@@ -7,8 +7,8 @@ fullnameOverride: ""
 ## ClawHost server
 server:
   image:
-    repository: clawhost
-    tag: latest
+    repository: 014388475497.dkr.ecr.us-east-2.amazonaws.com/metaverse
+    tag: clawhost
     pullPolicy: IfNotPresent
   replicas: 1
   port: 18080
