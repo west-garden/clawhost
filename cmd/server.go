@@ -65,6 +65,11 @@ func startServer() {
 				return next(c)
 			}
 
+			// Skip internal Kubernetes service DNS (*.svc.cluster.local)
+			if strings.HasSuffix(host, ".svc.cluster.local") {
+				return next(c)
+			}
+
 			// Extract first subdomain segment as bot ID
 			if dotIdx := strings.Index(host, "."); dotIdx > 0 {
 				botID := host[:dotIdx]
