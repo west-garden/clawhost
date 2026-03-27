@@ -129,6 +129,19 @@ func SyncSectionsToPod(ctx context.Context, botID string, sections ...string) er
 		}
 	}
 
+	// Always include plugins section to ensure openclaw-weixin is enabled
+	if plugins, ok := dbMap["plugins"].(map[string]interface{}); ok {
+		patch["plugins"] = plugins
+	} else {
+		patch["plugins"] = map[string]interface{}{
+			"entries": map[string]interface{}{
+				"openclaw-weixin": map[string]interface{}{
+					"enabled": true,
+				},
+			},
+		}
+	}
+
 	// Always update gateway.auth.token to match bot's AccessToken
 	// This ensures token stays in sync even when only models section is updated
 	if gateway, ok := patch["gateway"].(map[string]interface{}); ok {
