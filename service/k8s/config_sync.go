@@ -92,6 +92,7 @@ func WriteOpenClawConfigToPod(ctx context.Context, botID string, config *model.O
 // sections from the database, and writes back. Uses node inside the pod to do the
 // merge so that JSON key ordering of unchanged sections (especially gateway) is
 // preserved, preventing openclaw's hot-reload from detecting a false gateway change.
+// Always updates gateway.auth.token to ensure it matches bot's AccessToken.
 func SyncSectionsToPod(ctx context.Context, botID string, sections ...string) error {
 	namespace := GetNamespace()
 
@@ -125,6 +126,26 @@ func SyncSectionsToPod(ctx context.Context, botID string, sections ...string) er
 	for _, section := range sections {
 		if val, ok := dbMap[section]; ok {
 			patch[section] = val
+		}
+	}
+
+	// Always update gateway.auth.token to match bot's AccessToken
+	// This ensures token stays in sync even when only models section is updated
+	if gateway, ok := patch["gateway"].(map[string]interface{}); ok {
+		if auth, ok := gateway["auth"].(map[string]interface{}); ok {
+			auth["token"] = bot.AccessToken
+		} else {
+			gateway["auth"] = map[string]interface{}{
+				"mode":  "token",
+				"token": bot.AccessToken,
+			}
+		}
+	} else {
+		patch["gateway"] = map[string]interface{}{
+			"auth": map[string]interface{}{
+				"mode":  "token",
+				"token": bot.AccessToken,
+			},
 		}
 	}
 
