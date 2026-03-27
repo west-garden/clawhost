@@ -59,8 +59,7 @@ kubernetes:
 
 ## Shared storage for bot data
 storage:
-  pvcName: clawhost-shared-data
-  size: 10Gi
+  hostPath: /mnt/log/clawhost-data
   basePath: /clawhost-data
 
 ## Domain config

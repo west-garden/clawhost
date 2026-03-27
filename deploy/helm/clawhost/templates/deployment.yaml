@@ -42,6 +42,8 @@ spec:
             - name: config
               mountPath: /app/config.toml
               subPath: config.toml
+            - name: shared-data
+              mountPath: {{ .Values.storage.basePath }}
           resources:
             {{- toYaml .Values.server.resources | nindent 12 }}
           livenessProbe:
@@ -60,3 +62,7 @@ spec:
         - name: config
           configMap:
             name: {{ include "clawhost.fullname" . }}-config
+        - name: shared-data
+          hostPath:
+            path: {{ .Values.storage.hostPath }}
+            type: DirectoryOrCreate
