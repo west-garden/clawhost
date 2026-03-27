@@ -15,7 +15,9 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | env UV_INSTALL_DIR=/usr/local/b
 # Wrapper script: if user has upgraded openclaw via "npm i -g openclaw",
 # use the PVC-installed openclaw.mjs directly (same as built-in execution method).
 # Always runs via "node <path>/openclaw.mjs" to avoid npm bin wrapper's systemd check.
-RUN printf '#!/bin/sh\n\
+# Note: /usr/local/bin/openclaw is a symlink to /app/openclaw.mjs, must remove first!
+RUN rm -f /usr/local/bin/openclaw && \
+    printf '#!/bin/sh\n\
 PVC_MJS="$HOME/.openclaw/npm/lib/node_modules/openclaw/openclaw.mjs"\n\
 if [ -f "$PVC_MJS" ]; then\n\
   exec node "$PVC_MJS" "$@"\n\

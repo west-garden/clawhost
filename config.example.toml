@@ -33,7 +33,7 @@ bot_domain_suffix = "clawhost.ai"
 bot_domain_template = "https://{bot_id}.clawhost.ai"
 
 [openclaw]
-image = "1panel/openclaw:latest"
+image = "014388475497.dkr.ecr.us-east-2.amazonaws.com/metaverse:openclaw"
 gateway_port = 18789
 node_max_old_space_size = 6144
 cpu_limit = "2000m"
