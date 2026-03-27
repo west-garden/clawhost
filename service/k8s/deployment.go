@@ -107,9 +107,7 @@ func buildDeploymentSpec(botID, userID string, config *BotConfig) *appsv1.Deploy
 		gatewayPort = 18789
 	}
 	pvcName := viper.GetString("storage.pvc_name")
-	if pvcName == "" {
-		pvcName = "openclaw-shared-data"
-	}
+	hostPath := viper.GetString("storage.host_path")
 
 	cpuLimit := viper.GetString("openclaw.cpu_limit")
 	if cpuLimit == "" {
@@ -453,9 +451,27 @@ exec openclaw gateway --port %d --bind lan --allow-unconfigured --dev`, configJS
 							{
 								Name: "data",
 								VolumeSource: corev1.VolumeSource{
-									PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-										ClaimName: pvcName,
-									},
+									// Use hostPath if configured, otherwise fall back to PVC
+									HostPath: func() *corev1.HostPathVolumeSource {
+										if hostPath != "" {
+											return &corev1.HostPathVolumeSource{
+												Path: hostPath,
+												Type: func() *corev1.HostPathType {
+													t := corev1.HostPathDirectoryOrCreate
+													return &t
+												}(),
+											}
+										}
+										return nil
+									}(),
+									PersistentVolumeClaim: func() *corev1.PersistentVolumeClaimVolumeSource {
+										if hostPath != "" {
+											return nil
+										}
+										return &corev1.PersistentVolumeClaimVolumeSource{
+											ClaimName: pvcName,
+										}
+									}(),
 								},
 							},
 						}
