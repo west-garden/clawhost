@@ -1,7 +1,6 @@
 package v1
 
 import (
-	"fmt"
 	"regexp"
 	"time"
 
@@ -9,7 +8,6 @@ import (
 	"github.com/clawhost/clawhost/model"
 	"github.com/clawhost/clawhost/util"
 	"github.com/labstack/echo/v4"
-	"github.com/spf13/viper"
 )
 
 type CreateBotRequest struct {
