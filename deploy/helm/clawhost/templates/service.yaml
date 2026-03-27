@@ -8,5 +8,5 @@ spec:
   selector:
     {{- include "clawhost.selectorLabels" . | nindent 4 }}
   ports:
-    - port: {{ .Values.server.port }}
+    - port: 80
       targetPort: {{ .Values.server.port }}
