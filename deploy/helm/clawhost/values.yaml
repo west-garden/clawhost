@@ -68,7 +68,7 @@ domain:
 
 ## OpenClaw bot config
 openclaw:
-  image: "1panel/openclaw:latest"
+  image: "014388475497.dkr.ecr.us-east-2.amazonaws.com/metaverse:openclaw"
   imagePullSecret: ""
   gatewayPort: 18789
   nodeMaxOldSpaceSize: 6144
