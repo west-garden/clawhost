@@ -475,7 +475,8 @@ func buildOpenClawConfig(config *BotConfig, setDefaultModel bool) string {
       "openclaw-weixin": {
         "enabled": true
       }
-    }
+    },
+    "allow": ["openclaw-weixin"]
   }%s
 }`, gatewaySection, agentsSection, providersJSON, channelsSection)
 	}
@@ -492,7 +493,8 @@ func buildOpenClawConfig(config *BotConfig, setDefaultModel bool) string {
       "openclaw-weixin": {
         "enabled": true
       }
-    }
+    },
+    "allow": ["openclaw-weixin"]
   }%s
 }`, gatewaySection, providersJSON, channelsSection)
 }

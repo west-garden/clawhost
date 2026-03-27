@@ -255,10 +255,18 @@ if command -v node > /dev/null 2>&1 && [ -f /home/node/.openclaw/openclaw.json ]
         changed = true;
       }
       // Ensure plugins section has openclaw-weixin
-      if (!c.plugins) c.plugins = { entries: {} };
+      if (!c.plugins) c.plugins = { entries: {}, allow: [] };
       if (!c.plugins.entries) c.plugins.entries = {};
       if (!c.plugins.entries['openclaw-weixin']) {
         c.plugins.entries['openclaw-weixin'] = { enabled: true };
+        changed = true;
+      }
+      // Add openclaw-weixin to plugins.allow if not already present
+      if (!c.plugins.allow || !Array.isArray(c.plugins.allow)) {
+        c.plugins.allow = ['openclaw-weixin'];
+        changed = true;
+      } else if (!c.plugins.allow.includes('openclaw-weixin')) {
+        c.plugins.allow.push('openclaw-weixin');
         changed = true;
       }
       // Ensure channels section exists (Control UI needs this)

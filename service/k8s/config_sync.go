@@ -131,6 +131,21 @@ func SyncSectionsToPod(ctx context.Context, botID string, sections ...string) er
 
 	// Always include plugins section to ensure openclaw-weixin is enabled
 	if plugins, ok := dbMap["plugins"].(map[string]interface{}); ok {
+		// Ensure allow list includes openclaw-weixin
+		if allow, ok := plugins["allow"].([]interface{}); ok {
+			hasWeixin := false
+			for _, a := range allow {
+				if s, ok := a.(string); ok && s == "openclaw-weixin" {
+					hasWeixin = true
+					break
+				}
+			}
+			if !hasWeixin {
+				plugins["allow"] = append(allow, "openclaw-weixin")
+			}
+		} else {
+			plugins["allow"] = []string{"openclaw-weixin"}
+		}
 		patch["plugins"] = plugins
 	} else {
 		patch["plugins"] = map[string]interface{}{
@@ -139,6 +154,7 @@ func SyncSectionsToPod(ctx context.Context, botID string, sections ...string) er
 					"enabled": true,
 				},
 			},
+			"allow": []string{"openclaw-weixin"},
 		}
 	}
 
