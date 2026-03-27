@@ -91,14 +91,4 @@ func isValidSlug(slug string) bool {
 	return matched
 }
 
-func buildAccessURL(slug, token string) string {
-	domain := viper.GetString("domain.bot_domain_suffix")
-	if domain == "" {
-		domain = "clawhost.ai"
-	}
-	url := fmt.Sprintf("https://%s.%s", slug, domain)
-	if token != "" {
-		url += "?token=" + token
-	}
-	return url
-}
+// isValidSlug validates a bot slug
