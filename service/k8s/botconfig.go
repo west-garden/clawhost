@@ -422,13 +422,15 @@ func buildOpenClawConfig(config *BotConfig, setDefaultModel bool) string {
 	// Build providers section
 	providersJSON := buildProvidersJSON(config)
 
-	// Build channels section if present
+	// Build channels section - always include empty channels to allow Control UI to add channels
 	channelsSection := ""
 	if len(config.Channels) > 0 {
 		channelsJSON, err := json.MarshalIndent(config.Channels, "  ", "  ")
 		if err == nil {
 			channelsSection = fmt.Sprintf(",\n  \"channels\": %s", string(channelsJSON))
 		}
+	} else {
+		channelsSection = ",\n  \"channels\": {}"
 	}
 
 	// Determine default model

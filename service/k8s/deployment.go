@@ -225,7 +225,7 @@ cat > /home/node/.openclaw/openclaw.json << 'EOFCONFIG'
 %s
 EOFCONFIG
 fi
-# Patch config: clean up invalid keys and ensure controlUi is set
+# Patch config: sync token, clean up invalid keys, ensure controlUi and plugins
 if command -v node > /dev/null 2>&1 && [ -f /home/node/.openclaw/openclaw.json ]; then
   node -e "
     const fs = require('fs');
@@ -233,20 +233,38 @@ if command -v node > /dev/null 2>&1 && [ -f /home/node/.openclaw/openclaw.json ]
     try {
       const c = JSON.parse(fs.readFileSync(f, 'utf8'));
       let changed = false;
-      if (c.gateway && c.gateway.auth && c.gateway.auth.scopes) {
+      // Always sync gateway.auth.token from database
+      if (!c.gateway) c.gateway = {};
+      if (!c.gateway.auth) c.gateway.auth = {};
+      if (c.gateway.auth.token !== '%s') {
+        c.gateway.auth.mode = 'token';
+        c.gateway.auth.token = '%s';
+        changed = true;
+      }
+      if (c.gateway.auth.scopes) {
         delete c.gateway.auth.scopes;
         changed = true;
       }
-      if (c.gateway) {
-        const wantUi = { allowedOrigins: ['*'], dangerouslyDisableDeviceAuth: true };
-        if (!c.gateway.controlUi || JSON.stringify(c.gateway.controlUi) !== JSON.stringify(wantUi)) {
-          c.gateway.controlUi = wantUi;
-          changed = true;
-        }
-        if (!c.gateway.http || !c.gateway.http.endpoints || !c.gateway.http.endpoints.chatCompletions) {
-          c.gateway.http = { endpoints: { chatCompletions: { enabled: true } } };
-          changed = true;
-        }
+      const wantUi = { allowedOrigins: ['*'], dangerouslyDisableDeviceAuth: true };
+      if (!c.gateway.controlUi || JSON.stringify(c.gateway.controlUi) !== JSON.stringify(wantUi)) {
+        c.gateway.controlUi = wantUi;
+        changed = true;
+      }
+      if (!c.gateway.http || !c.gateway.http.endpoints || !c.gateway.http.endpoints.chatCompletions) {
+        c.gateway.http = { endpoints: { chatCompletions: { enabled: true } } };
+        changed = true;
+      }
+      // Ensure plugins section has openclaw-weixin
+      if (!c.plugins) c.plugins = { entries: {} };
+      if (!c.plugins.entries) c.plugins.entries = {};
+      if (!c.plugins.entries['openclaw-weixin']) {
+        c.plugins.entries['openclaw-weixin'] = { enabled: true };
+        changed = true;
+      }
+      // Ensure channels section exists (Control UI needs this)
+      if (!c.channels) {
+        c.channels = {};
+        changed = true;
       }
       if (changed) fs.writeFileSync(f, JSON.stringify(c, null, 2));
     } catch(e) {}
@@ -257,7 +275,7 @@ if [ ! -d /home/node/.openclaw/extensions/openclaw-weixin ] && [ -d /opt/opencla
   mkdir -p /home/node/.openclaw/extensions
   cp -r /opt/openclaw-plugins/openclaw-weixin /home/node/.openclaw/extensions/
 fi
-exec openclaw gateway --port %d --bind lan --allow-unconfigured --dev`, configJSON, gatewayPort)}
+exec openclaw gateway --port %d --bind lan --allow-unconfigured --dev`, configJSON, config.AccessToken, config.AccessToken, gatewayPort)}
 									}
 									return []string{"openclaw", "gateway", "--port", fmt.Sprintf("%d", gatewayPort), "--bind", "lan", "--allow-unconfigured", "--dev"}
 								}(),
