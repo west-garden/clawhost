@@ -63,8 +63,8 @@ storage:
 ## Domain config
 ## botDomain is the only required setting. apiDomain defaults to botDomain if not set.
 domain:
-  botDomain: clawhost.ai
-  apiDomain: ""
+  botDomain: cookieclicker.ai
+  apiDomain: admin.cookieclicker.ai
 
 ## OpenClaw bot config
 openclaw:
