@@ -3,7 +3,7 @@ WORKDIR /app/web/admin
 COPY web/admin/package.json web/admin/package-lock.json ./
 RUN npm ci
 COPY web/admin/ .
-RUN npx next build --webpack
+RUN npx next build
 
 FROM golang:1.24-alpine AS builder
 WORKDIR /app
