@@ -34,8 +34,6 @@ postgresql:
     database: clawhost
     username: postgres
     password: "postgres"
-  storage:
-    size: 5Gi
   resources:
     requests:
       cpu: 100m
