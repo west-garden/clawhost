@@ -13,6 +13,7 @@ spec:
     metadata:
       labels:
         {{- include "clawhost.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: server
     spec:
       serviceAccountName: {{ include "clawhost.fullname" . }}
       {{- if .Values.postgresql.enabled }}
