@@ -30,6 +30,7 @@ type Bot struct {
 	Name        string          `json:"name" gorm:"type:varchar(255);not null"`
 	Slug        string          `json:"slug" gorm:"type:varchar(100);uniqueIndex"`
 	AccessToken string          `json:"access_token" gorm:"type:varchar(64)"` // Used for CLI commands and token auth
+	AccessURL   string          `json:"access_url" gorm:"-"`                  // Computed field, not stored in DB
 	Status      BotStatus       `json:"status" gorm:"type:varchar(50);default:'created'"`
 	Config      json.RawMessage `json:"config" gorm:"type:jsonb"` // OpenClaw config (gateway, models, agents, channels)
 	Endpoint    string          `json:"endpoint" gorm:"type:varchar(255)"`
