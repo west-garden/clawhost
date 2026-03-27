@@ -171,6 +171,9 @@ export default function BotsPage() {
   }, []);
 
   const getBotUrl = (bot: Bot): string => {
+    // Use access_url from API (includes token)
+    if (bot.access_url) return bot.access_url;
+    // Fallback to template-based URL (without token)
     const app = appMap[bot.app_id];
     const template = app?.bot_domain_template || globalDomainTemplate;
     if (!template) return "";

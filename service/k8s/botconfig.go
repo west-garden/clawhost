@@ -123,20 +123,23 @@ func mergeConfigForModels(existing map[string]interface{}, config *BotConfig, se
 		trustedProxies = []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "127.0.0.0/8"}
 	}
 
-	// Build auth config - preserve existing gateway.auth if present, otherwise use token auth
+	// Build auth config - always update token to match bot.AccessToken
 	var authConfig map[string]interface{}
 	if existingGateway, ok := existing["gateway"].(map[string]interface{}); ok {
 		if existingAuth, ok := existingGateway["auth"].(map[string]interface{}); ok {
-			// Preserve existing auth config
+			// Preserve existing auth config but update token
 			authConfig = existingAuth
 		}
 	}
-	// If no existing auth or access token provided, use token auth
+	// Always set/update token to match bot's AccessToken
 	if authConfig == nil {
 		authConfig = map[string]interface{}{
 			"mode":  "token",
 			"token": config.AccessToken,
 		}
+	} else {
+		// Update token even if auth config exists
+		authConfig["token"] = config.AccessToken
 	}
 	// Clean up invalid keys that OpenClaw doesn't recognize
 	delete(authConfig, "scopes")

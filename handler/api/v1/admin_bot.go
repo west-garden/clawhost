@@ -2,11 +2,13 @@ package v1
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/clawhost/clawhost/model"
 	"github.com/clawhost/clawhost/service/k8s"
 	"github.com/clawhost/clawhost/util"
 	"github.com/labstack/echo/v4"
+	"github.com/spf13/viper"
 )
 
 // AdminCreateBot creates a new bot (admin only)
@@ -51,7 +53,23 @@ func AdminListBots(c echo.Context) error {
 	if err != nil {
 		return util.InternalError(c, "failed to list bots")
 	}
+	// Add access_url to each bot
+	for _, bot := range bots {
+		bot.AccessURL = buildAccessURL(bot.Slug, bot.AccessToken)
+	}
 	return util.Success(c, bots)
+}
+
+func buildAccessURL(slug, token string) string {
+	domain := viper.GetString("domain.bot_domain_suffix")
+	if domain == "" {
+		domain = "clawhost.ai"
+	}
+	url := fmt.Sprintf("https://%s.%s", slug, domain)
+	if token != "" {
+		url += "?token=" + token
+	}
+	return url
 }
 
 // AdminStartBot starts a bot by ID (admin only)

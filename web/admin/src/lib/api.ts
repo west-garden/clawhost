@@ -71,6 +71,7 @@ export interface Bot {
   name: string;
   slug: string;
   access_token: string;
+  access_url: string;
   status: "created" | "starting" | "running" | "stopped" | "error";
   config: Record<string, unknown>;
   endpoint: string;
