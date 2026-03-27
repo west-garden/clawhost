@@ -142,26 +142,6 @@ func SyncSectionsToPod(ctx context.Context, botID string, sections ...string) er
 		}
 	}
 
-	// Always update gateway.auth.token to match bot's AccessToken
-	// This ensures token stays in sync even when only models section is updated
-	if gateway, ok := patch["gateway"].(map[string]interface{}); ok {
-		if auth, ok := gateway["auth"].(map[string]interface{}); ok {
-			auth["token"] = bot.AccessToken
-		} else {
-			gateway["auth"] = map[string]interface{}{
-				"mode":  "token",
-				"token": bot.AccessToken,
-			}
-		}
-	} else {
-		patch["gateway"] = map[string]interface{}{
-			"auth": map[string]interface{}{
-				"mode":  "token",
-				"token": bot.AccessToken,
-			},
-		}
-	}
-
 	patchJSON, err := json.Marshal(patch)
 	if err != nil {
 		return fmt.Errorf("failed to marshal patch: %w", err)
@@ -172,13 +152,18 @@ func SyncSectionsToPod(ctx context.Context, botID string, sections ...string) er
 
 	// Use node inside the pod to merge. Node's JSON.parse preserves key ordering,
 	// so unchanged sections (gateway, channels, etc.) stay byte-for-byte identical.
+	// Also updates gateway.auth.token to match bot's AccessToken without overwriting other gateway settings.
 	nodeScript := fmt.Sprintf(
 		`const fs=require("fs");`+
 			`const p="/home/node/.openclaw/openclaw.json";`+
-			`let c={};try{c=JSON.parse(fs.readFileSync(p,"utf8"))}catch(e){}` +
+			`let c={};try{c=JSON.parse(fs.readFileSync(p,"utf8"))}catch(e){}`+
 			`Object.assign(c,JSON.parse(Buffer.from("%s","base64").toString()));`+
+			`if(!c.gateway)c.gateway={};`+
+			`if(!c.gateway.auth)c.gateway.auth={};`+
+			`c.gateway.auth.mode="token";`+
+			`c.gateway.auth.token="%s";`+
 			`fs.writeFileSync(p,JSON.stringify(c,null,2)+"\n")`,
-		patchB64)
+		patchB64, bot.AccessToken)
 
 	_, err = ExecInPod(ctx, namespace, podName, "openclaw", []string{"node", "-e", nodeScript})
 	if err != nil {
