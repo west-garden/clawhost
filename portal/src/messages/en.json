@@ -1,0 +1,128 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "save": "Save",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "copy": "Copy",
+    "copied": "Copied",
+    "open": "Open",
+    "close": "Close",
+    "back": "Back",
+    "error": "Something went wrong",
+    "retry": "Retry",
+    "noPermission": "No permission",
+    "notFound": "Page not found",
+    "goHome": "Go home"
+  },
+  "auth": {
+    "login": "Login",
+    "register": "Register",
+    "logout": "Logout",
+    "email": "Email",
+    "password": "Password",
+    "name": "Name",
+    "emailPlaceholder": "Enter your email",
+    "passwordPlaceholder": "Enter your password",
+    "namePlaceholder": "Enter your name",
+    "loginWithGithub": "Login with GitHub",
+    "loginWithGoogle": "Login with Google",
+    "noAccount": "Don't have an account?",
+    "hasAccount": "Already have an account?",
+    "goRegister": "Register",
+    "goLogin": "Login",
+    "loginFailed": "Login failed",
+    "registerFailed": "Registration failed",
+    "passwordMin": "Password must be at least 8 characters",
+    "orSeparator": "OR"
+  },
+  "sidebar": {
+    "agents": "My Agents",
+    "settings": "Settings",
+    "logout": "Logout"
+  },
+  "dashboard": {
+    "title": "My Agents",
+    "createAgent": "New Agent",
+    "emptyTitle": "Create your first AI Agent",
+    "emptyDescription": "Click the button below to get started",
+    "agentName": "Agent Name",
+    "agentNamePlaceholder": "Give your agent a name",
+    "creating": "Creating..."
+  },
+  "agent": {
+    "overview": "Overview",
+    "channels": "Channels",
+    "status": {
+      "created": "Created",
+      "running": "Running",
+      "stopped": "Stopped",
+      "error": "Error"
+    },
+    "actions": {
+      "start": "Start",
+      "stop": "Stop",
+      "restart": "Restart",
+      "starting": "Starting...",
+      "stopping": "Stopping...",
+      "restarting": "Restarting..."
+    },
+    "connect": {
+      "webui": "WebUI",
+      "apiEndpoint": "API Endpoint",
+      "accessToken": "Access Token",
+      "resetToken": "Reset Token",
+      "resetTokenConfirm": "The old token will be invalidated immediately. Are you sure?",
+      "tokenReset": "Token has been reset"
+    },
+    "info": {
+      "createdAt": "Created",
+      "slug": "Slug"
+    },
+    "danger": {
+      "title": "Danger Zone",
+      "deleteAgent": "Delete Agent",
+      "deleteConfirm": "This action cannot be undone. Type the agent name \"{name}\" to confirm.",
+      "deleteConfirmPlaceholder": "Type agent name",
+      "deleted": "Agent deleted"
+    },
+    "notRunning": "Agent is not running. Start it first.",
+    "startSuccess": "Agent started",
+    "stopSuccess": "Agent stopped",
+    "restartSuccess": "Agent restarted"
+  },
+  "channels": {
+    "title": "Connected Channels",
+    "empty": "No channels connected",
+    "add": "Add Channel",
+    "remove": "Remove",
+    "removeConfirm": "Are you sure you want to remove this channel?",
+    "removed": "Channel removed",
+    "wechat": {
+      "name": "WeChat",
+      "scanQr": "Scan QR Code",
+      "scanning": "Scan the QR code with WeChat",
+      "waitingScan": "Waiting for scan...",
+      "scanned": "Scanned, please confirm on your phone",
+      "expired": "QR code expired, please retry",
+      "success": "WeChat login successful",
+      "loginFailed": "WeChat login failed"
+    },
+    "telegram": {
+      "name": "Telegram",
+      "botToken": "Bot Token",
+      "botTokenPlaceholder": "Enter Telegram Bot Token",
+      "added": "Telegram channel added"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "profile": "Profile",
+    "changePassword": "Change Password",
+    "oldPassword": "Current Password",
+    "newPassword": "New Password",
+    "passwordChanged": "Password changed",
+    "profileUpdated": "Profile updated"
+  }
+}

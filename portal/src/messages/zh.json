@@ -1,0 +1,128 @@
+{
+  "common": {
+    "loading": "加载中...",
+    "save": "保存",
+    "cancel": "取消",
+    "confirm": "确认",
+    "delete": "删除",
+    "copy": "复制",
+    "copied": "已复制",
+    "open": "打开",
+    "close": "关闭",
+    "back": "返回",
+    "error": "出错了",
+    "retry": "重试",
+    "noPermission": "没有权限",
+    "notFound": "页面不存在",
+    "goHome": "返回首页"
+  },
+  "auth": {
+    "login": "登录",
+    "register": "注册",
+    "logout": "退出登录",
+    "email": "邮箱",
+    "password": "密码",
+    "name": "姓名",
+    "emailPlaceholder": "请输入邮箱",
+    "passwordPlaceholder": "请输入密码",
+    "namePlaceholder": "请输入姓名",
+    "loginWithGithub": "使用 GitHub 登录",
+    "loginWithGoogle": "使用 Google 登录",
+    "noAccount": "还没有账号？",
+    "hasAccount": "已有账号？",
+    "goRegister": "去注册",
+    "goLogin": "去登录",
+    "loginFailed": "登录失败",
+    "registerFailed": "注册失败",
+    "passwordMin": "密码至少 8 个字符",
+    "orSeparator": "或"
+  },
+  "sidebar": {
+    "agents": "我的 Agent",
+    "settings": "设置",
+    "logout": "退出登录"
+  },
+  "dashboard": {
+    "title": "我的 Agent",
+    "createAgent": "新建 Agent",
+    "emptyTitle": "创建你的第一个 AI Agent",
+    "emptyDescription": "点击下方按钮开始",
+    "agentName": "Agent 名称",
+    "agentNamePlaceholder": "给你的 Agent 起个名字",
+    "creating": "创建中..."
+  },
+  "agent": {
+    "overview": "概览",
+    "channels": "渠道",
+    "status": {
+      "created": "已创建",
+      "running": "运行中",
+      "stopped": "已停止",
+      "error": "异常"
+    },
+    "actions": {
+      "start": "启动",
+      "stop": "停止",
+      "restart": "重启",
+      "starting": "启动中...",
+      "stopping": "停止中...",
+      "restarting": "重启中..."
+    },
+    "connect": {
+      "webui": "WebUI",
+      "apiEndpoint": "API Endpoint",
+      "accessToken": "Access Token",
+      "resetToken": "重置 Token",
+      "resetTokenConfirm": "重置后旧 Token 将立即失效，确定要重置吗？",
+      "tokenReset": "Token 已重置"
+    },
+    "info": {
+      "createdAt": "创建时间",
+      "slug": "Slug"
+    },
+    "danger": {
+      "title": "危险操作",
+      "deleteAgent": "删除 Agent",
+      "deleteConfirm": "此操作不可撤销。请输入 Agent 名称 \"{name}\" 确认删除。",
+      "deleteConfirmPlaceholder": "输入 Agent 名称",
+      "deleted": "Agent 已删除"
+    },
+    "notRunning": "Agent 未运行，请先启动",
+    "startSuccess": "Agent 已启动",
+    "stopSuccess": "Agent 已停止",
+    "restartSuccess": "Agent 已重启"
+  },
+  "channels": {
+    "title": "已连接渠道",
+    "empty": "暂无连接的渠道",
+    "add": "添加渠道",
+    "remove": "移除",
+    "removeConfirm": "确定要移除此渠道吗？",
+    "removed": "渠道已移除",
+    "wechat": {
+      "name": "微信",
+      "scanQr": "扫码登录",
+      "scanning": "请用微信扫描二维码",
+      "waitingScan": "等待扫码...",
+      "scanned": "已扫码，请在手机上确认",
+      "expired": "二维码已过期，请重试",
+      "success": "微信登录成功",
+      "loginFailed": "微信登录失败"
+    },
+    "telegram": {
+      "name": "Telegram",
+      "botToken": "Bot Token",
+      "botTokenPlaceholder": "输入 Telegram Bot Token",
+      "added": "Telegram 渠道已添加"
+    }
+  },
+  "settings": {
+    "title": "设置",
+    "profile": "个人资料",
+    "changePassword": "修改密码",
+    "oldPassword": "当前密码",
+    "newPassword": "新密码",
+    "passwordChanged": "密码已修改",
+    "profileUpdated": "资料已更新"
+  }
+}
