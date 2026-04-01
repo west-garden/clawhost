@@ -107,7 +107,7 @@ func AddChannel(c echo.Context) error {
 	}
 
 	// Add channel to the running pod
-	if err := k8s.AddChannelToBot(context.Background(), agent.ID, agent.AccessToken, req.Channel, account, configMap); err != nil {
+	if err := k8s.AddChannelToAgent(context.Background(), agent.ID, agent.AccessToken, req.Channel, account, configMap); err != nil {
 		return util.InternalError(c, "failed to add channel: "+err.Error())
 	}
 
@@ -131,7 +131,7 @@ func ListChannels(c echo.Context) error {
 	}
 
 	// Get channels from the running pod
-	channels, err := k8s.ListBotChannels(context.Background(), agent.ID, agent.AccessToken)
+	channels, err := k8s.ListAgentChannels(context.Background(), agent.ID, agent.AccessToken)
 	if err != nil {
 		return util.InternalError(c, "failed to list channels: "+err.Error())
 	}
@@ -160,7 +160,7 @@ func RemoveChannel(c echo.Context) error {
 	}
 
 	// Remove channel or account from the running pod
-	if err := k8s.RemoveChannelFromBot(context.Background(), agent.ID, agent.AccessToken, channel, account); err != nil {
+	if err := k8s.RemoveChannelFromAgent(context.Background(), agent.ID, agent.AccessToken, channel, account); err != nil {
 		return util.InternalError(c, "failed to remove channel: "+err.Error())
 	}
 

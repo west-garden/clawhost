@@ -24,7 +24,7 @@ func GetAgentRawConfig(c echo.Context) error {
 	}
 
 	ctx := context.Background()
-	config, err := k8s.ReadBotConfig(ctx, agent.ID)
+	config, err := k8s.ReadAgentRawConfig(ctx, agent.ID)
 	if err != nil {
 		return util.InternalError(c, "failed to read config: "+err.Error())
 	}
@@ -62,14 +62,14 @@ func UpdateAgentRawConfig(c echo.Context) error {
 		finalConfig = input
 	} else {
 		// Merge mode (default): read existing, then merge input on top
-		existing, err := k8s.ReadBotConfig(ctx, agent.ID)
+		existing, err := k8s.ReadAgentRawConfig(ctx, agent.ID)
 		if err != nil {
 			return util.InternalError(c, "failed to read existing config: "+err.Error())
 		}
 		finalConfig = mergeMap(existing, input)
 	}
 
-	if err := k8s.WriteBotConfig(ctx, agent.ID, finalConfig); err != nil {
+	if err := k8s.WriteAgentRawConfig(ctx, agent.ID, finalConfig); err != nil {
 		return util.InternalError(c, "failed to write config: "+err.Error())
 	}
 

@@ -49,7 +49,7 @@ func StartAgent(c echo.Context) error {
 	if k8sConfig.AccessToken != "" {
 		go func() {
 			// On start, only set default model if user hasn't configured one
-			if err := k8s.WriteConfigToBot(context.Background(), agent.ID, k8sConfig, false); err != nil {
+			if err := k8s.WriteConfigToAgent(context.Background(), agent.ID, k8sConfig, false); err != nil {
 				// Log error but don't fail the request
 				c.Logger().Errorf("failed to write config to agent: %v", err)
 			}

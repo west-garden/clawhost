@@ -45,20 +45,20 @@ func SyncConfigToDatabase(ctx context.Context, botID string) error {
 		return fmt.Errorf("failed to read config from pod: %w", err)
 	}
 
-	// Get bot from database
-	bot, err := model.GetBotByID(botID)
+	// Get agent from database
+	agent, err := model.GetAgentByID(botID)
 	if err != nil {
-		return fmt.Errorf("failed to get bot: %w", err)
+		return fmt.Errorf("failed to get agent: %w", err)
 	}
 
-	// Update bot config
-	if err := bot.SetOpenClawConfig(config); err != nil {
+	// Update agent config
+	if err := agent.SetOpenClawConfig(config); err != nil {
 		return fmt.Errorf("failed to set config: %w", err)
 	}
 
 	// Save to database
-	if err := model.UpdateBot(bot); err != nil {
-		return fmt.Errorf("failed to update bot: %w", err)
+	if err := model.UpdateAgent(agent); err != nil {
+		return fmt.Errorf("failed to update agent: %w", err)
 	}
 
 	return nil
@@ -101,11 +101,11 @@ func SyncSectionsToPod(ctx context.Context, botID string, sections ...string) er
 	}
 
 	// Get config from database
-	bot, err := model.GetBotByID(botID)
+	agent, err := model.GetAgentByID(botID)
 	if err != nil {
-		return fmt.Errorf("failed to get bot: %w", err)
+		return fmt.Errorf("failed to get agent: %w", err)
 	}
-	dbConfig, err := bot.GetOpenClawConfig()
+	dbConfig, err := agent.GetOpenClawConfig()
 	if err != nil {
 		return fmt.Errorf("failed to get config: %w", err)
 	}
@@ -158,14 +158,14 @@ func SyncSectionsToPod(ctx context.Context, botID string, sections ...string) er
 // This includes gateway config and should only be used when gateway changes are intended
 // (e.g., token reset, initial setup).
 func SyncConfigToPod(ctx context.Context, botID string) error {
-	// Get bot from database
-	bot, err := model.GetBotByID(botID)
+	// Get agent from database
+	agent, err := model.GetAgentByID(botID)
 	if err != nil {
-		return fmt.Errorf("failed to get bot: %w", err)
+		return fmt.Errorf("failed to get agent: %w", err)
 	}
 
 	// Get config
-	config, err := bot.GetOpenClawConfig()
+	config, err := agent.GetOpenClawConfig()
 	if err != nil {
 		return fmt.Errorf("failed to get config: %w", err)
 	}
@@ -183,7 +183,7 @@ func SyncConfigToPod(ctx context.Context, botID string) error {
 	// Password auth is configured via config.gateway.auth in OpenClaw config
 	if config.Gateway.Auth.Mode == "" || config.Gateway.Auth.Mode == "token" {
 		config.Gateway.Auth.Mode = "token"
-		config.Gateway.Auth.Token = bot.AccessToken
+		config.Gateway.Auth.Token = agent.AccessToken
 	}
 
 	// Always disable device auth for control UI (pairing handled by clawhost proxy)
@@ -198,14 +198,14 @@ func SyncConfigToPod(ctx context.Context, botID string) error {
 
 // UpdateModelsConfig updates only the models section and syncs
 func UpdateModelsConfig(ctx context.Context, botID string, modelsConfig *model.ModelsConfig) error {
-	// Get bot from database
-	bot, err := model.GetBotByID(botID)
+	// Get agent from database
+	agent, err := model.GetAgentByID(botID)
 	if err != nil {
-		return fmt.Errorf("failed to get bot: %w", err)
+		return fmt.Errorf("failed to get agent: %w", err)
 	}
 
 	// Get existing config
-	config, err := bot.GetOpenClawConfig()
+	config, err := agent.GetOpenClawConfig()
 	if err != nil {
 		config = &model.OpenClawConfig{}
 	}
@@ -214,15 +214,15 @@ func UpdateModelsConfig(ctx context.Context, botID string, modelsConfig *model.M
 	config.Models = modelsConfig
 
 	// Save to database
-	if err := bot.SetOpenClawConfig(config); err != nil {
+	if err := agent.SetOpenClawConfig(config); err != nil {
 		return fmt.Errorf("failed to set config: %w", err)
 	}
-	if err := model.UpdateBot(bot); err != nil {
-		return fmt.Errorf("failed to update bot: %w", err)
+	if err := model.UpdateAgent(agent); err != nil {
+		return fmt.Errorf("failed to update agent: %w", err)
 	}
 
-	// If bot is running, sync only models section to pod (don't touch gateway)
-	if bot.Status == model.BotStatusRunning {
+	// If agent is running, sync only models section to pod (don't touch gateway)
+	if agent.Status == model.AgentStatusRunning {
 		return SyncSectionsToPod(ctx, botID, "models")
 	}
 
@@ -231,14 +231,14 @@ func UpdateModelsConfig(ctx context.Context, botID string, modelsConfig *model.M
 
 // UpdateAgentsConfig updates only the agents section and syncs
 func UpdateAgentsConfig(ctx context.Context, botID string, agentsConfig *model.AgentsConfig) error {
-	// Get bot from database
-	bot, err := model.GetBotByID(botID)
+	// Get agent from database
+	agent, err := model.GetAgentByID(botID)
 	if err != nil {
-		return fmt.Errorf("failed to get bot: %w", err)
+		return fmt.Errorf("failed to get agent: %w", err)
 	}
 
 	// Get existing config
-	config, err := bot.GetOpenClawConfig()
+	config, err := agent.GetOpenClawConfig()
 	if err != nil {
 		config = &model.OpenClawConfig{}
 	}
@@ -247,15 +247,15 @@ func UpdateAgentsConfig(ctx context.Context, botID string, agentsConfig *model.A
 	config.Agents = agentsConfig
 
 	// Save to database
-	if err := bot.SetOpenClawConfig(config); err != nil {
+	if err := agent.SetOpenClawConfig(config); err != nil {
 		return fmt.Errorf("failed to set config: %w", err)
 	}
-	if err := model.UpdateBot(bot); err != nil {
-		return fmt.Errorf("failed to update bot: %w", err)
+	if err := model.UpdateAgent(agent); err != nil {
+		return fmt.Errorf("failed to update agent: %w", err)
 	}
 
-	// If bot is running, sync only agents section to pod (don't touch gateway)
-	if bot.Status == model.BotStatusRunning {
+	// If agent is running, sync only agents section to pod (don't touch gateway)
+	if agent.Status == model.AgentStatusRunning {
 		return SyncSectionsToPod(ctx, botID, "agents")
 	}
 
@@ -264,14 +264,14 @@ func UpdateAgentsConfig(ctx context.Context, botID string, agentsConfig *model.A
 
 // UpdateChannelsConfig updates only the channels section and syncs
 func UpdateChannelsConfig(ctx context.Context, botID string, channelsConfig model.ChannelsConfig) error {
-	// Get bot from database
-	bot, err := model.GetBotByID(botID)
+	// Get agent from database
+	agent, err := model.GetAgentByID(botID)
 	if err != nil {
-		return fmt.Errorf("failed to get bot: %w", err)
+		return fmt.Errorf("failed to get agent: %w", err)
 	}
 
 	// Get existing config
-	config, err := bot.GetOpenClawConfig()
+	config, err := agent.GetOpenClawConfig()
 	if err != nil {
 		config = &model.OpenClawConfig{}
 	}
@@ -280,15 +280,15 @@ func UpdateChannelsConfig(ctx context.Context, botID string, channelsConfig mode
 	config.Channels = channelsConfig
 
 	// Save to database
-	if err := bot.SetOpenClawConfig(config); err != nil {
+	if err := agent.SetOpenClawConfig(config); err != nil {
 		return fmt.Errorf("failed to set config: %w", err)
 	}
-	if err := model.UpdateBot(bot); err != nil {
-		return fmt.Errorf("failed to update bot: %w", err)
+	if err := model.UpdateAgent(agent); err != nil {
+		return fmt.Errorf("failed to update agent: %w", err)
 	}
 
-	// If bot is running, sync only channels section to pod (don't touch gateway)
-	if bot.Status == model.BotStatusRunning {
+	// If agent is running, sync only channels section to pod (don't touch gateway)
+	if agent.Status == model.AgentStatusRunning {
 		return SyncSectionsToPod(ctx, botID, "channels")
 	}
 
@@ -297,14 +297,14 @@ func UpdateChannelsConfig(ctx context.Context, botID string, channelsConfig mode
 
 // AddChannel adds a channel to the config and syncs
 func AddChannel(ctx context.Context, botID, channelName string, channelConfig *model.ChannelConfig) error {
-	// Get bot from database
-	bot, err := model.GetBotByID(botID)
+	// Get agent from database
+	agent, err := model.GetAgentByID(botID)
 	if err != nil {
-		return fmt.Errorf("failed to get bot: %w", err)
+		return fmt.Errorf("failed to get agent: %w", err)
 	}
 
 	// Get existing config
-	config, err := bot.GetOpenClawConfig()
+	config, err := agent.GetOpenClawConfig()
 	if err != nil {
 		config = &model.OpenClawConfig{}
 	}
@@ -319,15 +319,15 @@ func AddChannel(ctx context.Context, botID, channelName string, channelConfig *m
 	config.Channels[channelName] = channelConfig
 
 	// Save to database
-	if err := bot.SetOpenClawConfig(config); err != nil {
+	if err := agent.SetOpenClawConfig(config); err != nil {
 		return fmt.Errorf("failed to set config: %w", err)
 	}
-	if err := model.UpdateBot(bot); err != nil {
-		return fmt.Errorf("failed to update bot: %w", err)
+	if err := model.UpdateAgent(agent); err != nil {
+		return fmt.Errorf("failed to update agent: %w", err)
 	}
 
-	// If bot is running, sync only channels section to pod (don't touch gateway)
-	if bot.Status == model.BotStatusRunning {
+	// If agent is running, sync only channels section to pod (don't touch gateway)
+	if agent.Status == model.AgentStatusRunning {
 		return SyncSectionsToPod(ctx, botID, "channels")
 	}
 
@@ -336,14 +336,14 @@ func AddChannel(ctx context.Context, botID, channelName string, channelConfig *m
 
 // RemoveChannel removes a channel from the config and syncs
 func RemoveChannel(ctx context.Context, botID, channelName string) error {
-	// Get bot from database
-	bot, err := model.GetBotByID(botID)
+	// Get agent from database
+	agent, err := model.GetAgentByID(botID)
 	if err != nil {
-		return fmt.Errorf("failed to get bot: %w", err)
+		return fmt.Errorf("failed to get agent: %w", err)
 	}
 
 	// Get existing config
-	config, err := bot.GetOpenClawConfig()
+	config, err := agent.GetOpenClawConfig()
 	if err != nil {
 		return fmt.Errorf("failed to get config: %w", err)
 	}
@@ -354,15 +354,15 @@ func RemoveChannel(ctx context.Context, botID, channelName string) error {
 	}
 
 	// Save to database
-	if err := bot.SetOpenClawConfig(config); err != nil {
+	if err := agent.SetOpenClawConfig(config); err != nil {
 		return fmt.Errorf("failed to set config: %w", err)
 	}
-	if err := model.UpdateBot(bot); err != nil {
-		return fmt.Errorf("failed to update bot: %w", err)
+	if err := model.UpdateAgent(agent); err != nil {
+		return fmt.Errorf("failed to update agent: %w", err)
 	}
 
-	// If bot is running, sync only channels section to pod (don't touch gateway)
-	if bot.Status == model.BotStatusRunning {
+	// If agent is running, sync only channels section to pod (don't touch gateway)
+	if agent.Status == model.AgentStatusRunning {
 		return SyncSectionsToPod(ctx, botID, "channels")
 	}
 
@@ -371,14 +371,14 @@ func RemoveChannel(ctx context.Context, botID, channelName string) error {
 
 // AddOrUpdateProvider adds or updates a provider in the models config
 func AddOrUpdateProvider(ctx context.Context, botID, providerName string, providerConfig *model.ProviderConfig) error {
-	// Get bot from database
-	bot, err := model.GetBotByID(botID)
+	// Get agent from database
+	agent, err := model.GetAgentByID(botID)
 	if err != nil {
-		return fmt.Errorf("failed to get bot: %w", err)
+		return fmt.Errorf("failed to get agent: %w", err)
 	}
 
 	// Get existing config
-	config, err := bot.GetOpenClawConfig()
+	config, err := agent.GetOpenClawConfig()
 	if err != nil {
 		config = &model.OpenClawConfig{}
 	}
@@ -398,15 +398,15 @@ func AddOrUpdateProvider(ctx context.Context, botID, providerName string, provid
 	config.Models.Providers[providerName] = providerConfig
 
 	// Save to database
-	if err := bot.SetOpenClawConfig(config); err != nil {
+	if err := agent.SetOpenClawConfig(config); err != nil {
 		return fmt.Errorf("failed to set config: %w", err)
 	}
-	if err := model.UpdateBot(bot); err != nil {
-		return fmt.Errorf("failed to update bot: %w", err)
+	if err := model.UpdateAgent(agent); err != nil {
+		return fmt.Errorf("failed to update agent: %w", err)
 	}
 
-	// If bot is running, sync only models section to pod (don't touch gateway)
-	if bot.Status == model.BotStatusRunning {
+	// If agent is running, sync only models section to pod (don't touch gateway)
+	if agent.Status == model.AgentStatusRunning {
 		return SyncSectionsToPod(ctx, botID, "models")
 	}
 
@@ -415,14 +415,14 @@ func AddOrUpdateProvider(ctx context.Context, botID, providerName string, provid
 
 // RemoveProvider removes a provider from the models config
 func RemoveProvider(ctx context.Context, botID, providerName string) error {
-	// Get bot from database
-	bot, err := model.GetBotByID(botID)
+	// Get agent from database
+	agent, err := model.GetAgentByID(botID)
 	if err != nil {
-		return fmt.Errorf("failed to get bot: %w", err)
+		return fmt.Errorf("failed to get agent: %w", err)
 	}
 
 	// Get existing config
-	config, err := bot.GetOpenClawConfig()
+	config, err := agent.GetOpenClawConfig()
 	if err != nil {
 		return fmt.Errorf("failed to get config: %w", err)
 	}
@@ -433,15 +433,15 @@ func RemoveProvider(ctx context.Context, botID, providerName string) error {
 	}
 
 	// Save to database
-	if err := bot.SetOpenClawConfig(config); err != nil {
+	if err := agent.SetOpenClawConfig(config); err != nil {
 		return fmt.Errorf("failed to set config: %w", err)
 	}
-	if err := model.UpdateBot(bot); err != nil {
-		return fmt.Errorf("failed to update bot: %w", err)
+	if err := model.UpdateAgent(agent); err != nil {
+		return fmt.Errorf("failed to update agent: %w", err)
 	}
 
-	// If bot is running, sync only models section to pod (don't touch gateway)
-	if bot.Status == model.BotStatusRunning {
+	// If agent is running, sync only models section to pod (don't touch gateway)
+	if agent.Status == model.AgentStatusRunning {
 		return SyncSectionsToPod(ctx, botID, "models")
 	}
 
@@ -450,14 +450,14 @@ func RemoveProvider(ctx context.Context, botID, providerName string) error {
 
 // SetDefaultModel sets the default model in agents config
 func SetDefaultModel(ctx context.Context, botID, primaryModel string) error {
-	// Get bot from database
-	bot, err := model.GetBotByID(botID)
+	// Get agent from database
+	agent, err := model.GetAgentByID(botID)
 	if err != nil {
-		return fmt.Errorf("failed to get bot: %w", err)
+		return fmt.Errorf("failed to get agent: %w", err)
 	}
 
 	// Get existing config
-	config, err := bot.GetOpenClawConfig()
+	config, err := agent.GetOpenClawConfig()
 	if err != nil {
 		config = &model.OpenClawConfig{}
 	}
@@ -477,15 +477,15 @@ func SetDefaultModel(ctx context.Context, botID, primaryModel string) error {
 	config.Agents.Defaults.Model.Primary = primaryModel
 
 	// Save to database
-	if err := bot.SetOpenClawConfig(config); err != nil {
+	if err := agent.SetOpenClawConfig(config); err != nil {
 		return fmt.Errorf("failed to set config: %w", err)
 	}
-	if err := model.UpdateBot(bot); err != nil {
-		return fmt.Errorf("failed to update bot: %w", err)
+	if err := model.UpdateAgent(agent); err != nil {
+		return fmt.Errorf("failed to update agent: %w", err)
 	}
 
-	// If bot is running, sync only agents section to pod (don't touch gateway)
-	if bot.Status == model.BotStatusRunning {
+	// If agent is running, sync only agents section to pod (don't touch gateway)
+	if agent.Status == model.AgentStatusRunning {
 		return SyncSectionsToPod(ctx, botID, "agents")
 	}
 

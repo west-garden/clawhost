@@ -70,8 +70,8 @@ type AgentDefaultsConfig struct {
 	FallbackModel string // e.g., "anthropic/claude-haiku-4-5-20251001" - used when primary is unavailable
 }
 
-// BotConfig holds the configuration for a bot
-type BotConfig struct {
+// AgentConfig holds the configuration for an agent
+type AgentConfig struct {
 	// Legacy single provider fields (kept for backward compatibility)
 	Provider string // Provider key name in openclaw config (e.g., "anthropic", "minimax")
 	Model    string
@@ -91,9 +91,9 @@ type BotConfig struct {
 	Channels map[string]interface{}
 }
 
-// buildDeploymentSpec builds the full Deployment object for a bot.
+// buildDeploymentSpec builds the full Deployment object for an agent.
 // Shared by CreateDeployment and ReplaceDeployment to ensure consistency.
-func buildDeploymentSpec(botID, userID string, config *BotConfig) *appsv1.Deployment {
+func buildDeploymentSpec(botID, userID string, config *AgentConfig) *appsv1.Deployment {
 	namespace := GetNamespace()
 	deploymentName := GetDeploymentName(botID)
 
@@ -466,7 +466,7 @@ exec openclaw gateway --port %d --bind lan --allow-unconfigured --dev`, configJS
 	}
 }
 
-func CreateDeployment(ctx context.Context, botID, userID, accessToken string, config *BotConfig) error {
+func CreateDeployment(ctx context.Context, botID, userID, accessToken string, config *AgentConfig) error {
 	client := GetClient()
 	namespace := GetNamespace()
 
@@ -486,7 +486,7 @@ func CreateDeployment(ctx context.Context, botID, userID, accessToken string, co
 // ReplaceDeployment updates the full deployment spec and triggers a rolling update.
 // Unlike RestartDeployment (annotation-only), this picks up all spec changes
 // including new sidecar containers, image updates, resource changes, etc.
-func ReplaceDeployment(ctx context.Context, botID, userID, accessToken string, config *BotConfig) error {
+func ReplaceDeployment(ctx context.Context, botID, userID, accessToken string, config *AgentConfig) error {
 	client := GetClient()
 	namespace := GetNamespace()
 
@@ -583,7 +583,7 @@ func GetDeploymentStatusInfo(ctx context.Context, botID string) (*DeploymentStat
 	return info, nil
 }
 
-// DeploymentExists checks if a deployment exists for the given bot
+// DeploymentExists checks if a deployment exists for the given agent
 func DeploymentExists(ctx context.Context, botID string) (bool, error) {
 	client := GetClient()
 	namespace := GetNamespace()
@@ -659,7 +659,7 @@ func UpdateDeploymentImage(ctx context.Context, botID, newImage string) error {
 	return nil
 }
 
-// GetDeploymentImage returns the current openclaw container image for a bot
+// GetDeploymentImage returns the current openclaw container image for an agent
 func GetDeploymentImage(ctx context.Context, botID string) (string, error) {
 	client := GetClient()
 	namespace := GetNamespace()
@@ -680,7 +680,7 @@ func GetDeploymentImage(ctx context.Context, botID string) (string, error) {
 }
 
 // UpdateDeploymentConfig updates the deployment with new config and triggers rolling update
-func UpdateDeploymentConfig(ctx context.Context, botID, accessToken string, config *BotConfig) error {
+func UpdateDeploymentConfig(ctx context.Context, botID, accessToken string, config *AgentConfig) error {
 	client := GetClient()
 	namespace := GetNamespace()
 	deploymentName := GetDeploymentName(botID)

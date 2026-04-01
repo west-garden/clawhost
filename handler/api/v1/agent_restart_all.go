@@ -89,7 +89,7 @@ func restartAgentsAsync(agents []*model.Agent) {
 
 			// Sync config to pod after restart (ensures controlUi, http, etc.)
 			if k8sConfig.AccessToken != "" {
-				if err := k8s.WriteConfigToBot(ctx, a.ID, k8sConfig, false); err != nil {
+				if err := k8s.WriteConfigToAgent(ctx, a.ID, k8sConfig, false); err != nil {
 					fmt.Printf("[RestartAll] Config sync failed for agent %s: %v\n", a.ID, err)
 				}
 			}

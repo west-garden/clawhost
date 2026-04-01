@@ -49,7 +49,7 @@ func RestartAgent(c echo.Context) error {
 	// Sync config to pod after restart
 	go func() {
 		if k8sConfig.AccessToken != "" {
-			if err := k8s.WriteConfigToBot(context.Background(), agent.ID, k8sConfig, false); err != nil {
+			if err := k8s.WriteConfigToAgent(context.Background(), agent.ID, k8sConfig, false); err != nil {
 				c.Logger().Errorf("failed to write config to agent: %v", err)
 			}
 		}

@@ -144,7 +144,7 @@ func ListDevices(c echo.Context) error {
 
 // listDevicesViaGateway uses the Gateway WebSocket API to list devices (fast)
 func listDevicesViaGateway(ctx context.Context, agent *model.Agent) ([]DeviceInfo, error) {
-	result, err := k8s.ListBotDevicesViaGateway(ctx, agent.ID, agent.AccessToken)
+	result, err := k8s.ListAgentDevicesViaGateway(ctx, agent.ID, agent.AccessToken)
 	if err != nil {
 		return nil, err
 	}
