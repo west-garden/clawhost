@@ -1,9 +1,6 @@
 [server]
 port = 18080
 
-[api]
-admin_token = "your-admin-token"
-
 [db]
 host = "localhost"
 port = 5432
@@ -12,6 +9,22 @@ password = "your-password"
 database = "clawhost"
 sslmode = "disable"
 timezone = "Asia/Shanghai"
+
+[auth]
+jwt_secret = "change-me-to-a-random-string"
+jwt_access_ttl = "15m"
+jwt_refresh_ttl = "168h"
+# frontend_url = "http://localhost:3000"  # Uncomment for OAuth redirect to frontend
+
+# [auth.oauth.github]
+# client_id = ""
+# client_secret = ""
+# callback_url = "http://localhost:18080/auth/oauth/github/callback"
+
+# [auth.oauth.google]
+# client_id = ""
+# client_secret = ""
+# callback_url = "http://localhost:18080/auth/oauth/google/callback"
 
 [kubernetes]
 kubeconfig = ""  # Empty for in-cluster config
