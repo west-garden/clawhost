@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { AgentStatusBadge } from "@/components/agent-status-badge";
 import { ConfirmDialog } from "@/components/confirm-dialog";
+import { ChannelList } from "@/components/channel-list";
 import { useAgentStatus } from "@/hooks/use-agent-status";
 import {
   startAgent,
@@ -271,10 +272,7 @@ export function AgentOverview({
         </TabsContent>
 
         <TabsContent value="channels" className="mt-4">
-          {/* ChannelList component added in Task 12 */}
-          <div className="text-sm text-muted-foreground p-4">
-            {t("agent.channels")}
-          </div>
+          <ChannelList agentId={agent.id} agentStatus={currentStatus} />
         </TabsContent>
       </Tabs>
 
