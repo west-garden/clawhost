@@ -107,9 +107,7 @@ func buildDeploymentSpec(botID, userID string, config *AgentConfig) *appsv1.Depl
 		gatewayPort = 18789
 	}
 	pvcName := viper.GetString("storage.pvc_name")
-	if pvcName == "" {
-		pvcName = "openclaw-shared-data"
-	}
+	hostPath := viper.GetString("storage.host_path")
 
 	cpuLimit := viper.GetString("openclaw.cpu_limit")
 	if cpuLimit == "" {
@@ -227,7 +225,7 @@ cat > /home/node/.openclaw/openclaw.json << 'EOFCONFIG'
 %s
 EOFCONFIG
 fi
-# Patch config: clean up invalid keys and ensure controlUi is set
+# Patch config: sync token, clean up invalid keys, ensure controlUi and plugins
 if command -v node > /dev/null 2>&1 && [ -f /home/node/.openclaw/openclaw.json ]; then
   node -e "
     const fs = require('fs');
@@ -235,19 +233,46 @@ if command -v node > /dev/null 2>&1 && [ -f /home/node/.openclaw/openclaw.json ]
     try {
       const c = JSON.parse(fs.readFileSync(f, 'utf8'));
       let changed = false;
-      if (c.gateway && c.gateway.auth && c.gateway.auth.scopes) {
+      // Always sync gateway.auth.token from database
+      if (!c.gateway) c.gateway = {};
+      if (!c.gateway.auth) c.gateway.auth = {};
+      if (c.gateway.auth.token !== '%s') {
+        c.gateway.auth.mode = 'token';
+        c.gateway.auth.token = '%s';
+        changed = true;
+      }
+      if (c.gateway.auth.scopes) {
         delete c.gateway.auth.scopes;
         changed = true;
       }
-      if (c.gateway) {
-        if (!c.gateway.controlUi || !c.gateway.controlUi.allowedOrigins) {
-          c.gateway.controlUi = { allowedOrigins: ['*'], dangerouslyDisableDeviceAuth: true };
-          changed = true;
-        }
-        if (!c.gateway.http || !c.gateway.http.endpoints || !c.gateway.http.endpoints.chatCompletions) {
-          c.gateway.http = { endpoints: { chatCompletions: { enabled: true } } };
-          changed = true;
-        }
+      const wantUi = { allowedOrigins: ['*'], dangerouslyDisableDeviceAuth: true };
+      if (!c.gateway.controlUi || JSON.stringify(c.gateway.controlUi) !== JSON.stringify(wantUi)) {
+        c.gateway.controlUi = wantUi;
+        changed = true;
+      }
+      if (!c.gateway.http || !c.gateway.http.endpoints || !c.gateway.http.endpoints.chatCompletions) {
+        c.gateway.http = { endpoints: { chatCompletions: { enabled: true } } };
+        changed = true;
+      }
+      // Ensure plugins section has openclaw-weixin
+      if (!c.plugins) c.plugins = { entries: {}, allow: [] };
+      if (!c.plugins.entries) c.plugins.entries = {};
+      if (!c.plugins.entries['openclaw-weixin']) {
+        c.plugins.entries['openclaw-weixin'] = { enabled: true };
+        changed = true;
+      }
+      // Add openclaw-weixin to plugins.allow if not already present
+      if (!c.plugins.allow || !Array.isArray(c.plugins.allow)) {
+        c.plugins.allow = ['openclaw-weixin'];
+        changed = true;
+      } else if (!c.plugins.allow.includes('openclaw-weixin')) {
+        c.plugins.allow.push('openclaw-weixin');
+        changed = true;
+      }
+      // Ensure channels section exists (Control UI needs this)
+      if (!c.channels) {
+        c.channels = {};
+        changed = true;
       }
       if (changed) fs.writeFileSync(f, JSON.stringify(c, null, 2));
     } catch(e) {}
@@ -258,7 +283,7 @@ if [ ! -d /home/node/.openclaw/extensions/openclaw-weixin ] && [ -d /opt/opencla
   mkdir -p /home/node/.openclaw/extensions
   cp -r /opt/openclaw-plugins/openclaw-weixin /home/node/.openclaw/extensions/
 fi
-exec openclaw gateway --port %d --bind lan --allow-unconfigured --dev`, configJSON, gatewayPort)}
+exec openclaw gateway --port %d --bind lan --allow-unconfigured --dev`, configJSON, config.AccessToken, config.AccessToken, gatewayPort)}
 									}
 									return []string{"openclaw", "gateway", "--port", fmt.Sprintf("%d", gatewayPort), "--bind", "lan", "--allow-unconfigured", "--dev"}
 								}(),
@@ -452,9 +477,27 @@ exec openclaw gateway --port %d --bind lan --allow-unconfigured --dev`, configJS
 							{
 								Name: "data",
 								VolumeSource: corev1.VolumeSource{
-									PersistentVolumeClaim: &corev1.PersistentVolumeClaimVolumeSource{
-										ClaimName: pvcName,
-									},
+									// Use hostPath if configured, otherwise fall back to PVC
+									HostPath: func() *corev1.HostPathVolumeSource {
+										if hostPath != "" {
+											return &corev1.HostPathVolumeSource{
+												Path: hostPath,
+												Type: func() *corev1.HostPathType {
+													t := corev1.HostPathDirectoryOrCreate
+													return &t
+												}(),
+											}
+										}
+										return nil
+									}(),
+									PersistentVolumeClaim: func() *corev1.PersistentVolumeClaimVolumeSource {
+										if hostPath != "" {
+											return nil
+										}
+										return &corev1.PersistentVolumeClaimVolumeSource{
+											ClaimName: pvcName,
+										}
+									}(),
 								},
 							},
 						}
@@ -475,7 +518,9 @@ func CreateDeployment(ctx context.Context, botID, userID, accessToken string, co
 	_, err := client.AppsV1().Deployments(namespace).Create(ctx, deployment, metav1.CreateOptions{})
 	if err != nil {
 		if errors.IsAlreadyExists(err) {
-			return nil
+			// Deployment exists (maybe scaled to 0 from a previous stop).
+			// Update the full spec and ensure replicas=1.
+			return ReplaceDeployment(ctx, botID, userID, accessToken, config)
 		}
 		return fmt.Errorf("failed to create deployment: %w", err)
 	}

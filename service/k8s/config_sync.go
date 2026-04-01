@@ -14,7 +14,7 @@ import (
 func ReadOpenClawConfig(ctx context.Context, botID string) (*model.OpenClawConfig, error) {
 	namespace := GetNamespace()
 
-	podName, err := waitForPodReady(ctx, botID, 30)
+	podName, err := WaitForPodReady(ctx, botID, 30)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get pod: %w", err)
 	}
@@ -68,7 +68,7 @@ func SyncConfigToDatabase(ctx context.Context, botID string) error {
 func WriteOpenClawConfigToPod(ctx context.Context, botID string, config *model.OpenClawConfig) error {
 	namespace := GetNamespace()
 
-	podName, err := waitForPodReady(ctx, botID, 60)
+	podName, err := WaitForPodReady(ctx, botID, 60)
 	if err != nil {
 		return fmt.Errorf("failed to get pod: %w", err)
 	}
@@ -92,10 +92,11 @@ func WriteOpenClawConfigToPod(ctx context.Context, botID string, config *model.O
 // sections from the database, and writes back. Uses node inside the pod to do the
 // merge so that JSON key ordering of unchanged sections (especially gateway) is
 // preserved, preventing openclaw's hot-reload from detecting a false gateway change.
+// Always updates gateway.auth.token to ensure it matches bot's AccessToken.
 func SyncSectionsToPod(ctx context.Context, botID string, sections ...string) error {
 	namespace := GetNamespace()
 
-	podName, err := waitForPodReady(ctx, botID, 60)
+	podName, err := WaitForPodReady(ctx, botID, 60)
 	if err != nil {
 		return fmt.Errorf("failed to get pod: %w", err)
 	}
@@ -128,6 +129,35 @@ func SyncSectionsToPod(ctx context.Context, botID string, sections ...string) er
 		}
 	}
 
+	// Always include plugins section to ensure openclaw-weixin is enabled
+	if plugins, ok := dbMap["plugins"].(map[string]interface{}); ok {
+		// Ensure allow list includes openclaw-weixin
+		if allow, ok := plugins["allow"].([]interface{}); ok {
+			hasWeixin := false
+			for _, a := range allow {
+				if s, ok := a.(string); ok && s == "openclaw-weixin" {
+					hasWeixin = true
+					break
+				}
+			}
+			if !hasWeixin {
+				plugins["allow"] = append(allow, "openclaw-weixin")
+			}
+		} else {
+			plugins["allow"] = []string{"openclaw-weixin"}
+		}
+		patch["plugins"] = plugins
+	} else {
+		patch["plugins"] = map[string]interface{}{
+			"entries": map[string]interface{}{
+				"openclaw-weixin": map[string]interface{}{
+					"enabled": true,
+				},
+			},
+			"allow": []string{"openclaw-weixin"},
+		}
+	}
+
 	patchJSON, err := json.Marshal(patch)
 	if err != nil {
 		return fmt.Errorf("failed to marshal patch: %w", err)
@@ -138,13 +168,18 @@ func SyncSectionsToPod(ctx context.Context, botID string, sections ...string) er
 
 	// Use node inside the pod to merge. Node's JSON.parse preserves key ordering,
 	// so unchanged sections (gateway, channels, etc.) stay byte-for-byte identical.
+	// Also updates gateway.auth.token to match bot's AccessToken without overwriting other gateway settings.
 	nodeScript := fmt.Sprintf(
 		`const fs=require("fs");`+
 			`const p="/home/node/.openclaw/openclaw.json";`+
-			`let c={};try{c=JSON.parse(fs.readFileSync(p,"utf8"))}catch(e){}` +
+			`let c={};try{c=JSON.parse(fs.readFileSync(p,"utf8"))}catch(e){}`+
 			`Object.assign(c,JSON.parse(Buffer.from("%s","base64").toString()));`+
+			`if(!c.gateway)c.gateway={};`+
+			`if(!c.gateway.auth)c.gateway.auth={};`+
+			`c.gateway.auth.mode="token";`+
+			`c.gateway.auth.token="%s";`+
 			`fs.writeFileSync(p,JSON.stringify(c,null,2)+"\n")`,
-		patchB64)
+		patchB64, agent.AccessToken)
 
 	_, err = ExecInPod(ctx, namespace, podName, "openclaw", []string{"node", "-e", nodeScript})
 	if err != nil {

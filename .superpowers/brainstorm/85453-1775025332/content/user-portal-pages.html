@@ -1,0 +1,123 @@
+<h2>User Portal — Page Structure</h2>
+<p class="subtitle">All pages the end user sees after login</p>
+
+<div class="mockup">
+  <div class="mockup-header">Page Map</div>
+  <div class="mockup-body" style="padding: 24px; font-family: monospace; font-size: 13px; color: #94a3b8;">
+
+    <!-- Auth pages -->
+    <div style="margin-bottom: 20px;">
+      <div style="color: #f59e0b; font-weight: bold; margin-bottom: 6px;">🔑 Auth (no login required)</div>
+      <div style="padding-left: 20px;">
+        /login — email/password + OAuth buttons (GitHub, Google)<br>
+        /register — email + password + name<br>
+        /forgot-password — reset via email
+      </div>
+    </div>
+
+    <!-- Dashboard -->
+    <div style="margin-bottom: 20px;">
+      <div style="color: #60a5fa; font-weight: bold; margin-bottom: 6px;">📊 Dashboard (login required)</div>
+      <div style="padding-left: 20px;">
+        /dashboard — Agent list (cards or table), quick stats<br>
+        <span style="color: #475569;">  └ Each agent shows: name, status badge, slug, created time</span><br>
+        <span style="color: #475569;">  └ Actions: Start / Stop / Open WebUI / Delete</span><br>
+        <span style="color: #475569;">  └ "Create Agent" button → /agents/new</span>
+      </div>
+    </div>
+
+    <!-- Create agent -->
+    <div style="margin-bottom: 20px;">
+      <div style="color: #34d399; font-weight: bold; margin-bottom: 6px;">➕ Create Agent</div>
+      <div style="padding-left: 20px;">
+        /agents/new — form: name, slug (auto-gen), model provider + API key<br>
+        <span style="color: #475569;">  └ Submit → calls POST /api/v1/agents → redirect to agent detail</span>
+      </div>
+    </div>
+
+    <!-- Agent detail -->
+    <div style="margin-bottom: 20px;">
+      <div style="color: #a78bfa; font-weight: bold; margin-bottom: 6px;">🤖 Agent Detail</div>
+      <div style="padding-left: 20px;">
+        /agents/:id — tabbed layout:<br>
+        <span style="color: #475569;">  ├ Overview — status, endpoint, access token, quick actions</span><br>
+        <span style="color: #475569;">  ├ Config — model providers, agent defaults, raw config</span><br>
+        <span style="color: #475569;">  ├ Channels — Telegram/Slack/Discord/WeChat etc.</span><br>
+        <span style="color: #475569;">  ├ Skills — list / create / edit / delete</span><br>
+        <span style="color: #475569;">  └ Devices — paired devices, approve/revoke</span>
+      </div>
+    </div>
+
+    <!-- Settings -->
+    <div>
+      <div style="color: #f472b6; font-weight: bold; margin-bottom: 6px;">⚙️ User Settings</div>
+      <div style="padding-left: 20px;">
+        /settings — profile (name, email, avatar), change password, API token, OAuth connections
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Dashboard mockup -->
+<div style="margin-top: 24px;">
+  <div class="mockup">
+    <div class="mockup-header">Dashboard Wireframe</div>
+    <div class="mockup-body" style="padding: 0;">
+      <!-- Top nav -->
+      <div style="display: flex; justify-content: space-between; align-items: center; padding: 12px 20px; border-bottom: 1px solid #2d3748; background: #0f172a;">
+        <div style="color: #e2e8f0; font-weight: bold; font-size: 15px;">🐾 ClawHost</div>
+        <div style="display: flex; gap: 16px; align-items: center;">
+          <span style="color: #94a3b8; font-size: 13px;">Docs</span>
+          <div style="width: 28px; height: 28px; border-radius: 50%; background: #3b82f6; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px;">R</div>
+        </div>
+      </div>
+
+      <!-- Content -->
+      <div style="padding: 24px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+          <div style="color: #e2e8f0; font-size: 18px; font-weight: bold;">My Agents</div>
+          <button class="mock-button" style="background: #3b82f6; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-size: 13px;">+ Create Agent</button>
+        </div>
+
+        <!-- Agent cards -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 16px;">
+
+          <div style="border: 1px solid #2d3748; border-radius: 8px; padding: 16px; background: #1e293b;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <span style="color: #e2e8f0; font-weight: bold;">my-assistant</span>
+              <span style="background: #065f46; color: #34d399; padding: 2px 8px; border-radius: 10px; font-size: 11px;">Running</span>
+            </div>
+            <div style="color: #64748b; font-size: 12px; margin-bottom: 12px;">claude-sonnet-4 · Created 2 days ago</div>
+            <div style="display: flex; gap: 8px;">
+              <span style="color: #60a5fa; font-size: 12px; cursor: pointer;">Open WebUI</span>
+              <span style="color: #94a3b8; font-size: 12px;">·</span>
+              <span style="color: #94a3b8; font-size: 12px; cursor: pointer;">Stop</span>
+              <span style="color: #94a3b8; font-size: 12px;">·</span>
+              <span style="color: #94a3b8; font-size: 12px; cursor: pointer;">Settings</span>
+            </div>
+          </div>
+
+          <div style="border: 1px solid #2d3748; border-radius: 8px; padding: 16px; background: #1e293b;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <span style="color: #e2e8f0; font-weight: bold;">code-reviewer</span>
+              <span style="background: #1e1e2e; color: #64748b; padding: 2px 8px; border-radius: 10px; font-size: 11px;">Stopped</span>
+            </div>
+            <div style="color: #64748b; font-size: 12px; margin-bottom: 12px;">gpt-4o · Created 5 days ago</div>
+            <div style="display: flex; gap: 8px;">
+              <span style="color: #34d399; font-size: 12px; cursor: pointer;">Start</span>
+              <span style="color: #94a3b8; font-size: 12px;">·</span>
+              <span style="color: #94a3b8; font-size: 12px; cursor: pointer;">Settings</span>
+              <span style="color: #94a3b8; font-size: 12px;">·</span>
+              <span style="color: #ef4444; font-size: 12px; cursor: pointer;">Delete</span>
+            </div>
+          </div>
+
+          <div style="border: 1px dashed #2d3748; border-radius: 8px; padding: 16px; display: flex; align-items: center; justify-content: center; color: #475569; font-size: 13px; cursor: pointer; min-height: 100px;">
+            + Create new agent
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

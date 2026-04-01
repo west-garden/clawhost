@@ -22,7 +22,7 @@ data:
     namespace = {{ .Values.kubernetes.namespace | quote }}
 
     [storage]
-    pvc_name = {{ .Values.storage.pvcName | quote }}
+    host_path = {{ .Values.storage.hostPath | quote }}
     base_path = {{ .Values.storage.basePath | quote }}
 
     [domain]

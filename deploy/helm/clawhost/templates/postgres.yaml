@@ -1,17 +1,4 @@
 {{- if .Values.postgresql.enabled }}
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: {{ include "clawhost.fullname" . }}-pg-data
-  labels:
-    {{- include "clawhost.labels" . | nindent 4 }}
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: {{ .Values.postgresql.storage.size }}
----
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -48,6 +35,8 @@ spec:
                 secretKeyRef:
                   name: {{ include "clawhost.fullname" . }}
                   key: db-password
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
           volumeMounts:
             - name: pg-data
               mountPath: /var/lib/postgresql/data
@@ -55,8 +44,9 @@ spec:
             {{- toYaml .Values.postgresql.resources | nindent 12 }}
       volumes:
         - name: pg-data
-          persistentVolumeClaim:
-            claimName: {{ include "clawhost.fullname" . }}-pg-data
+          hostPath:
+            path: {{ .Values.storage.hostPath }}/postgres
+            type: DirectoryOrCreate
 ---
 apiVersion: v1
 kind: Service

@@ -1,9 +1,24 @@
 package v1
 
 import (
+	"fmt"
+
 	"github.com/clawhost/clawhost/model"
 	"github.com/clawhost/clawhost/service/k8s"
+	"github.com/spf13/viper"
 )
+
+func buildAccessURL(slug, token string) string {
+	domain := viper.GetString("domain.bot_domain_suffix")
+	if domain == "" {
+		domain = "clawhost.ai"
+	}
+	url := fmt.Sprintf("https://%s.%s", slug, domain)
+	if token != "" {
+		url += "?token=" + token
+	}
+	return url
+}
 
 // convertToK8sConfig converts model.OpenClawConfig to k8s.AgentConfig for deployment
 // This is used when starting an agent to pass config to K8s deployment

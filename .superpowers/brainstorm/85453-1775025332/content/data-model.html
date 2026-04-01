@@ -1,0 +1,78 @@
+<h2>ClawHost — Refactored Data Model</h2>
+<p class="subtitle">App removed, User added, Bot → Agent</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">Before (Current)</div>
+    <div class="mockup-body" style="padding: 20px; font-family: monospace; font-size: 13px;">
+      <div style="color: #ef4444; margin-bottom: 12px;">❌ App (tenant)</div>
+      <div style="padding-left: 16px; color: #94a3b8; margin-bottom: 16px;">
+        id, name, api_token, status<br>
+        <span style="color: #475569;">↓ has many</span>
+      </div>
+      <div style="color: #f59e0b; margin-bottom: 12px;">Bot</div>
+      <div style="padding-left: 16px; color: #94a3b8;">
+        id, <span style="color: #ef4444;">app_id</span>, user_id (string), name,<br>
+        slug, access_token, status, config,<br>
+        endpoint, expires_at
+      </div>
+      <div style="margin-top: 20px; padding: 12px; background: #1a1a2e; border-radius: 6px; color: #94a3b8; font-size: 12px;">
+        Problems:<br>
+        • App ↔ User is 1:1 in SaaS, redundant<br>
+        • user_id is just a string, no real user<br>
+        • "Bot" doesn't match product language
+      </div>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">After (Refactored)</div>
+    <div class="mockup-body" style="padding: 20px; font-family: monospace; font-size: 13px;">
+      <div style="color: #34d399; margin-bottom: 12px;">✅ User (new)</div>
+      <div style="padding-left: 16px; color: #94a3b8; margin-bottom: 6px;">
+        id, email, password_hash, name,<br>
+        avatar, oauth_provider, oauth_id,<br>
+        role (user/admin), status, api_token
+      </div>
+      <div style="padding-left: 16px; color: #475569; margin-bottom: 16px;">↓ has many</div>
+      <div style="color: #60a5fa; margin-bottom: 12px;">✅ Agent (renamed from Bot)</div>
+      <div style="padding-left: 16px; color: #94a3b8;">
+        id, <span style="color: #34d399;">user_id (FK → users)</span>, name,<br>
+        slug, access_token, status, config,<br>
+        endpoint, expires_at
+      </div>
+      <div style="margin-top: 20px; padding: 12px; background: #0f2e1a; border-radius: 6px; color: #94a3b8; font-size: 12px;">
+        Changes:<br>
+        • App table deleted entirely<br>
+        • User has real auth (password/OAuth)<br>
+        • Agent.user_id is a real FK<br>
+        • Admin via user.role, not separate token
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top: 24px;">
+  <div class="mockup">
+    <div class="mockup-header">Auth Flow</div>
+    <div class="mockup-body" style="padding: 20px; font-family: monospace; font-size: 13px; color: #94a3b8;">
+      <div style="display: flex; gap: 30px;">
+        <div style="flex: 1;">
+          <div style="color: #60a5fa; font-weight: bold; margin-bottom: 8px;">User Auth (JWT)</div>
+          POST /auth/register → create user, return JWT<br>
+          POST /auth/login → verify password, return JWT<br>
+          GET /auth/oauth/:provider → OAuth redirect<br>
+          GET /auth/oauth/:provider/callback → exchange token<br>
+          <br>
+          <span style="color: #475569;">All /api/v1/* routes: Authorization: Bearer &lt;JWT&gt;</span>
+        </div>
+        <div style="flex: 1;">
+          <div style="color: #f472b6; font-weight: bold; margin-bottom: 8px;">Admin Auth</div>
+          Same JWT, but middleware checks user.role == "admin"<br>
+          <br>
+          <span style="color: #475569;">No more separate admin_token config.<br>First user created can be auto-promoted to admin,<br>or via CLI command: ./clawhost admin promote &lt;email&gt;</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

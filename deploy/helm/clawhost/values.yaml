@@ -7,8 +7,8 @@ fullnameOverride: ""
 ## ClawHost server
 server:
   image:
-    repository: clawhost
-    tag: latest
+    repository: 014388475497.dkr.ecr.us-east-2.amazonaws.com/metaverse
+    tag: clawhost
     pullPolicy: IfNotPresent
   replicas: 1
   port: 18080
@@ -34,8 +34,6 @@ postgresql:
     database: clawhost
     username: postgres
     password: "postgres"
-  storage:
-    size: 5Gi
   resources:
     requests:
       cpu: 100m
@@ -59,19 +57,18 @@ kubernetes:
 
 ## Shared storage for bot data
 storage:
-  pvcName: clawhost-shared-data
-  size: 10Gi
+  hostPath: /mnt/log/clawhost-data
   basePath: /clawhost-data
 
 ## Domain config
 ## botDomain is the only required setting. apiDomain defaults to botDomain if not set.
 domain:
-  botDomain: clawhost.ai
-  apiDomain: ""
+  botDomain: cookieclicker.ai
+  apiDomain: admin.cookieclicker.ai
 
 ## OpenClaw bot config
 openclaw:
-  image: "1panel/openclaw:latest"
+  image: "014388475497.dkr.ecr.us-east-2.amazonaws.com/metaverse:openclaw"
   imagePullSecret: ""
   gatewayPort: 18789
   nodeMaxOldSpaceSize: 6144

@@ -15,10 +15,12 @@ import (
 type AgentStatus string
 
 const (
-	AgentStatusCreated AgentStatus = "created"
-	AgentStatusRunning AgentStatus = "running"
-	AgentStatusStopped AgentStatus = "stopped"
-	AgentStatusError   AgentStatus = "error"
+	AgentStatusCreated  AgentStatus = "created"
+	AgentStatusStarting AgentStatus = "starting"
+	AgentStatusRunning  AgentStatus = "running"
+	AgentStatusStopped  AgentStatus = "stopped"
+	AgentStatusError    AgentStatus = "error"
+	AgentStatusDeleted  AgentStatus = "deleted"
 )
 
 type Agent struct {
@@ -27,6 +29,7 @@ type Agent struct {
 	Name        string          `json:"name" gorm:"type:varchar(255);not null"`
 	Slug        string          `json:"slug" gorm:"type:varchar(100);uniqueIndex"`
 	AccessToken string          `json:"access_token" gorm:"type:varchar(64)"` // Used for CLI commands and token auth
+	AccessURL   string          `json:"access_url" gorm:"-"`                  // Computed field, not stored in DB
 	Status      AgentStatus     `json:"status" gorm:"type:varchar(50);default:'created'"`
 	Config      json.RawMessage `json:"config" gorm:"type:jsonb"` // OpenClaw config (gateway, models, agents, channels)
 	Endpoint    string          `json:"endpoint" gorm:"type:varchar(255)"`
@@ -286,7 +289,7 @@ func UpdateAgentSlug(id, slug string) error {
 
 func ListAgentsByUserID(userID string) ([]*Agent, error) {
 	var agents []*Agent
-	if err := util.GetDB().Where("user_id = ?", userID).Order("created_at DESC").Find(&agents).Error; err != nil {
+	if err := util.GetDB().Where("user_id = ? AND status != ?", userID, AgentStatusDeleted).Order("created_at DESC").Find(&agents).Error; err != nil {
 		return nil, err
 	}
 	return agents, nil
@@ -306,6 +309,14 @@ func UpdateAgent(agent *Agent) error {
 
 func DeleteAgent(id string) error {
 	return util.GetDB().Where("id = ?", id).Delete(&Agent{}).Error
+}
+
+func ListAllAgents() ([]*Agent, error) {
+	var agents []*Agent
+	if err := util.GetDB().Where("status != ?", AgentStatusDeleted).Order("created_at DESC").Find(&agents).Error; err != nil {
+		return nil, err
+	}
+	return agents, nil
 }
 
 func CountAgents() (int64, error) {
@@ -333,6 +344,21 @@ func UpdateAgentStatus(id string, status AgentStatus, endpoint string) error {
 		updates["endpoint"] = endpoint
 	}
 	return util.GetDB().Model(&Agent{}).Where("id = ?", id).Updates(updates).Error
+}
+
+// ListExpiredAgents returns agents that have expired beyond the grace period,
+// ordered by expiration time (oldest first), limited to a batch size.
+func ListExpiredAgents(grace time.Duration, limit int) ([]*Agent, error) {
+	var agents []*Agent
+	cutoff := time.Now().Add(-grace)
+	if err := util.GetDB().
+		Where("expires_at IS NOT NULL AND expires_at < ? AND status != ?", cutoff, AgentStatusDeleted).
+		Order("expires_at ASC").
+		Limit(limit).
+		Find(&agents).Error; err != nil {
+		return nil, err
+	}
+	return agents, nil
 }
 
 // AutoMigrate creates the table if it doesn't exist

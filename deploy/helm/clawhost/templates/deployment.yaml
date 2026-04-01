@@ -13,6 +13,7 @@ spec:
     metadata:
       labels:
         {{- include "clawhost.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: server
     spec:
       serviceAccountName: {{ include "clawhost.fullname" . }}
       {{- if .Values.postgresql.enabled }}
@@ -42,6 +43,8 @@ spec:
             - name: config
               mountPath: /app/config.toml
               subPath: config.toml
+            - name: shared-data
+              mountPath: {{ .Values.storage.basePath }}
           resources:
             {{- toYaml .Values.server.resources | nindent 12 }}
           livenessProbe:
@@ -60,3 +63,7 @@ spec:
         - name: config
           configMap:
             name: {{ include "clawhost.fullname" . }}-config
+        - name: shared-data
+          hostPath:
+            path: {{ .Values.storage.hostPath }}
+            type: DirectoryOrCreate

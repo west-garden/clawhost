@@ -2,14 +2,17 @@ package cmd
 
 import (
 	"fmt"
+	"io/fs"
 	"log"
 	"net"
+	"net/http"
 	"strings"
 
 	v1 "github.com/clawhost/clawhost/handler/api/v1"
 	"github.com/clawhost/clawhost/handler/proxy"
 	authmw "github.com/clawhost/clawhost/middleware"
 	"github.com/clawhost/clawhost/service/k8s"
+	"github.com/clawhost/clawhost/web"
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
 	"github.com/spf13/cobra"
@@ -59,6 +62,11 @@ func startServer() {
 
 			// Skip if this is the API domain itself (no subdomain)
 			if host == apiDomain {
+				return next(c)
+			}
+
+			// Skip internal Kubernetes service DNS (*.svc.cluster.local)
+			if strings.HasSuffix(host, ".svc.cluster.local") {
 				return next(c)
 			}
 
@@ -190,6 +198,18 @@ func startServer() {
 		return c.JSON(200, map[string]string{"status": "ok"})
 	})
 
+	// Admin UI (served from embedded Next.js static export)
+	adminFS, err := fs.Sub(web.AdminFS, "admin/out")
+	if err != nil {
+		log.Printf("Warning: admin UI not available: %v", err)
+	} else {
+		adminHandler := http.FileServer(http.FS(adminFS))
+		e.GET("/admin/*", echo.WrapHandler(http.StripPrefix("/admin", adminHandler)))
+		e.GET("/admin", func(c echo.Context) error {
+			return c.Redirect(301, "/admin/")
+		})
+	}
+
 	// Agent proxy routes (for {agent_id}.clawhost.ai/*)
 	e.Any("/proxy/:agent_id", proxy.ProxyToAgent)
 	e.Any("/proxy/:agent_id/*", proxy.ProxyToAgent)
@@ -200,5 +220,6 @@ func startServer() {
 	}
 
 	log.Printf("Starting server on port %d", port)
+	log.Printf("Admin UI: http://localhost:%d/admin", port)
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%d", port)))
 }

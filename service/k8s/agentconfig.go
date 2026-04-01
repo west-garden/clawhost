@@ -20,7 +20,7 @@ func WriteConfigToAgent(ctx context.Context, botID string, config *AgentConfig, 
 	namespace := GetNamespace()
 
 	// Wait for pod to be ready and get pod name
-	podName, err := waitForPodReady(ctx, botID, 60) // 60 seconds timeout
+	podName, err := WaitForPodReady(ctx, botID, 60) // 60 seconds timeout
 	if err != nil {
 		return fmt.Errorf("failed to wait for pod ready: %w", err)
 	}
@@ -70,7 +70,7 @@ func WriteConfigToAgent(ctx context.Context, botID string, config *AgentConfig, 
 // ReadAgentRawConfig reads the openclaw.json config from a running agent's pod
 func ReadAgentRawConfig(ctx context.Context, botID string) (map[string]interface{}, error) {
 	namespace := GetNamespace()
-	podName, err := waitForPodReady(ctx, botID, 10)
+	podName, err := WaitForPodReady(ctx, botID, 10)
 	if err != nil {
 		return nil, fmt.Errorf("pod not ready: %w", err)
 	}
@@ -80,7 +80,7 @@ func ReadAgentRawConfig(ctx context.Context, botID string) (map[string]interface
 // WriteAgentRawConfig writes a full openclaw.json config to a running agent's pod
 func WriteAgentRawConfig(ctx context.Context, botID string, config map[string]interface{}) error {
 	namespace := GetNamespace()
-	podName, err := waitForPodReady(ctx, botID, 10)
+	podName, err := WaitForPodReady(ctx, botID, 10)
 	if err != nil {
 		return fmt.Errorf("pod not ready: %w", err)
 	}
@@ -123,20 +123,23 @@ func mergeConfigForModels(existing map[string]interface{}, config *AgentConfig, 
 		trustedProxies = []string{"10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "127.0.0.0/8"}
 	}
 
-	// Build auth config - preserve existing gateway.auth if present, otherwise use token auth
+	// Build auth config - always update token to match bot.AccessToken
 	var authConfig map[string]interface{}
 	if existingGateway, ok := existing["gateway"].(map[string]interface{}); ok {
 		if existingAuth, ok := existingGateway["auth"].(map[string]interface{}); ok {
-			// Preserve existing auth config
+			// Preserve existing auth config but update token
 			authConfig = existingAuth
 		}
 	}
-	// If no existing auth or access token provided, use token auth
+	// Always set/update token to match bot's AccessToken
 	if authConfig == nil {
 		authConfig = map[string]interface{}{
 			"mode":  "token",
 			"token": config.AccessToken,
 		}
+	} else {
+		// Update token even if auth config exists
+		authConfig["token"] = config.AccessToken
 	}
 	// Clean up invalid keys that OpenClaw doesn't recognize
 	delete(authConfig, "scopes")
@@ -419,13 +422,15 @@ func buildOpenClawConfig(config *AgentConfig, setDefaultModel bool) string {
 	// Build providers section
 	providersJSON := buildProvidersJSON(config)
 
-	// Build channels section if present
+	// Build channels section - always include empty channels to allow Control UI to add channels
 	channelsSection := ""
 	if len(config.Channels) > 0 {
 		channelsJSON, err := json.MarshalIndent(config.Channels, "  ", "  ")
 		if err == nil {
 			channelsSection = fmt.Sprintf(",\n  \"channels\": %s", string(channelsJSON))
 		}
+	} else {
+		channelsSection = ",\n  \"channels\": {}"
 	}
 
 	// Determine default model
@@ -470,7 +475,8 @@ func buildOpenClawConfig(config *AgentConfig, setDefaultModel bool) string {
       "openclaw-weixin": {
         "enabled": true
       }
-    }
+    },
+    "allow": ["openclaw-weixin"]
   }%s
 }`, gatewaySection, agentsSection, providersJSON, channelsSection)
 	}
@@ -487,7 +493,8 @@ func buildOpenClawConfig(config *AgentConfig, setDefaultModel bool) string {
       "openclaw-weixin": {
         "enabled": true
       }
-    }
+    },
+    "allow": ["openclaw-weixin"]
   }%s
 }`, gatewaySection, providersJSON, channelsSection)
 }
