@@ -1,85 +1,67 @@
 "use client";
 
 import { useState } from "react";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetTitle,
-} from "@/components/ui/sheet";
-import { SidebarContent } from "./sidebar";
-import type { User } from "@/types";
+import { AgentSidebarContent } from "./agent-sidebar";
+import type { Agent, User } from "@/types";
+import { ClawIcon } from "./claw-icon";
+import { Menu } from "lucide-react";
 
 export function MobileHeader({
+  agents,
   user,
   locale,
 }: {
+  agents: Agent[];
   user: User;
   locale: string;
 }) {
   const [open, setOpen] = useState(false);
 
   const initials = (user.name || user.email || "?")
-    .split(" ")
-    .map((s) => s[0])
-    .join("")
-    .toUpperCase()
-    .slice(0, 2);
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <>
       {/* Mobile header bar */}
-      <header className="flex md:hidden items-center justify-between border-b bg-white px-4 h-14">
-        <Button
-          variant="ghost"
-          size="sm"
+      <header className="flex md:hidden items-center justify-between glass-header px-4 h-14 sticky top-0 z-30">
+        <button
           onClick={() => setOpen(true)}
+          className="w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/70 hover:bg-white/10 transition-all"
           aria-label="Menu"
         >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <line x1="4" x2="20" y1="12" y2="12" />
-            <line x1="4" x2="20" y1="6" y2="6" />
-            <line x1="4" x2="20" y1="18" y2="18" />
-          </svg>
-        </Button>
-        <span className="font-semibold">ClawHost</span>
-        <Avatar className="h-8 w-8">
-          <AvatarFallback className="text-xs">{initials}</AvatarFallback>
-        </Avatar>
-      </header>
+          <Menu className="w-4 h-4" />
+        </button>
 
-      {/* Desktop header bar (just avatar, right side) */}
-      <header className="hidden md:flex items-center justify-end border-b bg-white px-6 h-14">
         <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">{user.name || user.email}</span>
-          <Avatar className="h-8 w-8">
-            <AvatarFallback className="text-xs">{initials}</AvatarFallback>
-          </Avatar>
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center">
+            <ClawIcon className="w-4 h-4" />
+          </div>
+          <span className="font-semibold text-sm text-white">ClawHost</span>
+        </div>
+
+        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-500/20 to-red-700/20 border border-white/10 flex items-center justify-center">
+          <span className="text-[10px] font-medium text-white">{initials}</span>
         </div>
       </header>
 
-      {/* Mobile sidebar sheet */}
-      <Sheet open={open} onOpenChange={setOpen}>
-        <SheetContent side="left" className="w-60 p-0">
-          <SheetTitle className="sr-only">Navigation</SheetTitle>
-          <SidebarContent
-            user={user}
-            locale={locale}
-            onNavigate={() => setOpen(false)}
+      {/* Mobile sidebar overlay */}
+      {open && (
+        <>
+          <div
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 md:hidden"
+            onClick={() => setOpen(false)}
           />
-        </SheetContent>
-      </Sheet>
+          <div className="fixed top-0 left-0 bottom-0 w-[260px] agent-sidebar z-50 md:hidden">
+            <AgentSidebarContent
+              agents={agents}
+              user={user}
+              locale={locale}
+              onNavigate={() => setOpen(false)}
+            />
+          </div>
+        </>
+      )}
     </>
   );
 }
