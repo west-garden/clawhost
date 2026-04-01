@@ -29,41 +29,41 @@ const sessionCookieName = "_claw_session"
 
 // sessionCookieValue generates an HMAC-SHA256 signature for the session cookie.
 // Using HMAC rather than storing the raw token prevents cookie leaks from exposing the access token.
-func sessionCookieValue(botID, accessToken string) string {
+func sessionCookieValue(agentID, accessToken string) string {
 	mac := hmac.New(sha256.New, []byte(accessToken))
-	mac.Write([]byte(botID))
+	mac.Write([]byte(agentID))
 	return hex.EncodeToString(mac.Sum(nil))
 }
 
 // validateSession checks if the request carries a valid ?token= or session cookie.
 // Returns the access token on success, or an empty string on failure.
-func validateSession(c echo.Context, bot *model.Bot) (accessToken string, ok bool) {
+func validateSession(c echo.Context, agent *model.Agent) (accessToken string, ok bool) {
 	// 1. Check ?token= query parameter
-	if token := c.QueryParam("token"); token != "" && token == bot.AccessToken {
-		return bot.AccessToken, true
+	if token := c.QueryParam("token"); token != "" && token == agent.AccessToken {
+		return agent.AccessToken, true
 	}
 
 	// 2. Check Authorization header (Bearer <token>)
 	if auth := c.Request().Header.Get("Authorization"); auth != "" {
-		if token := strings.TrimPrefix(auth, "Bearer "); token != auth && token == bot.AccessToken {
-			return bot.AccessToken, true
+		if token := strings.TrimPrefix(auth, "Bearer "); token != auth && token == agent.AccessToken {
+			return agent.AccessToken, true
 		}
 	}
 
 	// 3. Check session cookie
 	cookie, err := c.Cookie(sessionCookieName)
-	if err == nil && cookie.Value == sessionCookieValue(bot.ID, bot.AccessToken) {
-		return bot.AccessToken, true
+	if err == nil && cookie.Value == sessionCookieValue(agent.ID, agent.AccessToken) {
+		return agent.AccessToken, true
 	}
 
 	return "", false
 }
 
 // setSessionCookie sets an HttpOnly session cookie so subsequent requests don't need ?token=.
-func setSessionCookie(c echo.Context, bot *model.Bot) {
+func setSessionCookie(c echo.Context, agent *model.Agent) {
 	c.SetCookie(&http.Cookie{
 		Name:     sessionCookieName,
-		Value:    sessionCookieValue(bot.ID, bot.AccessToken),
+		Value:    sessionCookieValue(agent.ID, agent.AccessToken),
 		Path:     "/",
 		HttpOnly: true,
 		SameSite: http.SameSiteLaxMode,
@@ -108,23 +108,23 @@ func isNotPairedResponse(body []byte) bool {
 
 var (
 	activePollersMu sync.Mutex
-	activePollers   = make(map[string]bool) // botID -> polling in progress
+	activePollers   = make(map[string]bool) // agentID -> polling in progress
 )
 
 // autoApprovePoller polls for pending devices and approves them over a short period.
-func autoApprovePoller(botID, accessToken string) {
-	// Prevent duplicate pollers for the same bot
+func autoApprovePoller(agentID, accessToken string) {
+	// Prevent duplicate pollers for the same agent
 	activePollersMu.Lock()
-	if activePollers[botID] {
+	if activePollers[agentID] {
 		activePollersMu.Unlock()
 		return
 	}
-	activePollers[botID] = true
+	activePollers[agentID] = true
 	activePollersMu.Unlock()
 
 	defer func() {
 		activePollersMu.Lock()
-		delete(activePollers, botID)
+		delete(activePollers, agentID)
 		activePollersMu.Unlock()
 	}()
 
@@ -132,37 +132,37 @@ func autoApprovePoller(botID, accessToken string) {
 	// Poll every 2 seconds for ~16 seconds to catch newly pending devices
 	for i := 0; i < 8; i++ {
 		time.Sleep(2 * time.Second)
-		if err := k8s.AutoApproveAllPending(ctx, botID, accessToken); err != nil {
-			fmt.Printf("[AutoApprove] Poller error for bot %s: %v\n", botID, err)
+		if err := k8s.AutoApproveAllPending(ctx, agentID, accessToken); err != nil {
+			fmt.Printf("[AutoApprove] Poller error for agent %s: %v\n", agentID, err)
 		}
 	}
 }
 
-// ProxyToBot proxies requests to the OpenClaw bot
-// Path format: /proxy/{bot_id_or_slug}/*
-func ProxyToBot(c echo.Context) error {
-	botIdentifier := c.Param("bot_id")
-	if botIdentifier == "" {
-		return util.BadRequest(c, "bot_id or slug is required")
+// ProxyToAgent proxies requests to the OpenClaw agent
+// Path format: /proxy/{agent_id_or_slug}/*
+func ProxyToAgent(c echo.Context) error {
+	agentIdentifier := c.Param("agent_id")
+	if agentIdentifier == "" {
+		return util.BadRequest(c, "agent_id or slug is required")
 	}
 
-	// Get bot info - determine if it's an ID (UUID format) or slug (short string)
-	var bot *model.Bot
+	// Get agent info - determine if it's an ID (UUID format) or slug (short string)
+	var agent *model.Agent
 	var err error
-	if isUUID(botIdentifier) {
-		bot, err = model.GetBotByID(botIdentifier)
+	if isUUID(agentIdentifier) {
+		agent, err = model.GetAgentByID(agentIdentifier)
 	} else {
-		bot, err = model.GetBotBySlug(botIdentifier)
+		agent, err = model.GetAgentBySlug(agentIdentifier)
 	}
 	if err != nil {
 		if err == gorm.ErrRecordNotFound {
-			return util.NotFound(c, "bot not found")
+			return util.NotFound(c, "agent not found")
 		}
-		return util.InternalError(c, "failed to get bot")
+		return util.InternalError(c, "failed to get agent")
 	}
 
-	if bot.Status != model.BotStatusRunning {
-		return util.BadRequest(c, "bot is not running")
+	if agent.Status != model.AgentStatusRunning {
+		return util.BadRequest(c, "agent is not running")
 	}
 
 	// Get the remaining path early so we can decide which backend to route to
@@ -181,16 +181,16 @@ func ProxyToBot(c echo.Context) error {
 	var targetHost string
 	if isAPIPath || isWS {
 		// API and WebSocket requests must reach the OpenClaw gateway directly
-		targetHost, err = k8s.GetServiceEndpoint(context.Background(), bot.ID)
+		targetHost, err = k8s.GetServiceEndpoint(context.Background(), agent.ID)
 	} else {
 		// WebUI requests go to ChatClaw if available, otherwise gateway
-		targetHost, err = k8s.GetWebUIEndpoint(context.Background(), bot.ID)
+		targetHost, err = k8s.GetWebUIEndpoint(context.Background(), agent.ID)
 	}
 	if err != nil {
 		return util.InternalError(c, "failed to get service endpoint")
 	}
 	if targetHost == "" {
-		return util.NotFound(c, "bot service not found")
+		return util.NotFound(c, "agent service not found")
 	}
 
 	// Determine auth mode based on which port we're routing to.
@@ -199,7 +199,7 @@ func ProxyToBot(c echo.Context) error {
 	chatclawMode := strings.HasSuffix(targetHost, fmt.Sprintf(":%d", k8s.ChatClawPort()))
 	accessToken := ""
 	if chatclawMode {
-		token, ok := validateSession(c, bot)
+		token, ok := validateSession(c, agent)
 		if !ok {
 			// Distinguish between invalid token and no credentials at all
 			if t := c.QueryParam("token"); t != "" {
@@ -212,18 +212,18 @@ func ProxyToBot(c echo.Context) error {
 			})
 		}
 		accessToken = token
-		setSessionCookie(c, bot)
+		setSessionCookie(c, agent)
 	} else {
 		// Legacy OpenClaw WebUI: auto-approval via polling
-		if token := c.QueryParam("token"); token != "" && token == bot.AccessToken {
-			accessToken = bot.AccessToken
-			go autoApprovePoller(bot.ID, accessToken)
+		if token := c.QueryParam("token"); token != "" && token == agent.AccessToken {
+			accessToken = agent.AccessToken
+			go autoApprovePoller(agent.ID, accessToken)
 		}
 	}
 
 	// Check if this is a WebSocket upgrade request
 	if isWS {
-		return proxyWebSocket(c, targetHost, remainingPath, bot.ID, accessToken)
+		return proxyWebSocket(c, targetHost, remainingPath, agent.ID, accessToken)
 	}
 
 	// Regular HTTP proxy
@@ -242,9 +242,9 @@ func ProxyToBot(c echo.Context) error {
 		req.URL.RawQuery = c.QueryString()
 
 		// For API paths routed to gateway, ensure the gateway auth token is set.
-		// The bot's AccessToken is the same token configured in openclaw.json gateway.auth.token.
-		if isAPIPath && bot.AccessToken != "" {
-			req.Header.Set("Authorization", "Bearer "+bot.AccessToken)
+		// The agent's AccessToken is the same token configured in openclaw.json gateway.auth.token.
+		if isAPIPath && agent.AccessToken != "" {
+			req.Header.Set("Authorization", "Bearer "+agent.AccessToken)
 		}
 
 		// Forward real client IP
@@ -259,7 +259,7 @@ func ProxyToBot(c echo.Context) error {
 
 	// Auto-approve NOT_PAIRED HTTP responses so subsequent client retries succeed
 	if accessToken != "" {
-		botID := bot.ID
+		agentID := agent.ID
 		token := accessToken
 		proxy.ModifyResponse = func(resp *http.Response) error {
 			if resp.StatusCode < 400 {
@@ -272,11 +272,11 @@ func ProxyToBot(c echo.Context) error {
 			resp.Body = io.NopCloser(bytes.NewReader(body))
 
 			if isNotPairedResponse(body) {
-				fmt.Printf("[Proxy] NOT_PAIRED detected in HTTP response for bot %s, auto-approving...\n", botID)
+				fmt.Printf("[Proxy] NOT_PAIRED detected in HTTP response for agent %s, auto-approving...\n", agentID)
 				go func() {
 					ctx := context.Background()
-					if err := k8s.AutoApproveAllPending(ctx, botID, token); err != nil {
-						fmt.Printf("[Proxy] Auto-approve (HTTP) failed for bot %s: %v\n", botID, err)
+					if err := k8s.AutoApproveAllPending(ctx, agentID, token); err != nil {
+						fmt.Printf("[Proxy] Auto-approve (HTTP) failed for agent %s: %v\n", agentID, err)
 					}
 				}()
 			}
@@ -320,7 +320,7 @@ func buildWSRequestHeaders(c echo.Context, targetHost string) http.Header {
 	return requestHeader
 }
 
-func proxyWebSocket(c echo.Context, targetHost, path, botID, accessToken string) error {
+func proxyWebSocket(c echo.Context, targetHost, path, agentID, accessToken string) error {
 	// Upgrade client connection
 	clientConn, err := upgrader.Upgrade(c.Response(), c.Request(), nil)
 	if err != nil {
@@ -346,18 +346,18 @@ func proxyWebSocket(c echo.Context, targetHost, path, botID, accessToken string)
 		body, readErr := io.ReadAll(resp.Body)
 		resp.Body.Close()
 		if readErr == nil && isNotPairedResponse(body) {
-			fmt.Printf("[Proxy] NOT_PAIRED detected during WS handshake for bot %s, auto-approving...\n", botID)
+			fmt.Printf("[Proxy] NOT_PAIRED detected during WS handshake for agent %s, auto-approving...\n", agentID)
 
 			// Approve all pending devices (synchronous - wait for completion before retry)
 			ctx := context.Background()
-			if approveErr := k8s.AutoApproveAllPending(ctx, botID, accessToken); approveErr != nil {
-				fmt.Printf("[Proxy] Auto-approve (WS) failed for bot %s: %v\n", botID, approveErr)
+			if approveErr := k8s.AutoApproveAllPending(ctx, agentID, accessToken); approveErr != nil {
+				fmt.Printf("[Proxy] Auto-approve (WS) failed for agent %s: %v\n", agentID, approveErr)
 			}
 
 			// Retry WebSocket connection after approval
 			backendConn, _, err = websocket.DefaultDialer.Dial(backendURL.String(), requestHeader)
 			if err == nil {
-				fmt.Printf("[Proxy] WS retry succeeded for bot %s after auto-approval\n", botID)
+				fmt.Printf("[Proxy] WS retry succeeded for agent %s after auto-approval\n", agentID)
 			}
 		}
 	}
@@ -403,11 +403,11 @@ func proxyWebSocket(c echo.Context, targetHost, path, botID, accessToken string)
 			if firstMessage && accessToken != "" {
 				firstMessage = false
 				if isNotPairedResponse(msg) {
-					fmt.Printf("[Proxy] NOT_PAIRED detected in WS message for bot %s, auto-approving...\n", botID)
+					fmt.Printf("[Proxy] NOT_PAIRED detected in WS message for agent %s, auto-approving...\n", agentID)
 					go func() {
 						ctx := context.Background()
-						if err := k8s.AutoApproveAllPending(ctx, botID, accessToken); err != nil {
-							fmt.Printf("[Proxy] Auto-approve (WS msg) failed for bot %s: %v\n", botID, err)
+						if err := k8s.AutoApproveAllPending(ctx, agentID, accessToken); err != nil {
+							fmt.Printf("[Proxy] Auto-approve (WS msg) failed for agent %s: %v\n", agentID, err)
 						}
 					}()
 				}
