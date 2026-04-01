@@ -43,7 +43,7 @@ func startServer() {
 	apiDomain := viper.GetString("domain.api_domain")
 
 	// Subdomain routing middleware (must run BEFORE routing with e.Pre)
-	// {bot-id}.any-domain/* -> /proxy/{bot-id}/*
+	// {agent-id}.any-domain/* -> /proxy/{agent-id}/*
 	e.Pre(func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
 			host := c.Request().Host
@@ -62,12 +62,12 @@ func startServer() {
 				return next(c)
 			}
 
-			// Extract first subdomain segment as bot ID
+			// Extract first subdomain segment as agent ID
 			if dotIdx := strings.Index(host, "."); dotIdx > 0 {
-				botID := host[:dotIdx]
-				if botID != "" {
+				agentID := host[:dotIdx]
+				if agentID != "" {
 					path := c.Request().URL.Path
-					c.Request().URL.Path = "/proxy/" + botID + path
+					c.Request().URL.Path = "/proxy/" + agentID + path
 					return next(c)
 				}
 			}
@@ -80,93 +80,109 @@ func startServer() {
 	e.Use(middleware.Recover())
 	e.Use(middleware.CORS())
 
-	// API routes: /bot/api/v1/*
-	api := e.Group("/bot/api/v1")
-	api.Use(authmw.BearerAuth()) // Bearer token authentication
+	// Auth routes (no auth required)
+	auth := e.Group("/auth")
+	auth.POST("/register", v1.Register)
+	auth.POST("/login", v1.Login)
+	auth.POST("/refresh", v1.Refresh)
+	auth.GET("/oauth/:provider", v1.OAuthRedirect)
+	auth.GET("/oauth/:provider/callback", v1.OAuthCallback)
+
+	// Auth routes requiring JWT
+	authProtected := e.Group("/auth")
+	authProtected.Use(authmw.JWTAuth())
+	authProtected.GET("/me", v1.GetProfile)
+	authProtected.PUT("/me", v1.UpdateProfile)
+	authProtected.PUT("/me/password", v1.ChangePassword)
+
+	// API routes: /api/v1/*
+	api := e.Group("/api/v1")
+	api.Use(authmw.JWTAuth()) // JWT authentication
 	{
-		// Bot collection routes (no ownership check needed)
-		api.POST("/bots", v1.CreateBot)
-		api.GET("/bots", v1.ListBots)
+		// Agent collection routes (no ownership check needed)
+		api.POST("/agents", v1.CreateAgent)
+		api.GET("/agents", v1.ListAgents)
 	}
 
-	// Bot instance routes: require ownership validation
-	botAPI := api.Group("/bots/:id")
-	botAPI.Use(authmw.BotOwnerAuth()) // Verify authenticated app owns the bot
+	// Agent instance routes: require ownership validation
+	agentAPI := api.Group("/agents/:id")
+	agentAPI.Use(authmw.AgentOwnerAuth()) // Verify authenticated user owns the agent
 	{
-		// Bot CRUD
-		botAPI.GET("", v1.GetBot)
-		botAPI.PUT("", v1.UpdateBot)
-		botAPI.DELETE("", v1.DeleteBot)
+		// Agent CRUD
+		agentAPI.GET("", v1.GetAgent)
+		agentAPI.PUT("", v1.UpdateAgent)
+		agentAPI.DELETE("", v1.DeleteAgent)
 
-		// Bot lifecycle
-		botAPI.POST("/start", v1.StartBot)
-		botAPI.POST("/stop", v1.StopBot)
-		botAPI.POST("/restart", v1.RestartBot)
-		botAPI.GET("/status", v1.GetBotStatus)
-		botAPI.GET("/connect", v1.GetBotConnect)
-		botAPI.POST("/reset-token", v1.ResetBotToken)
+		// Agent lifecycle
+		agentAPI.POST("/start", v1.StartAgent)
+		agentAPI.POST("/stop", v1.StopAgent)
+		agentAPI.POST("/restart", v1.RestartAgent)
+		agentAPI.GET("/status", v1.GetAgentStatus)
+		agentAPI.GET("/connect", v1.GetAgentConnect)
+		agentAPI.POST("/reset-token", v1.ResetAgentToken)
 
 		// Skills management
-		botAPI.GET("/skills", v1.ListSkills)
-		botAPI.PUT("/skills/:name", v1.UpdateSkill)
-		botAPI.DELETE("/skills/:name", v1.DeleteSkill)
+		agentAPI.GET("/skills", v1.ListSkills)
+		agentAPI.PUT("/skills/:name", v1.UpdateSkill)
+		agentAPI.DELETE("/skills/:name", v1.DeleteSkill)
 
 		// Channels management (IM integrations)
-		botAPI.POST("/channels", v1.AddChannel)
-		botAPI.GET("/channels", v1.ListChannels)
-		botAPI.DELETE("/channels/:channel", v1.RemoveChannel)
+		agentAPI.POST("/channels", v1.AddChannel)
+		agentAPI.GET("/channels", v1.ListChannels)
+		agentAPI.DELETE("/channels/:channel", v1.RemoveChannel)
 
 		// Channel pairing management
-		botAPI.GET("/channels/:channel/pairing", v1.ListChannelPairingRequests)
-		botAPI.POST("/channels/:channel/pairing/approve", v1.ApproveChannelPairing)
-		botAPI.POST("/channels/:channel/pairing/revoke", v1.RevokeChannelPairing)
-		botAPI.GET("/channels/:channel/pairing/users", v1.GetChannelPairedUsers)
+		agentAPI.GET("/channels/:channel/pairing", v1.ListChannelPairingRequests)
+		agentAPI.POST("/channels/:channel/pairing/approve", v1.ApproveChannelPairing)
+		agentAPI.POST("/channels/:channel/pairing/revoke", v1.RevokeChannelPairing)
+		agentAPI.GET("/channels/:channel/pairing/users", v1.GetChannelPairedUsers)
 
 		// WeChat channel management (QR code login + multi-account)
-		botAPI.POST("/channels/wechat/login", v1.WechatLoginStart)
-		botAPI.GET("/channels/wechat/login/status", v1.WechatLoginStatus)
-		botAPI.GET("/channels/wechat/accounts", v1.WechatListAccounts)
-		botAPI.DELETE("/channels/wechat/accounts/:account_id", v1.WechatRemoveAccount)
+		agentAPI.POST("/channels/wechat/login", v1.WechatLoginStart)
+		agentAPI.GET("/channels/wechat/login/status", v1.WechatLoginStatus)
+		agentAPI.GET("/channels/wechat/accounts", v1.WechatListAccounts)
+		agentAPI.DELETE("/channels/wechat/accounts/:account_id", v1.WechatRemoveAccount)
 
 		// Device pairing management
-		botAPI.GET("/devices", v1.ListDevices)
-		botAPI.POST("/devices/:request_id/approve", v1.ApproveDevice)
-		botAPI.DELETE("/devices/:device_id", v1.RevokeDevice)
+		agentAPI.GET("/devices", v1.ListDevices)
+		agentAPI.POST("/devices/:request_id/approve", v1.ApproveDevice)
+		agentAPI.DELETE("/devices/:device_id", v1.RevokeDevice)
 
 		// Model providers management
-		botAPI.GET("/config/models", v1.ListModelProviders)
-		botAPI.POST("/config/models", v1.AddModelProvider)
-		botAPI.GET("/config/models/:provider", v1.GetModelProvider)
-		botAPI.PUT("/config/models/:provider", v1.UpdateModelProvider)
-		botAPI.DELETE("/config/models/:provider", v1.DeleteModelProvider)
+		agentAPI.GET("/config/models", v1.ListModelProviders)
+		agentAPI.POST("/config/models", v1.AddModelProvider)
+		agentAPI.GET("/config/models/:provider", v1.GetModelProvider)
+		agentAPI.PUT("/config/models/:provider", v1.UpdateModelProvider)
+		agentAPI.DELETE("/config/models/:provider", v1.DeleteModelProvider)
 
 		// Agent defaults management
-		botAPI.GET("/config/defaults", v1.GetAgentDefaults)
-		botAPI.PUT("/config/defaults", v1.SetAgentDefaults)
+		agentAPI.GET("/config/defaults", v1.GetAgentDefaults)
+		agentAPI.PUT("/config/defaults", v1.SetAgentDefaults)
 
 		// Raw openclaw.json config (read/write from running pod)
-		botAPI.GET("/config/raw", v1.GetBotRawConfig)
-		botAPI.PUT("/config/raw", v1.UpdateBotRawConfig)
+		agentAPI.GET("/config/raw", v1.GetAgentRawConfig)
+		agentAPI.PUT("/config/raw", v1.UpdateAgentRawConfig)
 	}
 
-	// Admin API routes: /bot/api/v1/admin/* (requires admin token)
-	admin := e.Group("/bot/api/v1/admin")
+	// Admin API routes: /api/v1/admin/* (requires JWT + admin role)
+	admin := e.Group("/api/v1/admin")
+	admin.Use(authmw.JWTAuth())
 	admin.Use(authmw.AdminAuth())
 	{
-		// App management
-		admin.POST("/apps", v1.CreateApp)
-		admin.GET("/apps", v1.ListApps)
-		admin.GET("/apps/:id", v1.GetApp)
-		admin.PUT("/apps/:id", v1.UpdateApp)
-		admin.DELETE("/apps/:id", v1.DeleteApp)
-		admin.POST("/apps/:id/reset-token", v1.ResetAppToken)
+		// TODO(Task 11): User management — handlers will be created in Task 11
+		// admin.GET("/users", v1.ListUsersAdmin)
+		// admin.PUT("/users/:id", v1.UpdateUserAdmin)
 
-		// Bot upgrade management
-		admin.POST("/bots/upgrade", v1.UpgradeAllBots)
-		admin.POST("/bots/:id/upgrade", v1.UpgradeBot)
+		// TODO(Task 11): Agent overview and stats
+		// admin.GET("/agents", v1.ListAllAgentsAdmin)
+		// admin.GET("/stats", v1.GetStats)
 
-		// Bot restart management (full pod spec rebuild)
-		admin.POST("/bots/restart", v1.RestartAllBots)
+		// Agent upgrade management
+		admin.POST("/agents/upgrade", v1.UpgradeAllAgents)
+		admin.POST("/agents/:id/upgrade", v1.UpgradeAgent)
+
+		// Agent restart management (full pod spec rebuild)
+		admin.POST("/agents/restart", v1.RestartAllAgents)
 	}
 
 	// Health check
@@ -174,9 +190,9 @@ func startServer() {
 		return c.JSON(200, map[string]string{"status": "ok"})
 	})
 
-	// Bot proxy routes (for {bot_id}.clawhost.ai/*)
-	e.Any("/proxy/:bot_id", proxy.ProxyToBot)
-	e.Any("/proxy/:bot_id/*", proxy.ProxyToBot)
+	// Agent proxy routes (for {agent_id}.clawhost.ai/*)
+	e.Any("/proxy/:agent_id", proxy.ProxyToAgent)
+	e.Any("/proxy/:agent_id/*", proxy.ProxyToAgent)
 
 	port := viper.GetInt("server.port")
 	if port == 0 {
