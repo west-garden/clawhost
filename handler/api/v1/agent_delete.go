@@ -10,30 +10,30 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-func DeleteBot(c echo.Context) error {
-	bot := middleware.GetBotFromContext(c)
-	if bot == nil {
+func DeleteAgent(c echo.Context) error {
+	agent := middleware.GetAgentFromContext(c)
+	if agent == nil {
 		return util.Forbidden(c, "not authorized")
 	}
 
 	ctx := context.Background()
 
 	// Delete K8s resources if running
-	if bot.Status == model.BotStatusRunning {
-		if err := k8s.DeleteDeployment(ctx, bot.ID); err != nil {
+	if agent.Status == model.AgentStatusRunning {
+		if err := k8s.DeleteDeployment(ctx, agent.ID); err != nil {
 			return util.InternalError(c, "failed to delete deployment")
 		}
-		if err := k8s.DeleteService(ctx, bot.ID); err != nil {
+		if err := k8s.DeleteService(ctx, agent.ID); err != nil {
 			return util.InternalError(c, "failed to delete service")
 		}
 	}
 
 	// Delete from database
-	if err := model.DeleteBot(bot.ID); err != nil {
-		return util.InternalError(c, "failed to delete bot")
+	if err := model.DeleteAgent(agent.ID); err != nil {
+		return util.InternalError(c, "failed to delete agent")
 	}
 
 	// TODO: Clean up NAS data directory
 
-	return util.Success(c, map[string]string{"message": "bot deleted"})
+	return util.Success(c, map[string]string{"message": "agent deleted"})
 }

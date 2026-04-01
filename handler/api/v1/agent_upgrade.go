@@ -13,17 +13,17 @@ import (
 	"github.com/spf13/viper"
 )
 
-type UpgradeBotsRequest struct {
+type UpgradeAgentsRequest struct {
 	Image string `json:"image"` // Target image, defaults to config value if empty
 }
 
 type UpgradeResult struct {
-	BotID   string `json:"bot_id"`
+	AgentID string `json:"agent_id"`
 	Status  string `json:"status"` // "upgraded", "failed", "skipped"
 	Message string `json:"message,omitempty"`
 }
 
-type UpgradeBotsResponse struct {
+type UpgradeAgentsResponse struct {
 	Image    string          `json:"image"`
 	Total    int             `json:"total"`
 	Upgraded int64           `json:"upgraded"`
@@ -32,24 +32,24 @@ type UpgradeBotsResponse struct {
 	Results  []UpgradeResult `json:"results"`
 }
 
-// UpgradeBot upgrades a single bot's openclaw image
-// POST /bot/api/v1/admin/bots/:id/upgrade
-func UpgradeBot(c echo.Context) error {
-	botID := c.Param("id")
-	if botID == "" {
-		return util.BadRequest(c, "bot id is required")
+// UpgradeAgent upgrades a single agent's openclaw image
+// POST /api/v1/admin/agents/:id/upgrade
+func UpgradeAgent(c echo.Context) error {
+	agentID := c.Param("id")
+	if agentID == "" {
+		return util.BadRequest(c, "agent id is required")
 	}
 
-	bot, err := model.GetBotByID(botID)
+	agent, err := model.GetAgentByID(agentID)
 	if err != nil {
-		return util.NotFound(c, "bot not found")
+		return util.NotFound(c, "agent not found")
 	}
 
-	if bot.Status != model.BotStatusRunning {
-		return util.BadRequest(c, "bot is not running")
+	if agent.Status != model.AgentStatusRunning {
+		return util.BadRequest(c, "agent is not running")
 	}
 
-	var req UpgradeBotsRequest
+	var req UpgradeAgentsRequest
 	if err := c.Bind(&req); err != nil {
 		return util.BadRequest(c, "invalid request body")
 	}
@@ -65,7 +65,7 @@ func UpgradeBot(c echo.Context) error {
 	ctx := context.Background()
 
 	// Check current image
-	currentImage, _ := k8s.GetDeploymentImage(ctx, bot.ID)
+	currentImage, _ := k8s.GetDeploymentImage(ctx, agent.ID)
 	if currentImage == image {
 		return util.Success(c, map[string]string{
 			"status":  "skipped",
@@ -74,14 +74,14 @@ func UpgradeBot(c echo.Context) error {
 		})
 	}
 
-	if err := k8s.UpdateDeploymentImage(ctx, bot.ID, image); err != nil {
+	if err := k8s.UpdateDeploymentImage(ctx, agent.ID, image); err != nil {
 		return util.InternalError(c, "failed to upgrade: "+err.Error())
 	}
 
 	// Sync config to new pod after image upgrade (applies latest gateway settings)
 	go func() {
-		if err := k8s.SyncConfigToPod(context.Background(), bot.ID); err != nil {
-			fmt.Printf("[Upgrade] failed to sync config for bot %s: %v\n", bot.ID, err)
+		if err := k8s.SyncConfigToPod(context.Background(), agent.ID); err != nil {
+			fmt.Printf("[Upgrade] failed to sync config for agent %s: %v\n", agent.ID, err)
 		}
 	}()
 
@@ -92,10 +92,10 @@ func UpgradeBot(c echo.Context) error {
 	})
 }
 
-// UpgradeAllBots upgrades all running bots to a new openclaw image
-// POST /bot/api/v1/admin/bots/upgrade
-func UpgradeAllBots(c echo.Context) error {
-	var req UpgradeBotsRequest
+// UpgradeAllAgents upgrades all running agents to a new openclaw image
+// POST /api/v1/admin/agents/upgrade
+func UpgradeAllAgents(c echo.Context) error {
+	var req UpgradeAgentsRequest
 	if err := c.Bind(&req); err != nil {
 		return util.BadRequest(c, "invalid request body")
 	}
@@ -108,13 +108,13 @@ func UpgradeAllBots(c echo.Context) error {
 		return util.BadRequest(c, "no image specified")
 	}
 
-	bots, err := model.ListBotsByStatus(model.BotStatusRunning)
+	agents, err := model.ListAgentsByStatus(model.AgentStatusRunning)
 	if err != nil {
-		return util.InternalError(c, "failed to list running bots")
+		return util.InternalError(c, "failed to list running agents")
 	}
 
-	if len(bots) == 0 {
-		return util.Success(c, &UpgradeBotsResponse{
+	if len(agents) == 0 {
+		return util.Success(c, &UpgradeAgentsResponse{
 			Image: image,
 			Total: 0,
 		})
@@ -122,23 +122,23 @@ func UpgradeAllBots(c echo.Context) error {
 
 	ctx := context.Background()
 	var upgraded, failed, skipped atomic.Int64
-	results := make([]UpgradeResult, len(bots))
+	results := make([]UpgradeResult, len(agents))
 
 	// Upgrade concurrently with limited parallelism
 	var wg sync.WaitGroup
 	sem := make(chan struct{}, 10) // max 10 concurrent upgrades
 
-	for i, bot := range bots {
+	for i, agent := range agents {
 		wg.Add(1)
-		go func(idx int, b *model.Bot) {
+		go func(idx int, a *model.Agent) {
 			defer wg.Done()
 			sem <- struct{}{}
 			defer func() { <-sem }()
 
-			result := UpgradeResult{BotID: b.ID}
+			result := UpgradeResult{AgentID: a.ID}
 
 			// Check current image
-			currentImage, err := k8s.GetDeploymentImage(ctx, b.ID)
+			currentImage, err := k8s.GetDeploymentImage(ctx, a.ID)
 			if err != nil {
 				// Deployment might not exist, skip
 				skipped.Add(1)
@@ -156,7 +156,7 @@ func UpgradeAllBots(c echo.Context) error {
 				return
 			}
 
-			if err := k8s.UpdateDeploymentImage(ctx, b.ID, image); err != nil {
+			if err := k8s.UpdateDeploymentImage(ctx, a.ID, image); err != nil {
 				failed.Add(1)
 				result.Status = "failed"
 				result.Message = err.Error()
@@ -164,21 +164,21 @@ func UpgradeAllBots(c echo.Context) error {
 				upgraded.Add(1)
 				result.Status = "upgraded"
 				// Sync config to new pod after image upgrade
-				go func(botID string) {
-					if err := k8s.SyncConfigToPod(context.Background(), botID); err != nil {
-						fmt.Printf("[Upgrade] failed to sync config for bot %s: %v\n", botID, err)
+				go func(agentID string) {
+					if err := k8s.SyncConfigToPod(context.Background(), agentID); err != nil {
+						fmt.Printf("[Upgrade] failed to sync config for agent %s: %v\n", agentID, err)
 					}
-				}(b.ID)
+				}(a.ID)
 			}
 			results[idx] = result
-		}(i, bot)
+		}(i, agent)
 	}
 
 	wg.Wait()
 
-	return util.Success(c, &UpgradeBotsResponse{
+	return util.Success(c, &UpgradeAgentsResponse{
 		Image:    image,
-		Total:    len(bots),
+		Total:    len(agents),
 		Upgraded: upgraded.Load(),
 		Failed:   failed.Load(),
 		Skipped:  skipped.Load(),

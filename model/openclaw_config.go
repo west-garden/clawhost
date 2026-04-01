@@ -232,31 +232,31 @@ type HookEntryConfig struct {
 	Enabled bool `json:"enabled,omitempty"`
 }
 
-// GetBotOpenClawConfig returns the OpenClaw configuration from bot.Config
-func (b *Bot) GetOpenClawConfig() (*OpenClawConfig, error) {
-	if b.Config == nil {
+// GetOpenClawConfig returns the OpenClaw configuration from agent.Config
+func (a *Agent) GetOpenClawConfig() (*OpenClawConfig, error) {
+	if a.Config == nil {
 		return &OpenClawConfig{}, nil
 	}
 	var config OpenClawConfig
-	if err := json.Unmarshal(b.Config, &config); err != nil {
+	if err := json.Unmarshal(a.Config, &config); err != nil {
 		return nil, err
 	}
 	return &config, nil
 }
 
-// SetOpenClawConfig sets the OpenClaw configuration to bot.Config
-func (b *Bot) SetOpenClawConfig(config *OpenClawConfig) error {
+// SetOpenClawConfig sets the OpenClaw configuration to agent.Config
+func (a *Agent) SetOpenClawConfig(config *OpenClawConfig) error {
 	data, err := json.Marshal(config)
 	if err != nil {
 		return err
 	}
-	b.Config = data
+	a.Config = data
 	return nil
 }
 
 // MergeOpenClawConfig merges partial config into existing config
-func (b *Bot) MergeOpenClawConfig(partial *OpenClawConfig) error {
-	existing, err := b.GetOpenClawConfig()
+func (a *Agent) MergeOpenClawConfig(partial *OpenClawConfig) error {
+	existing, err := a.GetOpenClawConfig()
 	if err != nil {
 		existing = &OpenClawConfig{}
 	}
@@ -315,5 +315,5 @@ func (b *Bot) MergeOpenClawConfig(partial *OpenClawConfig) error {
 		existing.Gateway = partial.Gateway
 	}
 
-	return b.SetOpenClawConfig(existing)
+	return a.SetOpenClawConfig(existing)
 }

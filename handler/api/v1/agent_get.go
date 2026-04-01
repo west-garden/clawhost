@@ -11,33 +11,33 @@ import (
 	"github.com/spf13/viper"
 )
 
-// GetBotResponse includes bot info and deployment status
-type GetBotResponse struct {
-	*model.Bot
+// GetAgentResponse includes agent info and deployment status
+type GetAgentResponse struct {
+	*model.Agent
 	DeploymentStatus *k8s.DeploymentStatusInfo `json:"deployment_status,omitempty"`
 	Image            string                     `json:"image,omitempty"`
 	LatestImage      string                     `json:"latest_image,omitempty"`
 	ImageUpToDate    *bool                      `json:"image_up_to_date,omitempty"`
 }
 
-func GetBot(c echo.Context) error {
-	bot := middleware.GetBotFromContext(c)
-	if bot == nil {
+func GetAgent(c echo.Context) error {
+	agent := middleware.GetAgentFromContext(c)
+	if agent == nil {
 		return util.Forbidden(c, "not authorized")
 	}
 
 	ctx := context.Background()
-	response := &GetBotResponse{Bot: bot}
+	response := &GetAgentResponse{Agent: agent}
 
-	// If bot is running, get deployment status, image info, and sync config
-	if bot.Status == model.BotStatusRunning {
+	// If agent is running, get deployment status, image info, and sync config
+	if agent.Status == model.AgentStatusRunning {
 		// Get deployment status
-		if statusInfo, err := k8s.GetDeploymentStatusInfo(ctx, bot.ID); err == nil {
+		if statusInfo, err := k8s.GetDeploymentStatusInfo(ctx, agent.ID); err == nil {
 			response.DeploymentStatus = statusInfo
 		}
 
 		// Get current and latest image for upgrade check
-		if currentImage, err := k8s.GetDeploymentImage(ctx, bot.ID); err == nil {
+		if currentImage, err := k8s.GetDeploymentImage(ctx, agent.ID); err == nil {
 			response.Image = currentImage
 			latestImage := viper.GetString("openclaw.image")
 			if latestImage != "" {
@@ -49,12 +49,12 @@ func GetBot(c echo.Context) error {
 
 		// Only sync config if deployment is ready (not during updates)
 		if response.DeploymentStatus != nil && response.DeploymentStatus.Status == "ready" {
-			if err := k8s.SyncConfigToDatabase(ctx, bot.ID); err != nil {
+			if err := k8s.SyncConfigToDatabase(ctx, agent.ID); err != nil {
 				c.Logger().Warnf("failed to sync config from pod: %v", err)
 			} else {
-				// Reload bot to get updated config
-				if updatedBot, err := model.GetBotByID(bot.ID); err == nil {
-					response.Bot = updatedBot
+				// Reload agent to get updated config
+				if updatedAgent, err := model.GetAgentByID(agent.ID); err == nil {
+					response.Agent = updatedAgent
 				}
 			}
 		}

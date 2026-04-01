@@ -27,7 +27,7 @@ const (
 
 // weixinLoginSession tracks an active QR login session
 type weixinLoginSession struct {
-	BotID     string
+	AgentID   string
 	Name      string // optional friendly name for the account
 	QRCode    string // opaque token for polling status
 	QRCodeURL string // image URL for the QR code
@@ -36,7 +36,7 @@ type weixinLoginSession struct {
 
 var (
 	weixinSessionsMu sync.Mutex
-	weixinSessions   = make(map[string]*weixinLoginSession) // botID -> session
+	weixinSessions   = make(map[string]*weixinLoginSession) // agentID -> session
 )
 
 // ilink API response types
@@ -53,22 +53,15 @@ type ilinkQRStatusResponse struct {
 	IlinkUserID string `json:"ilink_user_id,omitempty"`
 }
 
-// WechatLoginStart initiates a WeChat QR code login for a bot.
-// POST /bot/api/v1/bots/:id/channels/wechat/login
-//
-// Response:
-//
-//	{
-//	  "qrcode_url": "https://...",
-//	  "message": "使用微信扫描二维码"
-//	}
+// WechatLoginStart initiates a WeChat QR code login for an agent.
+// POST /api/v1/agents/:id/channels/wechat/login
 func WechatLoginStart(c echo.Context) error {
-	bot := middleware.GetBotFromContext(c)
-	if bot == nil {
+	agent := middleware.GetAgentFromContext(c)
+	if agent == nil {
 		return util.Forbidden(c, "not authorized")
 	}
-	if bot.Status != model.BotStatusRunning {
-		return util.BadRequest(c, "bot is not running")
+	if agent.Status != model.AgentStatusRunning {
+		return util.BadRequest(c, "agent is not running")
 	}
 
 	// Optional friendly name for the account
@@ -85,8 +78,8 @@ func WechatLoginStart(c echo.Context) error {
 
 	// Store session for status polling
 	weixinSessionsMu.Lock()
-	weixinSessions[bot.ID] = &weixinLoginSession{
-		BotID:     bot.ID,
+	weixinSessions[agent.ID] = &weixinLoginSession{
+		AgentID:   agent.ID,
 		Name:      body.Name,
 		QRCode:    qrResp.QRCode,
 		QRCodeURL: qrResp.QRCodeImgURL,
@@ -96,29 +89,21 @@ func WechatLoginStart(c echo.Context) error {
 
 	return util.Success(c, map[string]any{
 		"qrcode_url": qrResp.QRCodeImgURL,
-		"message":    "使用微信扫描二维码，以完成连接。",
+		"message":    "\u4f7f\u7528\u5fae\u4fe1\u626b\u63cf\u4e8c\u7ef4\u7801\uff0c\u4ee5\u5b8c\u6210\u8fde\u63a5\u3002",
 	})
 }
 
 // WechatLoginStatus polls the QR code scan status.
-// GET /bot/api/v1/bots/:id/channels/wechat/login/status
-//
-// Response:
-//
-//	{
-//	  "status": "wait|scaned|confirmed|expired",
-//	  "connected": false,
-//	  "message": "等待扫码..."
-//	}
+// GET /api/v1/agents/:id/channels/wechat/login/status
 func WechatLoginStatus(c echo.Context) error {
-	bot := middleware.GetBotFromContext(c)
-	if bot == nil {
+	agent := middleware.GetAgentFromContext(c)
+	if agent == nil {
 		return util.Forbidden(c, "not authorized")
 	}
 
 	// Get active session
 	weixinSessionsMu.Lock()
-	session := weixinSessions[bot.ID]
+	session := weixinSessions[agent.ID]
 	weixinSessionsMu.Unlock()
 
 	if session == nil {
@@ -128,12 +113,12 @@ func WechatLoginStatus(c echo.Context) error {
 	// Check if expired locally
 	if time.Since(session.CreatedAt) > weixinQRTTL {
 		weixinSessionsMu.Lock()
-		delete(weixinSessions, bot.ID)
+		delete(weixinSessions, agent.ID)
 		weixinSessionsMu.Unlock()
 		return util.Success(c, map[string]any{
 			"status":    "expired",
 			"connected": false,
-			"message":   "二维码已过期，请重新获取。",
+			"message":   "\u4e8c\u7ef4\u7801\u5df2\u8fc7\u671f\uff0c\u8bf7\u91cd\u65b0\u83b7\u53d6\u3002",
 		})
 	}
 
@@ -147,43 +132,43 @@ func WechatLoginStatus(c echo.Context) error {
 	case "confirmed":
 		// Clean up session
 		weixinSessionsMu.Lock()
-		delete(weixinSessions, bot.ID)
+		delete(weixinSessions, agent.ID)
 		weixinSessionsMu.Unlock()
 
-		// Write credentials to bot pod
+		// Write credentials to agent pod
 		if statusResp.BotToken != "" && statusResp.IlinkBotID != "" {
-			go writeWechatCredentials(bot, statusResp, session.Name)
+			go writeWechatCredentials(agent, statusResp, session.Name)
 		}
 
 		return util.Success(c, map[string]any{
 			"status":     "confirmed",
 			"connected":  true,
 			"account_id": statusResp.IlinkBotID,
-			"message":    "微信连接成功！",
+			"message":    "\u5fae\u4fe1\u8fde\u63a5\u6210\u529f\uff01",
 		})
 
 	case "scaned":
 		return util.Success(c, map[string]any{
 			"status":    "scaned",
 			"connected": false,
-			"message":   "已扫码，请在微信上确认登录。",
+			"message":   "\u5df2\u626b\u7801\uff0c\u8bf7\u5728\u5fae\u4fe1\u4e0a\u786e\u8ba4\u767b\u5f55\u3002",
 		})
 
 	case "expired":
 		weixinSessionsMu.Lock()
-		delete(weixinSessions, bot.ID)
+		delete(weixinSessions, agent.ID)
 		weixinSessionsMu.Unlock()
 		return util.Success(c, map[string]any{
 			"status":    "expired",
 			"connected": false,
-			"message":   "二维码已过期，请重新获取。",
+			"message":   "\u4e8c\u7ef4\u7801\u5df2\u8fc7\u671f\uff0c\u8bf7\u91cd\u65b0\u83b7\u53d6\u3002",
 		})
 
 	default: // "wait"
 		return util.Success(c, map[string]any{
 			"status":    "wait",
 			"connected": false,
-			"message":   "等待扫码...",
+			"message":   "\u7b49\u5f85\u626b\u7801...",
 		})
 	}
 }
@@ -252,9 +237,9 @@ func normalizeAccountID(raw string) string {
 	return s
 }
 
-// writeWechatCredentials writes credential files to the bot's pod.
+// writeWechatCredentials writes credential files to the agent's pod.
 // The plugin reads credentials from these files, NOT from openclaw.json.
-func writeWechatCredentials(bot *model.Bot, status *ilinkQRStatusResponse, name string) {
+func writeWechatCredentials(agent *model.Agent, status *ilinkQRStatusResponse, name string) {
 	ctx := context.Background()
 
 	baseURL := status.BaseURL
@@ -264,7 +249,7 @@ func writeWechatCredentials(bot *model.Bot, status *ilinkQRStatusResponse, name 
 
 	normalizedID := normalizeAccountID(status.IlinkBotID)
 
-	podName, err := k8s.GetPodName(ctx, bot.ID)
+	podName, err := k8s.GetPodName(ctx, agent.ID)
 	if err != nil {
 		fmt.Printf("[Wechat] Failed to get pod: %v\n", err)
 		return
@@ -318,22 +303,22 @@ fs.writeFileSync(f, JSON.stringify(c, null, 2));
 		fmt.Printf("[Wechat] Failed to trigger reload: %v\n", err)
 	}
 
-	fmt.Printf("[Wechat] Credentials written for bot %s, account=%s\n", bot.ID, normalizedID)
+	fmt.Printf("[Wechat] Credentials written for agent %s, account=%s\n", agent.ID, normalizedID)
 }
 
-// WechatListAccounts lists all connected WeChat accounts for a bot.
-// GET /bot/api/v1/bots/:id/channels/wechat/accounts
+// WechatListAccounts lists all connected WeChat accounts for an agent.
+// GET /api/v1/agents/:id/channels/wechat/accounts
 func WechatListAccounts(c echo.Context) error {
-	bot := middleware.GetBotFromContext(c)
-	if bot == nil {
+	agent := middleware.GetAgentFromContext(c)
+	if agent == nil {
 		return util.Forbidden(c, "not authorized")
 	}
-	if bot.Status != model.BotStatusRunning {
-		return util.BadRequest(c, "bot is not running")
+	if agent.Status != model.AgentStatusRunning {
+		return util.BadRequest(c, "agent is not running")
 	}
 
 	ctx := context.Background()
-	podName, err := k8s.GetPodName(ctx, bot.ID)
+	podName, err := k8s.GetPodName(ctx, agent.ID)
 	if err != nil {
 		return util.InternalError(c, "failed to get pod: "+err.Error())
 	}
@@ -381,15 +366,15 @@ console.log(JSON.stringify(accounts));
 	})
 }
 
-// WechatRemoveAccount removes a specific WeChat account from a bot.
-// DELETE /bot/api/v1/bots/:id/channels/wechat/accounts/:account_id
+// WechatRemoveAccount removes a specific WeChat account from an agent.
+// DELETE /api/v1/agents/:id/channels/wechat/accounts/:account_id
 func WechatRemoveAccount(c echo.Context) error {
-	bot := middleware.GetBotFromContext(c)
-	if bot == nil {
+	agent := middleware.GetAgentFromContext(c)
+	if agent == nil {
 		return util.Forbidden(c, "not authorized")
 	}
-	if bot.Status != model.BotStatusRunning {
-		return util.BadRequest(c, "bot is not running")
+	if agent.Status != model.AgentStatusRunning {
+		return util.BadRequest(c, "agent is not running")
 	}
 
 	accountID := c.Param("account_id")
@@ -398,7 +383,7 @@ func WechatRemoveAccount(c echo.Context) error {
 	}
 
 	ctx := context.Background()
-	podName, err := k8s.GetPodName(ctx, bot.ID)
+	podName, err := k8s.GetPodName(ctx, agent.ID)
 	if err != nil {
 		return util.InternalError(c, "failed to get pod: "+err.Error())
 	}

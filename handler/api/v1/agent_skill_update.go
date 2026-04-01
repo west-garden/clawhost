@@ -16,8 +16,8 @@ type UpdateSkillRequest struct {
 }
 
 func UpdateSkill(c echo.Context) error {
-	bot := middleware.GetBotFromContext(c)
-	if bot == nil {
+	agent := middleware.GetAgentFromContext(c)
+	if agent == nil {
 		return util.Forbidden(c, "not authorized")
 	}
 
@@ -35,14 +35,14 @@ func UpdateSkill(c echo.Context) error {
 		return util.BadRequest(c, "content is required")
 	}
 
-	if bot.Status != model.BotStatusRunning {
-		return util.BadRequest(c, "bot is not running, cannot update skills")
+	if agent.Status != model.AgentStatusRunning {
+		return util.BadRequest(c, "agent is not running, cannot update skills")
 	}
 
 	ctx := context.Background()
 
 	// Write skill file to pod
-	if err := writeSkillToPod(ctx, bot.ID, name, req.Content); err != nil {
+	if err := writeSkillToPod(ctx, agent.ID, name, req.Content); err != nil {
 		return util.InternalError(c, "failed to write skill: "+err.Error())
 	}
 
@@ -52,12 +52,12 @@ func UpdateSkill(c echo.Context) error {
 	})
 }
 
-func writeSkillToPod(ctx context.Context, botID, skillName, content string) error {
+func writeSkillToPod(ctx context.Context, agentID, skillName, content string) error {
 	client := k8s.GetClient()
 	namespace := k8s.GetNamespace()
 
 	// Get pod name
-	deploymentName := k8s.GetDeploymentName(botID)
+	deploymentName := k8s.GetDeploymentName(agentID)
 	pods, err := client.CoreV1().Pods(namespace).List(ctx, k8s.ListOptions(deploymentName))
 	if err != nil {
 		return fmt.Errorf("failed to list pods: %w", err)

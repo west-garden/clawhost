@@ -11,20 +11,20 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
-// GetBotRawConfig reads the openclaw.json config from the bot's running pod
-// GET /bot/api/v1/bots/:id/config/raw
-func GetBotRawConfig(c echo.Context) error {
-	bot := middleware.GetBotFromContext(c)
-	if bot == nil {
+// GetAgentRawConfig reads the openclaw.json config from the agent's running pod
+// GET /api/v1/agents/:id/config/raw
+func GetAgentRawConfig(c echo.Context) error {
+	agent := middleware.GetAgentFromContext(c)
+	if agent == nil {
 		return util.Forbidden(c, "not authorized")
 	}
 
-	if bot.Status != model.BotStatusRunning {
-		return util.BadRequest(c, "bot is not running")
+	if agent.Status != model.AgentStatusRunning {
+		return util.BadRequest(c, "agent is not running")
 	}
 
 	ctx := context.Background()
-	config, err := k8s.ReadBotConfig(ctx, bot.ID)
+	config, err := k8s.ReadAgentRawConfig(ctx, agent.ID)
 	if err != nil {
 		return util.InternalError(c, "failed to read config: "+err.Error())
 	}
@@ -32,19 +32,19 @@ func GetBotRawConfig(c echo.Context) error {
 	return util.Success(c, config)
 }
 
-// UpdateBotRawConfig writes the openclaw.json config to the bot's running pod
-// PUT /bot/api/v1/bots/:id/config/raw
+// UpdateAgentRawConfig writes the openclaw.json config to the agent's running pod
+// PUT /api/v1/agents/:id/config/raw
 //
 // Accepts either a full config (replaces entirely) or a partial config (merged).
 // Query param: ?mode=merge (default) or ?mode=replace
-func UpdateBotRawConfig(c echo.Context) error {
-	bot := middleware.GetBotFromContext(c)
-	if bot == nil {
+func UpdateAgentRawConfig(c echo.Context) error {
+	agent := middleware.GetAgentFromContext(c)
+	if agent == nil {
 		return util.Forbidden(c, "not authorized")
 	}
 
-	if bot.Status != model.BotStatusRunning {
-		return util.BadRequest(c, "bot is not running")
+	if agent.Status != model.AgentStatusRunning {
+		return util.BadRequest(c, "agent is not running")
 	}
 
 	var input map[string]interface{}
@@ -62,14 +62,14 @@ func UpdateBotRawConfig(c echo.Context) error {
 		finalConfig = input
 	} else {
 		// Merge mode (default): read existing, then merge input on top
-		existing, err := k8s.ReadBotConfig(ctx, bot.ID)
+		existing, err := k8s.ReadAgentRawConfig(ctx, agent.ID)
 		if err != nil {
 			return util.InternalError(c, "failed to read existing config: "+err.Error())
 		}
 		finalConfig = mergeMap(existing, input)
 	}
 
-	if err := k8s.WriteBotConfig(ctx, bot.ID, finalConfig); err != nil {
+	if err := k8s.WriteAgentRawConfig(ctx, agent.ID, finalConfig); err != nil {
 		return util.InternalError(c, "failed to write config: "+err.Error())
 	}
 

@@ -34,11 +34,11 @@ type AddChannelRequest struct {
 	Extra map[string]interface{} `json:"extra,omitempty"`
 }
 
-// AddChannel adds an IM channel to a bot
-// POST /bots/:id/channels
+// AddChannel adds an IM channel to an agent
+// POST /agents/:id/channels
 func AddChannel(c echo.Context) error {
-	bot := middleware.GetBotFromContext(c)
-	if bot == nil {
+	agent := middleware.GetAgentFromContext(c)
+	if agent == nil {
 		return util.Forbidden(c, "not authorized")
 	}
 
@@ -51,8 +51,8 @@ func AddChannel(c echo.Context) error {
 		return util.BadRequest(c, "channel is required")
 	}
 
-	if bot.Status != model.BotStatusRunning {
-		return util.BadRequest(c, "bot is not running")
+	if agent.Status != model.AgentStatusRunning {
+		return util.BadRequest(c, "agent is not running")
 	}
 
 	// Default account name
@@ -107,7 +107,7 @@ func AddChannel(c echo.Context) error {
 	}
 
 	// Add channel to the running pod
-	if err := k8s.AddChannelToBot(context.Background(), bot.ID, bot.AccessToken, req.Channel, account, configMap); err != nil {
+	if err := k8s.AddChannelToAgent(context.Background(), agent.ID, agent.AccessToken, req.Channel, account, configMap); err != nil {
 		return util.InternalError(c, "failed to add channel: "+err.Error())
 	}
 
@@ -118,20 +118,20 @@ func AddChannel(c echo.Context) error {
 	})
 }
 
-// ListChannels lists all channels for a bot
-// GET /bots/:id/channels
+// ListChannels lists all channels for an agent
+// GET /agents/:id/channels
 func ListChannels(c echo.Context) error {
-	bot := middleware.GetBotFromContext(c)
-	if bot == nil {
+	agent := middleware.GetAgentFromContext(c)
+	if agent == nil {
 		return util.Forbidden(c, "not authorized")
 	}
 
-	if bot.Status != model.BotStatusRunning {
-		return util.BadRequest(c, "bot is not running")
+	if agent.Status != model.AgentStatusRunning {
+		return util.BadRequest(c, "agent is not running")
 	}
 
 	// Get channels from the running pod
-	channels, err := k8s.ListBotChannels(context.Background(), bot.ID, bot.AccessToken)
+	channels, err := k8s.ListAgentChannels(context.Background(), agent.ID, agent.AccessToken)
 	if err != nil {
 		return util.InternalError(c, "failed to list channels: "+err.Error())
 	}
@@ -139,12 +139,12 @@ func ListChannels(c echo.Context) error {
 	return util.Success(c, channels)
 }
 
-// RemoveChannel removes an IM channel or specific account from a bot
-// DELETE /bots/:id/channels/:channel?account=xxx
+// RemoveChannel removes an IM channel or specific account from an agent
+// DELETE /agents/:id/channels/:channel?account=xxx
 // If account query param is provided, removes only that account; otherwise removes entire channel
 func RemoveChannel(c echo.Context) error {
-	bot := middleware.GetBotFromContext(c)
-	if bot == nil {
+	agent := middleware.GetAgentFromContext(c)
+	if agent == nil {
 		return util.Forbidden(c, "not authorized")
 	}
 
@@ -155,12 +155,12 @@ func RemoveChannel(c echo.Context) error {
 		return util.BadRequest(c, "channel is required")
 	}
 
-	if bot.Status != model.BotStatusRunning {
-		return util.BadRequest(c, "bot is not running")
+	if agent.Status != model.AgentStatusRunning {
+		return util.BadRequest(c, "agent is not running")
 	}
 
 	// Remove channel or account from the running pod
-	if err := k8s.RemoveChannelFromBot(context.Background(), bot.ID, bot.AccessToken, channel, account); err != nil {
+	if err := k8s.RemoveChannelFromAgent(context.Background(), agent.ID, agent.AccessToken, channel, account); err != nil {
 		return util.InternalError(c, "failed to remove channel: "+err.Error())
 	}
 
@@ -187,10 +187,10 @@ type ChannelPairingRevokeRequest struct {
 }
 
 // ApproveChannelPairing approves a channel pairing request
-// POST /bots/:id/channels/:channel/pairing/approve
+// POST /agents/:id/channels/:channel/pairing/approve
 func ApproveChannelPairing(c echo.Context) error {
-	bot := middleware.GetBotFromContext(c)
-	if bot == nil {
+	agent := middleware.GetAgentFromContext(c)
+	if agent == nil {
 		return util.Forbidden(c, "not authorized")
 	}
 
@@ -208,12 +208,12 @@ func ApproveChannelPairing(c echo.Context) error {
 		return util.BadRequest(c, "pairing code is required")
 	}
 
-	if bot.Status != model.BotStatusRunning {
-		return util.BadRequest(c, "bot is not running")
+	if agent.Status != model.AgentStatusRunning {
+		return util.BadRequest(c, "agent is not running")
 	}
 
 	// Approve channel pairing
-	output, err := k8s.ApproveChannelPairing(context.Background(), bot.ID, channel, req.Code)
+	output, err := k8s.ApproveChannelPairing(context.Background(), agent.ID, channel, req.Code)
 	if err != nil {
 		return util.InternalError(c, "failed to approve pairing: "+err.Error())
 	}
@@ -227,10 +227,10 @@ func ApproveChannelPairing(c echo.Context) error {
 }
 
 // RevokeChannelPairing revokes a channel pairing for a user
-// POST /bots/:id/channels/:channel/pairing/revoke
+// POST /agents/:id/channels/:channel/pairing/revoke
 func RevokeChannelPairing(c echo.Context) error {
-	bot := middleware.GetBotFromContext(c)
-	if bot == nil {
+	agent := middleware.GetAgentFromContext(c)
+	if agent == nil {
 		return util.Forbidden(c, "not authorized")
 	}
 
@@ -248,12 +248,12 @@ func RevokeChannelPairing(c echo.Context) error {
 		return util.BadRequest(c, "user_id is required")
 	}
 
-	if bot.Status != model.BotStatusRunning {
-		return util.BadRequest(c, "bot is not running")
+	if agent.Status != model.AgentStatusRunning {
+		return util.BadRequest(c, "agent is not running")
 	}
 
 	// Revoke channel pairing
-	output, err := k8s.RevokeChannelPairing(context.Background(), bot.ID, channel, req.UserID)
+	output, err := k8s.RevokeChannelPairing(context.Background(), agent.ID, channel, req.UserID)
 	if err != nil {
 		return util.InternalError(c, "failed to revoke pairing: "+err.Error())
 	}
@@ -267,10 +267,10 @@ func RevokeChannelPairing(c echo.Context) error {
 }
 
 // GetChannelPairedUsers lists all paired users for a channel
-// GET /bots/:id/channels/:channel/pairing/users
+// GET /agents/:id/channels/:channel/pairing/users
 func GetChannelPairedUsers(c echo.Context) error {
-	bot := middleware.GetBotFromContext(c)
-	if bot == nil {
+	agent := middleware.GetAgentFromContext(c)
+	if agent == nil {
 		return util.Forbidden(c, "not authorized")
 	}
 
@@ -279,12 +279,12 @@ func GetChannelPairedUsers(c echo.Context) error {
 		return util.BadRequest(c, "channel is required")
 	}
 
-	if bot.Status != model.BotStatusRunning {
-		return util.BadRequest(c, "bot is not running")
+	if agent.Status != model.AgentStatusRunning {
+		return util.BadRequest(c, "agent is not running")
 	}
 
 	// Get paired users from config (allowFrom list)
-	users, err := k8s.GetChannelPairedUsers(context.Background(), bot.ID, channel)
+	users, err := k8s.GetChannelPairedUsers(context.Background(), agent.ID, channel)
 	if err != nil {
 		return util.InternalError(c, "failed to get paired users: "+err.Error())
 	}
@@ -296,10 +296,10 @@ func GetChannelPairedUsers(c echo.Context) error {
 }
 
 // ListChannelPairingRequests lists pending pairing requests for a channel
-// GET /bots/:id/channels/:channel/pairing
+// GET /agents/:id/channels/:channel/pairing
 func ListChannelPairingRequests(c echo.Context) error {
-	bot := middleware.GetBotFromContext(c)
-	if bot == nil {
+	agent := middleware.GetAgentFromContext(c)
+	if agent == nil {
 		return util.Forbidden(c, "not authorized")
 	}
 
@@ -308,12 +308,12 @@ func ListChannelPairingRequests(c echo.Context) error {
 		return util.BadRequest(c, "channel is required")
 	}
 
-	if bot.Status != model.BotStatusRunning {
-		return util.BadRequest(c, "bot is not running")
+	if agent.Status != model.AgentStatusRunning {
+		return util.BadRequest(c, "agent is not running")
 	}
 
 	// List channel pairing requests
-	response, err := k8s.ListChannelPairingRequests(context.Background(), bot.ID, channel)
+	response, err := k8s.ListChannelPairingRequests(context.Background(), agent.ID, channel)
 	if err != nil {
 		return util.InternalError(c, "failed to list pairing requests: "+err.Error())
 	}

@@ -12,28 +12,24 @@ import (
 	"github.com/spf13/viper"
 )
 
-type CreateBotRequest struct {
-	UserID    string                 `json:"user_id" validate:"required"`
+type CreateAgentRequest struct {
 	Name      string                 `json:"name" validate:"required"`
 	Slug      string                 `json:"slug,omitempty"` // Optional custom slug
 	Config    map[string]interface{} `json:"config,omitempty"`
 	ExpiresAt *time.Time             `json:"expires_at,omitempty"` // Optional expiration time
 }
 
-type BotResponse struct {
-	*model.Bot
+type AgentResponse struct {
+	*model.Agent
 	AccessURL string `json:"access_url"`
 }
 
-func CreateBot(c echo.Context) error {
-	var req CreateBotRequest
+func CreateAgent(c echo.Context) error {
+	var req CreateAgentRequest
 	if err := c.Bind(&req); err != nil {
 		return util.BadRequest(c, "invalid request body")
 	}
 
-	if req.UserID == "" {
-		return util.BadRequest(c, "user_id is required")
-	}
 	if req.Name == "" {
 		return util.BadRequest(c, "name is required")
 	}
@@ -44,41 +40,40 @@ func CreateBot(c echo.Context) error {
 			return util.BadRequest(c, "slug must be 1-50 characters, lowercase letters, numbers, and hyphens only")
 		}
 		// Check if slug is already taken
-		existing, _ := model.GetBotBySlug(req.Slug)
+		existing, _ := model.GetAgentBySlug(req.Slug)
 		if existing != nil {
 			return util.BadRequest(c, "slug is already taken")
 		}
 	}
 
-	// Get app_id from authenticated app context
-	var appID string
-	if app := middleware.GetAppFromContext(c); app != nil {
-		appID = app.ID
+	// Get user_id from JWT claims
+	claims := middleware.GetUserClaimsFromContext(c)
+	if claims == nil {
+		return util.Unauthorized(c, "not authenticated")
 	}
 
-	bot := &model.Bot{
-		AppID:     appID,
-		UserID:    req.UserID,
+	agent := &model.Agent{
+		UserID:    claims.UserID,
 		Name:      req.Name,
 		Slug:      req.Slug, // Will be auto-generated if empty
-		Status:    model.BotStatusCreated,
+		Status:    model.AgentStatusCreated,
 		ExpiresAt: req.ExpiresAt,
 	}
 
 	// Set config if provided (OpenClaw native format)
 	if req.Config != nil {
-		if err := bot.SetConfigMap(req.Config); err != nil {
+		if err := agent.SetConfigMap(req.Config); err != nil {
 			return util.InternalError(c, "failed to set config")
 		}
 	}
 
-	if err := model.CreateBot(bot); err != nil {
-		return util.InternalError(c, "failed to create bot")
+	if err := model.CreateAgent(agent); err != nil {
+		return util.InternalError(c, "failed to create agent")
 	}
 
-	return util.Success(c, &BotResponse{
-		Bot:       bot,
-		AccessURL: buildAccessURL(bot.Slug, bot.AccessToken),
+	return util.Success(c, &AgentResponse{
+		Agent:     agent,
+		AccessURL: buildAccessURL(agent.Slug, agent.AccessToken),
 	})
 }
 

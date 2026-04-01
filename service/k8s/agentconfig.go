@@ -9,10 +9,10 @@ import (
 	"github.com/spf13/viper"
 )
 
-// WriteConfigToBot writes the openclaw.json config file to the bot's pod
+// WriteConfigToAgent writes the openclaw.json config file to the agent's pod
 // If forceSetDefaultModel is true, always set agents.defaults.model.primary
 // This function MERGES with existing config to preserve channels and other settings
-func WriteConfigToBot(ctx context.Context, botID string, config *BotConfig, forceSetDefaultModel bool) error {
+func WriteConfigToAgent(ctx context.Context, botID string, config *AgentConfig, forceSetDefaultModel bool) error {
 	if config == nil {
 		return nil
 	}
@@ -67,8 +67,8 @@ func WriteConfigToBot(ctx context.Context, botID string, config *BotConfig, forc
 	return nil
 }
 
-// ReadBotConfig reads the openclaw.json config from a running bot's pod
-func ReadBotConfig(ctx context.Context, botID string) (map[string]interface{}, error) {
+// ReadAgentRawConfig reads the openclaw.json config from a running agent's pod
+func ReadAgentRawConfig(ctx context.Context, botID string) (map[string]interface{}, error) {
 	namespace := GetNamespace()
 	podName, err := waitForPodReady(ctx, botID, 10)
 	if err != nil {
@@ -77,8 +77,8 @@ func ReadBotConfig(ctx context.Context, botID string) (map[string]interface{}, e
 	return readExistingConfig(ctx, namespace, podName)
 }
 
-// WriteBotConfig writes a full openclaw.json config to a running bot's pod
-func WriteBotConfig(ctx context.Context, botID string, config map[string]interface{}) error {
+// WriteAgentRawConfig writes a full openclaw.json config to a running agent's pod
+func WriteAgentRawConfig(ctx context.Context, botID string, config map[string]interface{}) error {
 	namespace := GetNamespace()
 	podName, err := waitForPodReady(ctx, botID, 10)
 	if err != nil {
@@ -115,7 +115,7 @@ func readExistingConfig(ctx context.Context, namespace, podName string) (map[str
 }
 
 // mergeConfigForModels merges model/gateway config into existing config, preserving channels
-func mergeConfigForModels(existing map[string]interface{}, config *BotConfig, setDefaultModel bool) map[string]interface{} {
+func mergeConfigForModels(existing map[string]interface{}, config *AgentConfig, setDefaultModel bool) map[string]interface{} {
 	// Build gateway config
 	gatewayPort := getGatewayPort()
 	trustedProxies := viper.GetStringSlice("openclaw.trusted_proxies")
@@ -222,7 +222,7 @@ func mergeConfigForModels(existing map[string]interface{}, config *BotConfig, se
 	existing["plugins"] = plugins
 
 	// Merge channels from config if provided
-	// This allows setting channels during bot creation or update
+	// This allows setting channels during agent creation or update
 	if len(config.Channels) > 0 {
 		existingChannels, _ := existing["channels"].(map[string]interface{})
 		if existingChannels == nil {
@@ -239,8 +239,8 @@ func mergeConfigForModels(existing map[string]interface{}, config *BotConfig, se
 	return existing
 }
 
-// buildProvidersMap builds the providers map from BotConfig
-func buildProvidersMap(config *BotConfig) map[string]interface{} {
+// buildProvidersMap builds the providers map from AgentConfig
+func buildProvidersMap(config *AgentConfig) map[string]interface{} {
 	providers := make(map[string]interface{})
 
 	if len(config.Providers) > 0 {
@@ -374,7 +374,7 @@ func getGatewayPort() int {
 
 // buildOpenClawConfig builds the openclaw.json configuration content
 // setDefaultModel: if true, also sets agents.defaults.model.primary (for first-time setup)
-func buildOpenClawConfig(config *BotConfig, setDefaultModel bool) string {
+func buildOpenClawConfig(config *AgentConfig, setDefaultModel bool) string {
 	// Build gateway section with password or token auth
 	gatewayPort := getGatewayPort()
 	trustedProxies := getTrustedProxies()
@@ -492,8 +492,8 @@ func buildOpenClawConfig(config *BotConfig, setDefaultModel bool) string {
 }`, gatewaySection, providersJSON, channelsSection)
 }
 
-// buildProvidersJSON builds the providers JSON object from BotConfig
-func buildProvidersJSON(config *BotConfig) string {
+// buildProvidersJSON builds the providers JSON object from AgentConfig
+func buildProvidersJSON(config *AgentConfig) string {
 	// If we have multiple providers configured, use them
 	if len(config.Providers) > 0 {
 		providers := make(map[string]interface{})
@@ -571,7 +571,7 @@ func buildProvidersJSON(config *BotConfig) string {
 }
 
 // getDefaultModelFromConfig returns the default model ID from config
-func getDefaultModelFromConfig(config *BotConfig) string {
+func getDefaultModelFromConfig(config *AgentConfig) string {
 	// Check AgentDefaults first
 	if config.AgentDefaults != nil && config.AgentDefaults.PrimaryModel != "" {
 		return config.AgentDefaults.PrimaryModel
@@ -617,7 +617,7 @@ func getAPIOrDefault(api, provider string) string {
 
 // BuildGatewayConfig builds the minimal gateway config for initial startup
 // This is used to write config before gateway starts (in container command)
-func BuildGatewayConfig(config *BotConfig, port int32) string {
+func BuildGatewayConfig(config *AgentConfig, port int32) string {
 	trustedProxies := getTrustedProxies()
 
 	// Build optional parts
