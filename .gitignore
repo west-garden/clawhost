@@ -88,4 +88,8 @@ coverage/
 debug*
 *.txt
 
-deploy.sh
+deploy.sh.superpowers/
+
+# Portal frontend
+portal/node_modules/
+portal/.next/
