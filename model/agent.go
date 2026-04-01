@@ -308,6 +308,22 @@ func DeleteAgent(id string) error {
 	return util.GetDB().Where("id = ?", id).Delete(&Agent{}).Error
 }
 
+func CountAgents() (int64, error) {
+	var count int64
+	if err := util.GetDB().Model(&Agent{}).Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
+func CountAgentsByStatus(status AgentStatus) (int64, error) {
+	var count int64
+	if err := util.GetDB().Model(&Agent{}).Where("status = ?", status).Count(&count).Error; err != nil {
+		return 0, err
+	}
+	return count, nil
+}
+
 func UpdateAgentStatus(id string, status AgentStatus, endpoint string) error {
 	updates := map[string]interface{}{
 		"status":     status,

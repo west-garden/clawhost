@@ -169,13 +169,13 @@ func startServer() {
 	admin.Use(authmw.JWTAuth())
 	admin.Use(authmw.AdminAuth())
 	{
-		// TODO(Task 11): User management — handlers will be created in Task 11
-		// admin.GET("/users", v1.ListUsersAdmin)
-		// admin.PUT("/users/:id", v1.UpdateUserAdmin)
+		// User management
+		admin.GET("/users", v1.ListUsersAdmin)
+		admin.PUT("/users/:id", v1.UpdateUserAdmin)
 
-		// TODO(Task 11): Agent overview and stats
-		// admin.GET("/agents", v1.ListAllAgentsAdmin)
-		// admin.GET("/stats", v1.GetStats)
+		// Agent overview and stats
+		admin.GET("/agents", v1.ListAllAgentsAdmin)
+		admin.GET("/stats", v1.GetStats)
 
 		// Agent upgrade management
 		admin.POST("/agents/upgrade", v1.UpgradeAllAgents)
