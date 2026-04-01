@@ -1,10 +1,12 @@
 import { notFound } from "next/navigation";
 import { getAgent, getAgentConnect, ApiError } from "@/lib/api";
-import { ManagementPanel } from "@/components/management-panel";
+import { AgentDetailClient } from "./client";
 
-export default async function AgentManagementPage({
+export default async function AgentDetailLayout({
+  children,
   params,
 }: {
+  children: React.ReactNode;
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
@@ -25,9 +27,13 @@ export default async function AgentManagementPage({
     try {
       connectInfo = await getAgentConnect(id);
     } catch {
-      // Connect info not available yet
+      // Agent may be starting, connect info not available yet
     }
   }
 
-  return <ManagementPanel agent={agent} connectInfo={connectInfo} />;
+  return (
+    <AgentDetailClient agent={agent} connectInfo={connectInfo}>
+      {children}
+    </AgentDetailClient>
+  );
 }
