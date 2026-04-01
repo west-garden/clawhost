@@ -13,7 +13,8 @@
     "error": "Something went wrong",
     "retry": "Retry",
     "noPermission": "No permission",
-    "notFound": "Page not found"
+    "notFound": "Page not found",
+    "goHome": "Go home"
   },
   "auth": {
     "login": "Login",
@@ -33,7 +34,8 @@
     "goLogin": "Login",
     "loginFailed": "Login failed",
     "registerFailed": "Registration failed",
-    "passwordMin": "Password must be at least 8 characters"
+    "passwordMin": "Password must be at least 8 characters",
+    "orSeparator": "OR"
   },
   "sidebar": {
     "agents": "My Agents",

@@ -7,5 +7,21 @@ export async function GET(
   { params }: { params: Promise<{ provider: string }> }
 ) {
   const { provider } = await params;
-  return NextResponse.redirect(`${API_URL}/auth/oauth/${provider}`);
+
+  // Fetch the OAuth redirect URL from ClawHost server-side
+  // ClawHost returns a 302 redirect to the OAuth provider
+  const res = await fetch(`${API_URL}/auth/oauth/${provider}`, {
+    redirect: "manual", // Don't follow redirect, capture the Location header
+  });
+
+  const location = res.headers.get("location");
+  if (!location) {
+    return NextResponse.json(
+      { message: "OAuth provider not configured" },
+      { status: 500 }
+    );
+  }
+
+  // Redirect the browser to the OAuth provider's URL (github.com, google.com)
+  return NextResponse.redirect(location);
 }

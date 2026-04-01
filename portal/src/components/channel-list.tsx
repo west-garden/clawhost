@@ -145,7 +145,7 @@ export function ChannelList({
                   {t("channels.telegram.name")}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Bot Token
+                  {t("channels.telegram.botToken")}
                 </p>
               </CardContent>
             </Card>

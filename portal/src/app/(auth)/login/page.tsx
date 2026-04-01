@@ -88,7 +88,7 @@ export default function LoginPage() {
 
         <div className="my-4 flex items-center gap-2">
           <Separator className="flex-1" />
-          <span className="text-xs text-muted-foreground">OR</span>
+          <span className="text-xs text-muted-foreground">{t("auth.orSeparator")}</span>
           <Separator className="flex-1" />
         </div>
 
