@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,7 @@ import { createAgent } from "@/lib/actions";
 
 export function CreateAgentDialog({ children }: { children: React.ReactNode }) {
   const t = useTranslations();
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
 
@@ -27,15 +29,13 @@ export function CreateAgentDialog({ children }: { children: React.ReactNode }) {
     const formData = new FormData(e.currentTarget);
     const name = formData.get("name") as string;
 
-    try {
-      const result = await createAgent(name);
-      if (result?.error) {
-        toast.error(result.error);
-        setLoading(false);
-      }
-      // On success, createAgent calls redirect() so we won't reach here
-    } catch {
-      // redirect() throws a NEXT_REDIRECT error which is expected
+    const result = await createAgent(name);
+    if (result?.error) {
+      toast.error(result.error);
+      setLoading(false);
+    } else if (result?.id) {
+      setOpen(false);
+      router.push(`/agents/${result.id}`);
     }
   }
 

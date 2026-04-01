@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -34,9 +34,19 @@ export function AgentOverview({
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [resetTokenOpen, setResetTokenOpen] = useState(false);
+  const [pollEnabled, setPollEnabled] = useState(agent.status === "running");
 
-  const { status: liveStatus } = useAgentStatus(agent.id, agent.status === "running");
+  const { status: liveStatus } = useAgentStatus(agent.id, pollEnabled);
   const currentStatus = liveStatus?.status ?? agent.status;
+
+  // When status transitions to "running", refresh server data to get connect info
+  const [prevStatus, setPrevStatus] = useState(currentStatus);
+  useEffect(() => {
+    if (prevStatus !== "running" && currentStatus === "running") {
+      router.refresh();
+    }
+    setPrevStatus(currentStatus);
+  }, [currentStatus, prevStatus, router]);
 
   async function handleAction(
     action: "start" | "stop" | "restart",
@@ -48,6 +58,7 @@ export function AgentOverview({
       toast.error(result.error);
     } else {
       toast.success(t(`agent.${action}Success`));
+      setPollEnabled(true);
       router.refresh();
     }
     setActionLoading(null);
@@ -55,14 +66,13 @@ export function AgentOverview({
 
   async function handleDelete() {
     setActionLoading("delete");
-    try {
-      const result = await deleteAgent(agent.id);
-      if (result?.error) {
-        toast.error(result.error);
-        setActionLoading(null);
-      }
-    } catch {
-      // redirect throws
+    const result = await deleteAgent(agent.id);
+    if (result?.error) {
+      toast.error(result.error);
+      setActionLoading(null);
+    } else {
+      toast.success(t("agent.danger.deleted"));
+      router.push("/");
     }
   }
 

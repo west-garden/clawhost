@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
 import { getAccessToken } from "./auth";
 import type { ApiResponse, AgentCreateResponse } from "@/types";
 
@@ -30,7 +29,8 @@ export async function createAgent(name: string) {
     return { error: data.message || "Failed to create agent" };
   }
 
-  redirect(`/agents/${data.data.id}`);
+  revalidatePath("/");
+  return { success: true, id: data.data.id };
 }
 
 export async function startAgent(id: string) {
@@ -77,7 +77,8 @@ export async function deleteAgent(id: string) {
   if (!res.ok || data.code !== 0) {
     return { error: data.message || "Failed to delete agent" };
   }
-  redirect("/");
+  revalidatePath("/");
+  return { success: true };
 }
 
 export async function resetAgentToken(id: string) {
