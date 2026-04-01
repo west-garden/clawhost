@@ -8,9 +8,10 @@ import { Button } from "@/components/ui/button";
 import { LocaleSwitcher } from "./locale-switcher";
 import type { User } from "@/types";
 
-interface SidebarProps {
+interface SidebarContentProps {
   user: User;
   locale: string;
+  onNavigate?: () => void;
 }
 
 const navItems = [
@@ -18,7 +19,7 @@ const navItems = [
   { key: "settings" as const, href: "/settings" },
 ];
 
-export function Sidebar({ user, locale }: SidebarProps) {
+export function SidebarContent({ user, locale, onNavigate }: SidebarContentProps) {
   const t = useTranslations("sidebar");
   const pathname = usePathname();
   const router = useRouter();
@@ -30,7 +31,7 @@ export function Sidebar({ user, locale }: SidebarProps) {
   }
 
   return (
-    <aside className="flex h-full w-60 flex-col border-r bg-white">
+    <div className="flex h-full flex-col">
       {/* Logo */}
       <div className="flex h-14 items-center px-4 font-semibold text-lg">
         ClawHost
@@ -42,13 +43,16 @@ export function Sidebar({ user, locale }: SidebarProps) {
           <Link
             key={item.key}
             href={item.href}
+            onClick={onNavigate}
             className={cn(
               "flex items-center rounded-md px-3 py-2 text-sm font-medium transition-colors",
-              (item.href === "/"
+              item.href === "/"
                 ? pathname === "/" || pathname.startsWith("/agents")
-                : pathname === item.href)
-                ? "bg-gray-100 text-gray-900"
-                : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  ? "bg-gray-100 text-gray-900"
+                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                : pathname === item.href
+                  ? "bg-gray-100 text-gray-900"
+                  : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
             )}
           >
             {t(item.key)}
@@ -73,6 +77,15 @@ export function Sidebar({ user, locale }: SidebarProps) {
           {t("logout")}
         </Button>
       </div>
+    </div>
+  );
+}
+
+// Desktop sidebar wrapper
+export function Sidebar({ user, locale }: { user: User; locale: string }) {
+  return (
+    <aside className="flex h-full w-60 flex-col border-r bg-white">
+      <SidebarContent user={user} locale={locale} />
     </aside>
   );
 }

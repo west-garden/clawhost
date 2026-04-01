@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getLocale } from "next-intl/server";
 import { getProfile } from "@/lib/api";
 import { Sidebar } from "@/components/sidebar";
+import { MobileHeader } from "@/components/mobile-header";
 import { ApiError } from "@/lib/api";
 
 export default async function DashboardLayout({
@@ -28,10 +29,13 @@ export default async function DashboardLayout({
         <Sidebar user={user} locale={locale} />
       </div>
 
-      {/* Main content */}
-      <main className="flex-1 overflow-auto">
-        <div className="mx-auto max-w-5xl p-6">{children}</div>
-      </main>
+      {/* Main area with header + content */}
+      <div className="flex-1 flex flex-col overflow-hidden">
+        <MobileHeader user={user} locale={locale} />
+        <main className="flex-1 overflow-auto">
+          <div className="mx-auto max-w-5xl p-6">{children}</div>
+        </main>
+      </div>
     </div>
   );
 }
