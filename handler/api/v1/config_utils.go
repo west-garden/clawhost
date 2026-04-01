@@ -6,10 +6,10 @@ import (
 )
 
 // convertToK8sConfig converts model.OpenClawConfig to k8s.BotConfig
-// This is used when starting a bot to pass config to K8s deployment
-func convertToK8sConfig(bot *model.Bot, config *model.OpenClawConfig) *k8s.BotConfig {
+// This is used when starting an agent to pass config to K8s deployment
+func convertToK8sConfig(agent *model.Agent, config *model.OpenClawConfig) *k8s.BotConfig {
 	k8sConfig := &k8s.BotConfig{
-		AccessToken: bot.AccessToken,
+		AccessToken: agent.AccessToken,
 	}
 
 	// Convert models/providers
@@ -67,11 +67,11 @@ func convertToK8sConfig(bot *model.Bot, config *model.OpenClawConfig) *k8s.BotCo
 	return k8sConfig
 }
 
-// convertLegacyToK8sConfig converts legacy model.BotConfig to k8s.BotConfig
+// convertLegacyToK8sConfig converts legacy model.AgentConfig to k8s.BotConfig
 // This is for backward compatibility with old config format
-func convertLegacyToK8sConfig(bot *model.Bot, config *model.BotConfig) *k8s.BotConfig {
+func convertLegacyToK8sConfig(agent *model.Agent, config *model.AgentConfig) *k8s.BotConfig {
 	k8sConfig := &k8s.BotConfig{
-		AccessToken: bot.AccessToken,
+		AccessToken: agent.AccessToken,
 		// Legacy fields
 		Provider: config.Provider,
 		Model:    config.Model,

@@ -77,31 +77,31 @@ func formatAge(ms int64) string {
 	return fmt.Sprintf("%dd ago", int(d.Hours()/24))
 }
 
-// ListDevices returns the list of pending and paired devices for a bot
+// ListDevices returns the list of pending and paired devices for an agent
 // Query params:
 //   - status: filter by status ("pending" or "paired"), default returns all
 //   - client_mode: filter by client mode ("web", "cli", "desktop", etc.), default returns all
 func ListDevices(c echo.Context) error {
-	bot := middleware.GetBotFromContext(c)
-	if bot == nil {
+	agent := middleware.GetAgentFromContext(c)
+	if agent == nil {
 		return util.Forbidden(c, "not authorized")
 	}
 
 	statusFilter := c.QueryParam("status")          // "pending", "paired", or empty for all
 	clientModeFilter := c.QueryParam("client_mode") // "web", "cli", "desktop", etc.
 
-	if bot.Status != model.BotStatusRunning {
-		return util.BadRequest(c, "bot is not running")
+	if agent.Status != model.AgentStatusRunning {
+		return util.BadRequest(c, "agent is not running")
 	}
 
 	ctx := context.Background()
 
 	// Try Gateway WebSocket API first (faster)
-	devices, err := listDevicesViaGateway(ctx, bot)
+	devices, err := listDevicesViaGateway(ctx, agent)
 	if err != nil {
 		// Fallback to CLI method
 		c.Logger().Warnf("Gateway API failed (%v), falling back to CLI", err)
-		devices, err = listDevicesViaCLI(ctx, bot)
+		devices, err = listDevicesViaCLI(ctx, agent)
 		if err != nil {
 			c.Logger().Errorf("CLI fallback also failed: %v", err)
 			return util.InternalError(c, "failed to list devices: "+err.Error())
@@ -137,14 +137,14 @@ func ListDevices(c echo.Context) error {
 	}
 
 	return util.Success(c, map[string]interface{}{
-		"bot_id":  bot.ID,
-		"devices": devices,
+		"agent_id": agent.ID,
+		"devices":  devices,
 	})
 }
 
 // listDevicesViaGateway uses the Gateway WebSocket API to list devices (fast)
-func listDevicesViaGateway(ctx context.Context, bot *model.Bot) ([]DeviceInfo, error) {
-	result, err := k8s.ListBotDevicesViaGateway(ctx, bot.ID, bot.AccessToken)
+func listDevicesViaGateway(ctx context.Context, agent *model.Agent) ([]DeviceInfo, error) {
+	result, err := k8s.ListBotDevicesViaGateway(ctx, agent.ID, agent.AccessToken)
 	if err != nil {
 		return nil, err
 	}
@@ -203,16 +203,16 @@ func listDevicesViaGateway(ctx context.Context, bot *model.Bot) ([]DeviceInfo, e
 }
 
 // listDevicesViaCLI uses CLI command to list devices (slower, fallback)
-func listDevicesViaCLI(ctx context.Context, bot *model.Bot) ([]DeviceInfo, error) {
+func listDevicesViaCLI(ctx context.Context, agent *model.Agent) ([]DeviceInfo, error) {
 	// Get pod name
-	podName, err := k8s.GetPodName(ctx, bot.ID)
+	podName, err := k8s.GetPodName(ctx, agent.ID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get pod: %w", err)
 	}
 
 	// Execute devices list command with --json flag and token for gateway auth
 	output, err := k8s.ExecInPod(ctx, k8s.GetNamespace(), podName, "openclaw",
-		[]string{"node", "/app/openclaw.mjs", "devices", "list", "--json", "--token", bot.AccessToken})
+		[]string{"node", "/app/openclaw.mjs", "devices", "list", "--json", "--token", agent.AccessToken})
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute CLI: %w", err)
 	}
@@ -274,8 +274,8 @@ func listDevicesViaCLI(ctx context.Context, bot *model.Bot) ([]DeviceInfo, error
 
 // ApproveDevice approves a pending device pairing request
 func ApproveDevice(c echo.Context) error {
-	bot := middleware.GetBotFromContext(c)
-	if bot == nil {
+	agent := middleware.GetAgentFromContext(c)
+	if agent == nil {
 		return util.Forbidden(c, "not authorized")
 	}
 
@@ -284,19 +284,19 @@ func ApproveDevice(c echo.Context) error {
 		return util.BadRequest(c, "request_id is required")
 	}
 
-	if bot.Status != model.BotStatusRunning {
-		return util.BadRequest(c, "bot is not running")
+	if agent.Status != model.AgentStatusRunning {
+		return util.BadRequest(c, "agent is not running")
 	}
 
 	ctx := context.Background()
 
 	// Use Gateway WebSocket API directly (bypasses CLI wss:// security check)
-	endpoint, err := k8s.GetServiceEndpoint(ctx, bot.ID)
+	endpoint, err := k8s.GetServiceEndpoint(ctx, agent.ID)
 	if err != nil {
 		return util.InternalError(c, "failed to get service endpoint: "+err.Error())
 	}
 
-	client, err := k8s.NewGatewayClient(ctx, endpoint, bot.AccessToken)
+	client, err := k8s.NewGatewayClient(ctx, endpoint, agent.AccessToken)
 	if err != nil {
 		return util.InternalError(c, "failed to connect to gateway: "+err.Error())
 	}
@@ -307,7 +307,7 @@ func ApproveDevice(c echo.Context) error {
 	}
 
 	return util.Success(c, map[string]interface{}{
-		"bot_id":     bot.ID,
+		"agent_id":   agent.ID,
 		"request_id": requestID,
 		"message":    "device approved",
 	})
@@ -317,8 +317,8 @@ func ApproveDevice(c echo.Context) error {
 // Query params:
 //   - role: the role to revoke (default: "user")
 func RevokeDevice(c echo.Context) error {
-	bot := middleware.GetBotFromContext(c)
-	if bot == nil {
+	agent := middleware.GetAgentFromContext(c)
+	if agent == nil {
 		return util.Forbidden(c, "not authorized")
 	}
 
@@ -332,19 +332,19 @@ func RevokeDevice(c echo.Context) error {
 		return util.BadRequest(c, "device_id is required")
 	}
 
-	if bot.Status != model.BotStatusRunning {
-		return util.BadRequest(c, "bot is not running")
+	if agent.Status != model.AgentStatusRunning {
+		return util.BadRequest(c, "agent is not running")
 	}
 
 	ctx := context.Background()
 
 	// Use Gateway WebSocket API directly (bypasses CLI wss:// security check)
-	endpoint, err := k8s.GetServiceEndpoint(ctx, bot.ID)
+	endpoint, err := k8s.GetServiceEndpoint(ctx, agent.ID)
 	if err != nil {
 		return util.InternalError(c, "failed to get service endpoint: "+err.Error())
 	}
 
-	client, err := k8s.NewGatewayClient(ctx, endpoint, bot.AccessToken)
+	client, err := k8s.NewGatewayClient(ctx, endpoint, agent.AccessToken)
 	if err != nil {
 		return util.InternalError(c, "failed to connect to gateway: "+err.Error())
 	}
@@ -355,7 +355,7 @@ func RevokeDevice(c echo.Context) error {
 	}
 
 	return util.Success(c, map[string]interface{}{
-		"bot_id":    bot.ID,
+		"agent_id":  agent.ID,
 		"device_id": deviceID,
 		"role":      role,
 		"message":   "device revoked",

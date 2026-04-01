@@ -17,16 +17,16 @@ type AgentDefaultsRequest struct {
 }
 
 // GetAgentDefaults returns the agent default settings
-// GET /bots/:id/config/defaults
+// GET /agents/:id/config/defaults
 func GetAgentDefaults(c echo.Context) error {
-	bot := middleware.GetBotFromContext(c)
-	if bot == nil {
+	agent := middleware.GetAgentFromContext(c)
+	if agent == nil {
 		return util.Forbidden(c, "not authorized")
 	}
 
-	config, err := bot.GetOpenClawConfig()
+	config, err := agent.GetOpenClawConfig()
 	if err != nil {
-		return util.InternalError(c, "failed to get bot config")
+		return util.InternalError(c, "failed to get agent config")
 	}
 
 	// Extract agent defaults
@@ -49,10 +49,10 @@ func GetAgentDefaults(c echo.Context) error {
 }
 
 // SetAgentDefaults sets the agent default settings
-// PUT /bots/:id/config/defaults
+// PUT /agents/:id/config/defaults
 func SetAgentDefaults(c echo.Context) error {
-	bot := middleware.GetBotFromContext(c)
-	if bot == nil {
+	agent := middleware.GetAgentFromContext(c)
+	if agent == nil {
 		return util.Forbidden(c, "not authorized")
 	}
 
@@ -61,7 +61,7 @@ func SetAgentDefaults(c echo.Context) error {
 		return util.BadRequest(c, "invalid request body")
 	}
 
-	config, err := bot.GetOpenClawConfig()
+	config, err := agent.GetOpenClawConfig()
 	if err != nil {
 		config = &model.OpenClawConfig{}
 	}
@@ -91,18 +91,18 @@ func SetAgentDefaults(c echo.Context) error {
 	}
 
 	// Save to database
-	if err := bot.SetOpenClawConfig(config); err != nil {
+	if err := agent.SetOpenClawConfig(config); err != nil {
 		return util.InternalError(c, "failed to set config")
 	}
-	if err := model.UpdateBot(bot); err != nil {
-		return util.InternalError(c, "failed to update bot")
+	if err := model.UpdateAgent(agent); err != nil {
+		return util.InternalError(c, "failed to update agent")
 	}
 
-	// Sync only agents section to pod if bot is running (don't touch gateway)
-	if bot.Status == model.BotStatusRunning {
+	// Sync only agents section to pod if agent is running (don't touch gateway)
+	if agent.Status == model.AgentStatusRunning {
 		go func() {
 			ctx := context.Background()
-			if err := k8s.SyncSectionsToPod(ctx, bot.ID, "agents"); err != nil {
+			if err := k8s.SyncSectionsToPod(ctx, agent.ID, "agents"); err != nil {
 				c.Logger().Errorf("failed to sync config to pod: %v", err)
 			}
 		}()

@@ -12,8 +12,8 @@ import (
 )
 
 func DeleteSkill(c echo.Context) error {
-	bot := middleware.GetBotFromContext(c)
-	if bot == nil {
+	agent := middleware.GetAgentFromContext(c)
+	if agent == nil {
 		return util.Forbidden(c, "not authorized")
 	}
 
@@ -22,14 +22,14 @@ func DeleteSkill(c echo.Context) error {
 		return util.BadRequest(c, "skill name is required")
 	}
 
-	if bot.Status != model.BotStatusRunning {
-		return util.BadRequest(c, "bot is not running, cannot delete skills")
+	if agent.Status != model.AgentStatusRunning {
+		return util.BadRequest(c, "agent is not running, cannot delete skills")
 	}
 
 	ctx := context.Background()
 
 	// Delete skill directory in pod
-	if err := deleteSkillFromPod(ctx, bot.ID, name); err != nil {
+	if err := deleteSkillFromPod(ctx, agent.ID, name); err != nil {
 		return util.InternalError(c, "failed to delete skill: "+err.Error())
 	}
 
@@ -39,12 +39,12 @@ func DeleteSkill(c echo.Context) error {
 	})
 }
 
-func deleteSkillFromPod(ctx context.Context, botID, skillName string) error {
+func deleteSkillFromPod(ctx context.Context, agentID, skillName string) error {
 	client := k8s.GetClient()
 	namespace := k8s.GetNamespace()
 
 	// Get pod name
-	deploymentName := k8s.GetDeploymentName(botID)
+	deploymentName := k8s.GetDeploymentName(agentID)
 	pods, err := client.CoreV1().Pods(namespace).List(ctx, k8s.ListOptions(deploymentName))
 	if err != nil {
 		return fmt.Errorf("failed to list pods: %w", err)

@@ -17,19 +17,19 @@ type SkillInfo struct {
 }
 
 func ListSkills(c echo.Context) error {
-	bot := middleware.GetBotFromContext(c)
-	if bot == nil {
+	agent := middleware.GetAgentFromContext(c)
+	if agent == nil {
 		return util.Forbidden(c, "not authorized")
 	}
 
-	if bot.Status != model.BotStatusRunning {
-		return util.BadRequest(c, "bot is not running, cannot list skills")
+	if agent.Status != model.AgentStatusRunning {
+		return util.BadRequest(c, "agent is not running, cannot list skills")
 	}
 
 	ctx := context.Background()
 
 	// List skills directory in pod
-	skills, err := listSkillsInPod(ctx, bot.ID)
+	skills, err := listSkillsInPod(ctx, agent.ID)
 	if err != nil {
 		return util.InternalError(c, "failed to list skills: "+err.Error())
 	}
@@ -37,12 +37,12 @@ func ListSkills(c echo.Context) error {
 	return util.Success(c, skills)
 }
 
-func listSkillsInPod(ctx context.Context, botID string) ([]SkillInfo, error) {
+func listSkillsInPod(ctx context.Context, agentID string) ([]SkillInfo, error) {
 	client := k8s.GetClient()
 	namespace := k8s.GetNamespace()
 
 	// Get pod name
-	deploymentName := k8s.GetDeploymentName(botID)
+	deploymentName := k8s.GetDeploymentName(agentID)
 	pods, err := client.CoreV1().Pods(namespace).List(ctx, k8s.ListOptions(deploymentName))
 	if err != nil {
 		return nil, fmt.Errorf("failed to list pods: %w", err)

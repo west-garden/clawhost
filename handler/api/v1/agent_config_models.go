@@ -20,17 +20,17 @@ type ProviderRequest struct {
 	Models  []model.ProviderModelConfig `json:"models,omitempty"`
 }
 
-// ListModelProviders returns all model providers for a bot
-// GET /bots/:id/config/models
+// ListModelProviders returns all model providers for an agent
+// GET /agents/:id/config/models
 func ListModelProviders(c echo.Context) error {
-	bot := middleware.GetBotFromContext(c)
-	if bot == nil {
+	agent := middleware.GetAgentFromContext(c)
+	if agent == nil {
 		return util.Forbidden(c, "not authorized")
 	}
 
-	config, err := bot.GetOpenClawConfig()
+	config, err := agent.GetOpenClawConfig()
 	if err != nil {
-		return util.InternalError(c, "failed to get bot config")
+		return util.InternalError(c, "failed to get agent config")
 	}
 
 	// Return providers map
@@ -42,11 +42,11 @@ func ListModelProviders(c echo.Context) error {
 	return util.Success(c, providers)
 }
 
-// AddModelProvider adds a new model provider to the bot
-// POST /bots/:id/config/models
+// AddModelProvider adds a new model provider to the agent
+// POST /agents/:id/config/models
 func AddModelProvider(c echo.Context) error {
-	bot := middleware.GetBotFromContext(c)
-	if bot == nil {
+	agent := middleware.GetAgentFromContext(c)
+	if agent == nil {
 		return util.Forbidden(c, "not authorized")
 	}
 
@@ -59,7 +59,7 @@ func AddModelProvider(c echo.Context) error {
 		return util.BadRequest(c, "provider name is required")
 	}
 
-	config, err := bot.GetOpenClawConfig()
+	config, err := agent.GetOpenClawConfig()
 	if err != nil {
 		config = &model.OpenClawConfig{}
 	}
@@ -90,18 +90,18 @@ func AddModelProvider(c echo.Context) error {
 	}
 
 	// Save to database
-	if err := bot.SetOpenClawConfig(config); err != nil {
+	if err := agent.SetOpenClawConfig(config); err != nil {
 		return util.InternalError(c, "failed to set config")
 	}
-	if err := model.UpdateBot(bot); err != nil {
-		return util.InternalError(c, "failed to update bot")
+	if err := model.UpdateAgent(agent); err != nil {
+		return util.InternalError(c, "failed to update agent")
 	}
 
-	// Sync only models section to pod if bot is running (don't touch gateway)
-	if bot.Status == model.BotStatusRunning {
+	// Sync only models section to pod if agent is running (don't touch gateway)
+	if agent.Status == model.AgentStatusRunning {
 		go func() {
 			ctx := context.Background()
-			if err := k8s.SyncSectionsToPod(ctx, bot.ID, "models"); err != nil {
+			if err := k8s.SyncSectionsToPod(ctx, agent.ID, "models"); err != nil {
 				c.Logger().Errorf("failed to sync config to pod: %v", err)
 			}
 		}()
@@ -111,10 +111,10 @@ func AddModelProvider(c echo.Context) error {
 }
 
 // GetModelProvider returns a single model provider by name
-// GET /bots/:id/config/models/:provider
+// GET /agents/:id/config/models/:provider
 func GetModelProvider(c echo.Context) error {
-	bot := middleware.GetBotFromContext(c)
-	if bot == nil {
+	agent := middleware.GetAgentFromContext(c)
+	if agent == nil {
 		return util.Forbidden(c, "not authorized")
 	}
 
@@ -123,9 +123,9 @@ func GetModelProvider(c echo.Context) error {
 		return util.BadRequest(c, "provider name is required")
 	}
 
-	config, err := bot.GetOpenClawConfig()
+	config, err := agent.GetOpenClawConfig()
 	if err != nil {
-		return util.InternalError(c, "failed to get bot config")
+		return util.InternalError(c, "failed to get agent config")
 	}
 
 	if config.Models == nil || config.Models.Providers == nil {
@@ -141,10 +141,10 @@ func GetModelProvider(c echo.Context) error {
 }
 
 // UpdateModelProvider updates a model provider configuration
-// PUT /bots/:id/config/models/:provider
+// PUT /agents/:id/config/models/:provider
 func UpdateModelProvider(c echo.Context) error {
-	bot := middleware.GetBotFromContext(c)
-	if bot == nil {
+	agent := middleware.GetAgentFromContext(c)
+	if agent == nil {
 		return util.Forbidden(c, "not authorized")
 	}
 
@@ -158,7 +158,7 @@ func UpdateModelProvider(c echo.Context) error {
 		return util.BadRequest(c, "invalid request body")
 	}
 
-	config, err := bot.GetOpenClawConfig()
+	config, err := agent.GetOpenClawConfig()
 	if err != nil {
 		config = &model.OpenClawConfig{}
 	}
@@ -184,18 +184,18 @@ func UpdateModelProvider(c echo.Context) error {
 	}
 
 	// Save to database
-	if err := bot.SetOpenClawConfig(config); err != nil {
+	if err := agent.SetOpenClawConfig(config); err != nil {
 		return util.InternalError(c, "failed to set config")
 	}
-	if err := model.UpdateBot(bot); err != nil {
-		return util.InternalError(c, "failed to update bot")
+	if err := model.UpdateAgent(agent); err != nil {
+		return util.InternalError(c, "failed to update agent")
 	}
 
-	// Sync only models section to pod if bot is running (don't touch gateway)
-	if bot.Status == model.BotStatusRunning {
+	// Sync only models section to pod if agent is running (don't touch gateway)
+	if agent.Status == model.AgentStatusRunning {
 		go func() {
 			ctx := context.Background()
-			if err := k8s.SyncSectionsToPod(ctx, bot.ID, "models"); err != nil {
+			if err := k8s.SyncSectionsToPod(ctx, agent.ID, "models"); err != nil {
 				c.Logger().Errorf("failed to sync config to pod: %v", err)
 			}
 		}()
@@ -205,10 +205,10 @@ func UpdateModelProvider(c echo.Context) error {
 }
 
 // DeleteModelProvider removes a model provider
-// DELETE /bots/:id/config/models/:provider
+// DELETE /agents/:id/config/models/:provider
 func DeleteModelProvider(c echo.Context) error {
-	bot := middleware.GetBotFromContext(c)
-	if bot == nil {
+	agent := middleware.GetAgentFromContext(c)
+	if agent == nil {
 		return util.Forbidden(c, "not authorized")
 	}
 
@@ -217,9 +217,9 @@ func DeleteModelProvider(c echo.Context) error {
 		return util.BadRequest(c, "provider name is required")
 	}
 
-	config, err := bot.GetOpenClawConfig()
+	config, err := agent.GetOpenClawConfig()
 	if err != nil {
-		return util.InternalError(c, "failed to get bot config")
+		return util.InternalError(c, "failed to get agent config")
 	}
 
 	if config.Models == nil || config.Models.Providers == nil {
@@ -234,18 +234,18 @@ func DeleteModelProvider(c echo.Context) error {
 	delete(config.Models.Providers, providerName)
 
 	// Save to database
-	if err := bot.SetOpenClawConfig(config); err != nil {
+	if err := agent.SetOpenClawConfig(config); err != nil {
 		return util.InternalError(c, "failed to set config")
 	}
-	if err := model.UpdateBot(bot); err != nil {
-		return util.InternalError(c, "failed to update bot")
+	if err := model.UpdateAgent(agent); err != nil {
+		return util.InternalError(c, "failed to update agent")
 	}
 
-	// Sync only models section to pod if bot is running (don't touch gateway)
-	if bot.Status == model.BotStatusRunning {
+	// Sync only models section to pod if agent is running (don't touch gateway)
+	if agent.Status == model.AgentStatusRunning {
 		go func() {
 			ctx := context.Background()
-			if err := k8s.SyncSectionsToPod(ctx, bot.ID, "models"); err != nil {
+			if err := k8s.SyncSectionsToPod(ctx, agent.ID, "models"); err != nil {
 				c.Logger().Errorf("failed to sync config to pod: %v", err)
 			}
 		}()
