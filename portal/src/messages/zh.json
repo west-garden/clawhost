@@ -102,7 +102,24 @@
     "notRunning": "Agent 未运行，请先启动",
     "startSuccess": "Agent 已启动",
     "stopSuccess": "Agent 已停止",
-    "restartSuccess": "Agent 已重启"
+    "restartSuccess": "Agent 已重启",
+    "config": {
+      "title": "配置",
+      "models": "模型提供商",
+      "defaults": "默认设置",
+      "raw": "原始配置"
+    },
+    "skills": {
+      "title": "技能",
+      "delete": "删除技能"
+    },
+    "devices": {
+      "title": "设备",
+      "pending": "待配对",
+      "paired": "已配对",
+      "approve": "批准",
+      "revoke": "撤销"
+    }
   },
   "channels": {
     "title": "已连接渠道",
