@@ -1,4 +1,5 @@
-const API_BASE = "/api/v1/admin";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
+const API_BASE = `${API_URL}/api/v1/admin`;
 
 export interface User {
   id: string;
@@ -10,14 +11,14 @@ export interface User {
 }
 
 export async function getProfile(): Promise<User> {
-  const res = await fetch("/api/auth/me", {
+  const res = await fetch(`${API_URL}/auth/me`, {
     credentials: "include",
   });
   const json = await res.json();
   if (!res.ok) {
     throw new Error(json.message || `Request failed: ${res.status}`);
   }
-  return json.data;
+  return json.data?.user;
 }
 
 async function request<T>(

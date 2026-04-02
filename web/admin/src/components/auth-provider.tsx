@@ -10,6 +10,8 @@ import {
 } from "react";
 import type { User } from "@/lib/api";
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
+
 interface AuthContextType {
   user: User | null;
   isAuthed: boolean;
@@ -31,11 +33,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/auth/me", { credentials: "include" })
+    fetch(`${API_URL}/auth/me`, { credentials: "include" })
       .then((res) => res.json())
       .then((data) => {
-        if (data.user && data.user.role === "admin") {
-          setUser(data.user);
+        if (data.data?.user && data.data.user.role === "admin") {
+          setUser(data.data.user);
         }
       })
       .catch(() => {})
@@ -44,7 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const login = useCallback(async (email: string, password: string) => {
     try {
-      const res = await fetch("/api/auth/login", {
+      const res = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -53,15 +55,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       const data = await res.json();
 
-      if (!res.ok) {
+      if (!res.ok || data.code !== 0) {
         return { success: false, error: data.message || "Login failed" };
       }
 
-      if (!data.user || data.user.role !== "admin") {
+      if (!data.data?.user || data.data.user.role !== "admin") {
         return { success: false, error: "Admin access required" };
       }
 
-      setUser(data.user);
+      setUser(data.data.user);
       return { success: true };
     } catch (e) {
       return { success: false, error: "Login failed" };
@@ -69,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = useCallback(async () => {
-    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    await fetch(`${API_URL}/auth/logout`, { method: "POST", credentials: "include" });
     setUser(null);
   }, []);
 

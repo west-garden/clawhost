@@ -40,7 +40,7 @@ export default function UsersPage() {
       await updateUser(userId, { role });
       toast.success("Role updated");
       setUsers((users) =>
-        users.map((u) => (u.id === userId ? { ...u, role } : u))
+        users.map((u) => (u.id === userId ? { ...u, role: role as "user" | "admin" } : u))
       );
     } catch (err) {
       toast.error((err as Error).message);
@@ -52,7 +52,7 @@ export default function UsersPage() {
       await updateUser(userId, { status });
       toast.success("Status updated");
       setUsers((users) =>
-        users.map((u) => (u.id === userId ? { ...u, status } : u))
+        users.map((u) => (u.id === userId ? { ...u, status: status as "active" | "disabled" } : u))
       );
     } catch (err) {
       toast.error((err as Error).message);
@@ -92,7 +92,7 @@ export default function UsersPage() {
                   <TableCell>
                     <Select
                       value={user.role}
-                      onValueChange={(v) => handleRoleChange(user.id, v)}
+                      onValueChange={(v) => v && handleRoleChange(user.id, v)}
                     >
                       <SelectTrigger className="w-[100px]">
                         <SelectValue />
@@ -106,7 +106,7 @@ export default function UsersPage() {
                   <TableCell>
                     <Select
                       value={user.status}
-                      onValueChange={(v) => handleStatusChange(user.id, v)}
+                      onValueChange={(v) => v && handleStatusChange(user.id, v)}
                     >
                       <SelectTrigger className="w-[100px]">
                         <SelectValue />
