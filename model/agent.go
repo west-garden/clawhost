@@ -370,6 +370,9 @@ func AutoMigrate() error {
 	if err := util.GetDB().AutoMigrate(&Agent{}); err != nil {
 		return err
 	}
+	if err := AutoMigrateSubscription(); err != nil {
+		return err
+	}
 	// Migrate existing agents without slug or access_token
 	return migrateExistingAgents()
 }
