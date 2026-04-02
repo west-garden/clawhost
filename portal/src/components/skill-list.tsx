@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
+import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "./confirm-dialog";
 import { deleteSkill } from "@/lib/actions";
 import { Trash2, FileCode } from "lucide-react";
-import type { AgentStatus } from "@/types";
 
 interface Skill {
   name: string;
@@ -16,7 +16,6 @@ interface Props {
   agentId: string;
   skills: Skill[];
   loading: boolean;
-  agentStatus: AgentStatus;
   onRefresh: () => void;
 }
 
@@ -24,9 +23,9 @@ export function SkillList({
   agentId,
   skills,
   loading,
-  agentStatus,
   onRefresh,
 }: Props) {
+  const t = useTranslations();
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
 
@@ -39,20 +38,20 @@ export function SkillList({
     if (result.error) {
       toast.error(result.error);
     } else {
-      toast.success("Skill deleted");
+      toast.success(t("agent.skills.deleted"));
       setDeleteTarget(null);
       onRefresh();
     }
   }
 
   if (loading) {
-    return <div className="text-white/50 text-sm">Loading...</div>;
+    return <div className="text-white/50 text-sm">{t("common.loading")}</div>;
   }
 
   if (skills.length === 0) {
     return (
       <div className="text-center py-8 text-white/50 text-sm">
-        No skills configured
+        {t("agent.skills.empty")}
       </div>
     );
   }
@@ -78,7 +77,6 @@ export function SkillList({
               variant="ghost"
               className="text-red-400 hover:text-red-300"
               onClick={() => setDeleteTarget(skill.name)}
-              disabled={agentStatus !== "running"}
             >
               <Trash2 className="w-4 h-4" />
             </Button>
@@ -89,8 +87,8 @@ export function SkillList({
       <ConfirmDialog
         open={!!deleteTarget}
         onOpenChange={() => setDeleteTarget(null)}
-        title="Delete Skill"
-        description={`Are you sure you want to delete "${deleteTarget}"?`}
+        title={t("agent.skills.delete")}
+        description={t("agent.skills.deleteConfirm", { name: deleteTarget })}
         loading={deleting}
         onConfirm={handleDelete}
         variant="destructive"

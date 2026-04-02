@@ -111,7 +111,10 @@
     },
     "skills": {
       "title": "技能",
-      "delete": "删除技能"
+      "delete": "删除技能",
+      "deleteConfirm": "确定要删除 \"{name}\" 吗？",
+      "deleted": "技能已删除",
+      "empty": "暂无技能配置"
     },
     "devices": {
       "title": "设备",

@@ -111,7 +111,10 @@
     },
     "skills": {
       "title": "Skills",
-      "delete": "Delete Skill"
+      "delete": "Delete Skill",
+      "deleteConfirm": "Are you sure you want to delete \"{name}\"?",
+      "deleted": "Skill deleted",
+      "empty": "No skills configured"
     },
     "devices": {
       "title": "Devices",

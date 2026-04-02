@@ -6,7 +6,6 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { SkillList } from "@/components/skill-list";
 import { listSkills } from "@/lib/actions";
-import type { AgentStatus } from "@/types";
 
 interface Skill {
   name: string;
@@ -19,7 +18,6 @@ export default function SkillsPage() {
 
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(true);
-  const [agentStatus, setAgentStatus] = useState<AgentStatus>("stopped");
 
   useEffect(() => {
     loadSkills();
@@ -49,7 +47,6 @@ export default function SkillsPage() {
             agentId={agentId}
             skills={skills}
             loading={loading}
-            agentStatus={agentStatus}
             onRefresh={loadSkills}
           />
         </div>
