@@ -1,0 +1,46 @@
+{{- if .Values.portal.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "clawhost.fullname" . }}-portal
+  labels:
+    {{- include "clawhost.labels" . | nindent 4 }}
+    app.kubernetes.io/component: portal
+spec:
+  replicas: {{ .Values.portal.replicas }}
+  selector:
+    matchLabels:
+      {{- include "clawhost.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: portal
+  template:
+    metadata:
+      labels:
+        {{- include "clawhost.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: portal
+    spec:
+      containers:
+        - name: portal
+          image: "{{ .Values.portal.image.repository }}:{{ .Values.portal.image.tag }}"
+          imagePullPolicy: {{ .Values.portal.image.pullPolicy }}
+          ports:
+            - containerPort: {{ .Values.portal.port }}
+          env:
+            - name: NEXT_PUBLIC_API_URL
+              value: {{ .Values.portal.env.NEXT_PUBLIC_API_URL | quote }}
+            - name: CLAWHOST_API_URL
+              value: {{ .Values.portal.env.NEXT_PUBLIC_API_URL | quote }}
+          resources:
+            {{- toYaml .Values.portal.resources | nindent 12 }}
+          livenessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.portal.port }}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /
+              port: {{ .Values.portal.port }}
+            initialDelaySeconds: 5
+            periodSeconds: 5
+{{- end }}

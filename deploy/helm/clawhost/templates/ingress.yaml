@@ -18,6 +18,51 @@ spec:
     {{- toYaml .Values.ingress.tls | nindent 4 }}
   {{- end }}
   rules:
+    # API domain: /admin/*, /api/*, /auth/*
+    - host: {{ .Values.domain.apiDomain | quote }}
+      http:
+        paths:
+          - path: /admin
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "clawhost.fullname" . }}
+                port:
+                  number: {{ .Values.server.port }}
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "clawhost.fullname" . }}
+                port:
+                  number: {{ .Values.server.port }}
+          - path: /auth
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "clawhost.fullname" . }}
+                port:
+                  number: {{ .Values.server.port }}
+          - path: /health
+            pathType: Exact
+            backend:
+              service:
+                name: {{ include "clawhost.fullname" . }}
+                port:
+                  number: {{ .Values.server.port }}
+    {{- if .Values.portal.enabled }}
+    # Portal domain
+    - host: {{ .Values.domain.botDomain | quote }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "clawhost.fullname" . }}-portal
+                port:
+                  number: {{ .Values.portal.port }}
+    {{- end }}
     {{- range .Values.ingress.hosts }}
     - host: {{ .host | quote }}
       http:
@@ -29,7 +74,7 @@ spec:
               service:
                 name: {{ include "clawhost.fullname" $ }}
                 port:
-                  number: 80
+                  number: {{ $.Values.server.port }}
           {{- end }}
     {{- end }}
 {{- end }}
