@@ -193,6 +193,24 @@ func startServer() {
 		admin.POST("/agents/restart", v1.RestartAllAgents)
 	}
 
+	// Subscription routes (public, requires JWT)
+	subAPI := api.Group("/subscription")
+	{
+		subAPI.GET("/plans", v1.ListSubscriptionPlans)
+		subAPI.GET("/credit-packs", v1.ListCreditPacks)
+		subAPI.GET("/me", v1.GetMySubscription)
+	}
+
+	// Admin subscription routes
+	adminSub := admin.Group("/subscription")
+	{
+		adminSub.POST("/plans", v1.AdminCreatePlan)
+		adminSub.PUT("/plans/:id", v1.AdminUpdatePlan)
+		adminSub.POST("/credit-packs", v1.AdminCreateCreditPack)
+		adminSub.PUT("/credit-packs/:id", v1.AdminUpdateCreditPack)
+		adminSub.POST("/grant", v1.AdminGrantSubscription)
+	}
+
 	// Health check
 	e.GET("/health", func(c echo.Context) error {
 		return c.JSON(200, map[string]string{"status": "ok"})
