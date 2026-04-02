@@ -8,7 +8,6 @@ import { Plus, Bot } from "lucide-react";
 import { createAgent } from "@/lib/actions";
 import {
   Sheet,
-  SheetTrigger,
   SheetContent,
   SheetHeader,
   SheetTitle,
@@ -41,8 +40,9 @@ export function CreateAgentDialog({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger render={<div />}>{children}</SheetTrigger>
+    <>
+      <div onClick={() => setOpen(true)}>{children}</div>
+      <Sheet open={open} onOpenChange={setOpen}>
       <SheetContent side="right" showCloseButton>
         <SheetHeader>
           <SheetTitle>
@@ -114,6 +114,7 @@ export function CreateAgentDialog({ children }: { children: React.ReactNode }) {
           </div>
         </form>
       </SheetContent>
-    </Sheet>
+      </Sheet>
+    </>
   );
 }
