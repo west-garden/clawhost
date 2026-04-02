@@ -86,7 +86,28 @@ func startServer() {
 
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
-	e.Use(middleware.CORS())
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOriginFunc: func(origin string) (bool, error) {
+			// Allow localhost for development
+			if strings.HasPrefix(origin, "http://localhost:") ||
+				strings.HasPrefix(origin, "http://127.0.0.1:") {
+				return true, nil
+			}
+			// Allow same-origin (empty origin for same-origin requests)
+			if origin == "" {
+				return true, nil
+			}
+			// In production, check against configured domain
+			apiDomain := viper.GetString("domain.api_domain")
+			if apiDomain != "" && strings.HasSuffix(origin, apiDomain) {
+				return true, nil
+			}
+			return false, nil
+		},
+		AllowMethods:     []string{echo.GET, echo.POST, echo.PUT, echo.DELETE, echo.OPTIONS},
+		AllowHeaders:     []string{echo.HeaderOrigin, echo.HeaderContentType, echo.HeaderAccept, echo.HeaderAuthorization},
+		AllowCredentials: true,
+	}))
 
 	// Auth routes (no auth required)
 	auth := e.Group("/auth")
@@ -102,6 +123,7 @@ func startServer() {
 	authProtected.GET("/me", v1.GetProfile)
 	authProtected.PUT("/me", v1.UpdateProfile)
 	authProtected.PUT("/me/password", v1.ChangePassword)
+	authProtected.POST("/logout", v1.Logout)
 
 	// API routes: /api/v1/*
 	api := e.Group("/api/v1")

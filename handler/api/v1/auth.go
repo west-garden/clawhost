@@ -134,6 +134,25 @@ func Login(c echo.Context) error {
 	if err != nil {
 		return util.InternalError(c, "failed to generate tokens")
 	}
+
+	// Set httpOnly cookies for Admin (static export can't use API routes)
+	accessToken := tokens["access_token"].(string)
+	refreshToken := tokens["refresh_token"].(string)
+
+	cookieOpts := func(name, value string) *http.Cookie {
+		return &http.Cookie{
+			Name:     name,
+			Value:    value,
+			Path:     "/",
+			HttpOnly: true,
+			Secure:   false, // set true in production
+			SameSite: http.SameSiteLaxMode,
+			MaxAge:   86400 * 7, // 7 days
+		}
+	}
+	c.SetCookie(cookieOpts("token", accessToken))
+	c.SetCookie(cookieOpts("refresh", refreshToken))
+
 	return util.Success(c, tokens)
 }
 
@@ -239,6 +258,32 @@ func ChangePassword(c echo.Context) error {
 	model.DeleteRefreshTokensByUserID(user.ID)
 
 	return util.Success(c, map[string]string{"message": "password changed"})
+}
+
+func Logout(c echo.Context) error {
+	// Clear cookies
+	c.SetCookie(&http.Cookie{
+		Name:     "token",
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		MaxAge:   -1,
+	})
+	c.SetCookie(&http.Cookie{
+		Name:     "refresh",
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		MaxAge:   -1,
+	})
+
+	// Also invalidate refresh tokens if user is authenticated
+	claims := middleware.GetUserClaimsFromContext(c)
+	if claims != nil {
+		model.DeleteRefreshTokensByUserID(claims.UserID)
+	}
+
+	return util.Success(c, map[string]string{"message": "logged out"})
 }
 
 // --- OAuth ---
