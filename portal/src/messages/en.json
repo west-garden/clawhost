@@ -51,6 +51,11 @@
     "emptyDescription": "Click the button below to get started",
     "agentName": "Agent Name",
     "agentNamePlaceholder": "Give your agent a name",
+    "agentSlug": "Slug",
+    "agentSlugPlaceholder": "my-agent",
+    "agentSlugHint": "Optional. Only a-z, 0-9 and hyphens.",
+    "agentPersonality": "Personality",
+    "agentPersonalityPlaceholder": "Describe your agent's personality and behavior...",
     "creating": "Creating..."
   },
   "agent": {

@@ -18,10 +18,14 @@ async function fetchWithAuth(path: string, options: RequestInit = {}) {
   return fetch(`${API_URL}${path}`, { ...options, headers, cache: "no-store" });
 }
 
-export async function createAgent(name: string) {
+export async function createAgent(name: string, slug?: string, soulMd?: string) {
+  const body: Record<string, unknown> = { name };
+  if (slug) body.slug = slug;
+  if (soulMd) body.config = { soul_md: soulMd };
+
   const res = await fetchWithAuth("/api/v1/agents", {
     method: "POST",
-    body: JSON.stringify({ name }),
+    body: JSON.stringify(body),
   });
 
   const data = (await res.json()) as ApiResponse<AgentCreateResponse>;

@@ -51,6 +51,11 @@
     "emptyDescription": "点击下方按钮开始",
     "agentName": "Agent 名称",
     "agentNamePlaceholder": "给你的 Agent 起个名字",
+    "agentSlug": "Slug",
+    "agentSlugPlaceholder": "my-agent",
+    "agentSlugHint": "可选。仅支持小写字母、数字和连字符。",
+    "agentPersonality": "人设",
+    "agentPersonalityPlaceholder": "描述你的 Agent 的性格和行为方式...",
     "creating": "创建中..."
   },
   "agent": {
