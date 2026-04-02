@@ -293,24 +293,24 @@ func seedSubscriptionData() error {
 	if packCount == 0 {
 		packs := []CreditPack{
 			{
-				Name:       "小包",
-				Credits:    1000,
-				PriceCents: 1500,
+				Name:       "补充包",
+				Credits:    8000,
+				PriceCents: 4000,
 				Currency:   "cny",
 				Active:     true,
 				SortOrder:  1,
 			},
 			{
-				Name:       "中包",
-				Credits:    5000,
-				PriceCents: 6000,
+				Name:       "超值包",
+				Credits:    16480,
+				PriceCents: 8000,
 				Currency:   "cny",
 				Active:     true,
 				SortOrder:  2,
 			},
 			{
-				Name:       "大包",
-				Credits:    20000,
+				Name:       "高频包",
+				Credits:    42400,
 				PriceCents: 20000,
 				Currency:   "cny",
 				Active:     true,

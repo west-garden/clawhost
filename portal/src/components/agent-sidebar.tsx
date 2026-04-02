@@ -94,8 +94,8 @@ export function AgentSidebarContent({
         Agents
       </div>
 
-      {/* Agent list */}
-      <nav className="flex-1 overflow-y-auto px-2 space-y-0.5">
+      {/* Agent list + nav items (scrollable together) */}
+      <nav className="flex-1 overflow-y-auto min-h-0 px-2 space-y-0.5">
         {agents.map((agent) => {
           const isActive = agent.id === activeAgentId;
           const initial = (agent.name || "?")[0].toUpperCase();
@@ -136,10 +136,9 @@ export function AgentSidebarContent({
             </a>
           );
         })}
-      </nav>
 
-      {/* Nav items: subscription + settings */}
-      <div className="px-2 py-2 space-y-0.5 border-t border-white/10">
+        {/* Subscription + Settings nav items */}
+        <div className="!mt-2 pt-2 border-t border-white/10 space-y-0.5">
         <a
           href="/subscription"
           onClick={(e) => {
@@ -192,7 +191,8 @@ export function AgentSidebarContent({
             {t("sidebar.settings")}
           </span>
         </a>
-      </div>
+        </div>
+      </nav>
 
       {/* Footer: user info + logout */}
       <div className="border-t border-white/10 p-3">

@@ -185,20 +185,12 @@ export function SubscriptionPage({
           {packs.map((pack) => (
             <div key={pack.id} className="pricing-card">
               <div className="pricing-card-header">
-                <div className="flex items-center gap-2 mb-2">
-                  <Zap className="w-5 h-5 text-amber-400" />
-                  <h3 className="text-base font-semibold text-white">
-                    {pack.name}
-                  </h3>
-                </div>
-                <p className="text-2xl font-bold text-white">
-                  {pack.credits.toLocaleString()}{" "}
-                  <span className="text-sm font-normal text-white/40">
-                    {t("credits")}
-                  </span>
-                </p>
-                <div className="mt-3 flex items-baseline gap-1">
-                  <span className="text-xl font-bold text-white">
+                <h3 className="text-base font-semibold text-white mb-1">
+                  +{pack.credits.toLocaleString()} {t("credits")}
+                </h3>
+                <p className="text-xs text-white/40">{pack.name}</p>
+                <div className="mt-4 flex items-baseline gap-1">
+                  <span className="text-3xl font-bold text-white">
                     {formatPrice(pack.price_cents)}
                   </span>
                 </div>
