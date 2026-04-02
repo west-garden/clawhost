@@ -121,7 +121,13 @@
       "pending": "Pending",
       "paired": "Paired",
       "approve": "Approve",
-      "revoke": "Revoke"
+      "revoke": "Revoke",
+      "approved": "Device approved",
+      "revoked": "Device revoked",
+      "noPending": "No pending devices",
+      "noPaired": "No paired devices",
+      "approveConfirm": "Allow this device to connect to your agent?",
+      "revokeConfirm": "This will disconnect the device from your agent."
     }
   },
   "channels": {

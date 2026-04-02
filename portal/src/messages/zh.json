@@ -121,7 +121,13 @@
       "pending": "待配对",
       "paired": "已配对",
       "approve": "批准",
-      "revoke": "撤销"
+      "revoke": "撤销",
+      "approved": "设备已批准",
+      "revoked": "设备已撤销",
+      "noPending": "无待配对设备",
+      "noPaired": "无已配对设备",
+      "approveConfirm": "允许此设备连接到您的 Agent？",
+      "revokeConfirm": "此操作将断开设备与 Agent 的连接。"
     }
   },
   "channels": {
