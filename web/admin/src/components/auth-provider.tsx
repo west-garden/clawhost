@@ -57,6 +57,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return { success: false, error: data.message || "Login failed" };
       }
 
+      if (!data.user || data.user.role !== "admin") {
+        return { success: false, error: "Admin access required" };
+      }
+
       setUser(data.user);
       return { success: true };
     } catch (e) {
