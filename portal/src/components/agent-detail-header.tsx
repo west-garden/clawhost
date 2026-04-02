@@ -116,10 +116,37 @@ export function AgentDetailHeader({
           href={`/agents/${agentId}`}
           className={cn(
             "view-tab",
-            !isChatTab && "view-tab-active"
+            pathname === `/agents/${agentId}` && "view-tab-active"
           )}
         >
           {t("agent.management")}
+        </Link>
+        <Link
+          href={`/agents/${agentId}/config`}
+          className={cn(
+            "view-tab",
+            pathname.includes("/config") && "view-tab-active"
+          )}
+        >
+          {t("agent.config.title")}
+        </Link>
+        <Link
+          href={`/agents/${agentId}/skills`}
+          className={cn(
+            "view-tab",
+            pathname.includes("/skills") && "view-tab-active"
+          )}
+        >
+          {t("agent.skills.title")}
+        </Link>
+        <Link
+          href={`/agents/${agentId}/devices`}
+          className={cn(
+            "view-tab",
+            pathname.includes("/devices") && "view-tab-active"
+          )}
+        >
+          {t("agent.devices.title")}
         </Link>
         <Link
           href={`/agents/${agentId}/chat`}
