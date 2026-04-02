@@ -226,8 +226,10 @@ func startServer() {
 	// Admin subscription routes
 	adminSub := admin.Group("/subscription")
 	{
+		adminSub.GET("/plans", v1.AdminListPlans)
 		adminSub.POST("/plans", v1.AdminCreatePlan)
 		adminSub.PUT("/plans/:id", v1.AdminUpdatePlan)
+		adminSub.GET("/credit-packs", v1.AdminListCreditPacks)
 		adminSub.POST("/credit-packs", v1.AdminCreateCreditPack)
 		adminSub.PUT("/credit-packs/:id", v1.AdminUpdateCreditPack)
 		adminSub.POST("/grant", v1.AdminGrantSubscription)

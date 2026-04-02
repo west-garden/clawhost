@@ -115,6 +115,14 @@ func (c *CreditTransaction) BeforeCreate(tx *gorm.DB) error {
 
 // --- SubscriptionPlan DB operations ---
 
+func ListAllSubscriptionPlans() ([]*SubscriptionPlan, error) {
+	var plans []*SubscriptionPlan
+	if err := util.GetDB().Order("created_at DESC").Find(&plans).Error; err != nil {
+		return nil, err
+	}
+	return plans, nil
+}
+
 func ListActiveSubscriptionPlans() ([]*SubscriptionPlan, error) {
 	var plans []*SubscriptionPlan
 	if err := util.GetDB().Where("active = ?", true).Order("sort_order ASC").Find(&plans).Error; err != nil {
@@ -148,6 +156,14 @@ func UpdateSubscriptionPlan(plan *SubscriptionPlan) error {
 }
 
 // --- CreditPack DB operations ---
+
+func ListAllCreditPacks() ([]*CreditPack, error) {
+	var packs []*CreditPack
+	if err := util.GetDB().Order("created_at DESC").Find(&packs).Error; err != nil {
+		return nil, err
+	}
+	return packs, nil
+}
 
 func ListActiveCreditPacks() ([]*CreditPack, error) {
 	var packs []*CreditPack

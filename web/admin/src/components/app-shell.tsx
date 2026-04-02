@@ -1,5 +1,6 @@
 "use client";
 
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/components/auth-provider";
 import { AppSidebar } from "@/components/app-sidebar";
 import { SiteHeader } from "@/components/site-header";
@@ -7,6 +8,14 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const { isAuthed, loading } = useAuth();
+  const pathname = usePathname();
+
+  // Skip auth check on login page
+  const isLoginPage = pathname === "/login" || pathname === "/login/";
+
+  if (isLoginPage) {
+    return <>{children}</>;
+  }
 
   if (loading) {
     return (
