@@ -84,3 +84,15 @@ export async function getAgentConnect(id: string) {
 export async function getProfile() {
   return fetchApi<import("@/types").User>("/auth/me");
 }
+
+export async function getSubscriptionPlans() {
+  return fetchApi<import("@/types").SubscriptionPlan[]>("/api/v1/subscription/plans");
+}
+
+export async function getCreditPacks() {
+  return fetchApi<import("@/types").CreditPack[]>("/api/v1/subscription/credit-packs");
+}
+
+export async function getMySubscription() {
+  return fetchApi<import("@/types").UserSubscription>("/api/v1/subscription/me");
+}

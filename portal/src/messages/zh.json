@@ -41,7 +41,8 @@
     "agents": "我的 Agent",
     "newAgent": "新建 Agent",
     "settings": "设置",
-    "logout": "退出登录"
+    "logout": "退出登录",
+    "subscription": "订阅"
   },
   "dashboard": {
     "title": "我的 Agent",
@@ -140,5 +141,26 @@
     "newPassword": "新密码",
     "passwordChanged": "密码已修改",
     "profileUpdated": "资料已更新"
+  },
+  "subscription": {
+    "title": "升级您的订阅计划",
+    "nav": "订阅",
+    "agentPlans": "Agent 订阅",
+    "creditPacks": "积分包",
+    "currentPlan": "当前计划",
+    "freeTier": "免费用户",
+    "upgradePrompt": "升级以获得更多 Agent 和积分",
+    "creditsRemaining": "剩余积分",
+    "expiresAt": "到期时间",
+    "upgrade": "立即升级",
+    "currentBadge": "当前计划",
+    "purchase": "购买",
+    "perMonth": "/月",
+    "credits": "积分",
+    "agents": "个 Agent",
+    "features": "包含特权",
+    "dailyBonus": "每日额外赠 {amount} 积分（上限 {cap}）",
+    "topUpAnytime": "随时加购积分（按需付费）",
+    "comingSoon": "支付功能即将上线，敬请期待"
   }
 }

@@ -689,6 +689,27 @@
     border-radius: 10px;
     padding: 12px 16px;
   }
+
+  /* Pricing cards */
+  .pricing-card {
+    @apply glass-panel flex flex-col;
+  }
+
+  .pricing-card-active {
+    @apply border-red-500/40;
+  }
+
+  .pricing-card-header {
+    @apply p-5 border-b border-white/5;
+  }
+
+  .pricing-card-body {
+    @apply p-5 flex-1;
+  }
+
+  .pricing-card-feature {
+    @apply flex items-center gap-2 text-xs text-white/50 py-1;
+  }
 }
 
 /* Scrollbar */

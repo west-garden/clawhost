@@ -16,7 +16,7 @@ export interface User {
 
 // --- Agent ---
 
-export type AgentStatus = "created" | "running" | "stopped" | "error";
+export type AgentStatus = "created" | "starting" | "running" | "stopped" | "error";
 
 export interface Agent {
   id: string;
@@ -105,4 +105,40 @@ export interface AuthTokens {
   access_token: string;
   refresh_token: string;
   user: User;
+}
+
+// --- Subscription ---
+
+export interface SubscriptionPlan {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  price_cents: number;
+  currency: string;
+  agent_limit: number;
+  monthly_credits: number;
+  daily_bonus: number;
+  daily_bonus_cap: number;
+  features: string[];
+  sort_order: number;
+  active: boolean;
+}
+
+export interface CreditPack {
+  id: string;
+  name: string;
+  credits: number;
+  price_cents: number;
+  currency: string;
+  active: boolean;
+  sort_order: number;
+}
+
+export interface UserSubscription {
+  plan: SubscriptionPlan | null;
+  status: "active" | "expired" | "cancelled" | "none";
+  credits_balance: number;
+  bonus_credits: number;
+  current_period_end: string | null;
 }

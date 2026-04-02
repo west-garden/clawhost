@@ -41,7 +41,8 @@
     "agents": "My Agents",
     "newAgent": "New Agent",
     "settings": "Settings",
-    "logout": "Logout"
+    "logout": "Logout",
+    "subscription": "Subscription"
   },
   "dashboard": {
     "title": "My Agents",
@@ -140,5 +141,26 @@
     "newPassword": "New Password",
     "passwordChanged": "Password changed",
     "profileUpdated": "Profile updated"
+  },
+  "subscription": {
+    "title": "Upgrade Your Plan",
+    "nav": "Subscription",
+    "agentPlans": "Agent Plans",
+    "creditPacks": "Credit Packs",
+    "currentPlan": "Current Plan",
+    "freeTier": "Free Tier",
+    "upgradePrompt": "Upgrade for more Agents and credits",
+    "creditsRemaining": "Credits remaining",
+    "expiresAt": "Expires",
+    "upgrade": "Upgrade Now",
+    "currentBadge": "Current",
+    "purchase": "Purchase",
+    "perMonth": "/mo",
+    "credits": "credits",
+    "agents": "Agents",
+    "features": "Includes",
+    "dailyBonus": "Daily bonus: {amount} credits (cap {cap})",
+    "topUpAnytime": "Top up credits anytime (pay as you go)",
+    "comingSoon": "Payment coming soon, stay tuned"
   }
 }
