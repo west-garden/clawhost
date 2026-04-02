@@ -20,7 +20,7 @@ func workspacePath(agentID string) string {
 
 // ListAgents returns the agent list from openclaw.json config
 func ListAgents(ctx context.Context, botID string) ([]map[string]interface{}, error) {
-	config, err := ReadBotConfig(ctx, botID)
+	config, err := ReadAgentRawConfig(ctx, botID)
 	if err != nil {
 		return nil, err
 	}

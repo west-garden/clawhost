@@ -390,9 +390,9 @@ func (c *GatewayClient) RevokeNode(ctx context.Context, deviceID, role string) e
 	return err
 }
 
-// ListBotDevicesViaGateway lists devices using the Gateway WebSocket API
+// ListAgentDevicesViaGateway lists devices using the Gateway WebSocket API
 // This is much faster than executing CLI commands via ExecInPod
-func ListBotDevicesViaGateway(ctx context.Context, botID, accessToken string) (*DeviceListResult, error) {
+func ListAgentDevicesViaGateway(ctx context.Context, botID, accessToken string) (*DeviceListResult, error) {
 	// Get service endpoint
 	endpoint, err := GetServiceEndpoint(ctx, botID)
 	if err != nil {

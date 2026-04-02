@@ -1,15 +1,30 @@
 package v1
 
 import (
+	"fmt"
+
 	"github.com/clawhost/clawhost/model"
 	"github.com/clawhost/clawhost/service/k8s"
+	"github.com/spf13/viper"
 )
 
-// convertToK8sConfig converts model.OpenClawConfig to k8s.BotConfig
-// This is used when starting a bot to pass config to K8s deployment
-func convertToK8sConfig(bot *model.Bot, config *model.OpenClawConfig) *k8s.BotConfig {
-	k8sConfig := &k8s.BotConfig{
-		AccessToken: bot.AccessToken,
+func buildAccessURL(slug, token string) string {
+	domain := viper.GetString("domain.bot_domain_suffix")
+	if domain == "" {
+		domain = "clawhost.ai"
+	}
+	url := fmt.Sprintf("https://%s.%s", slug, domain)
+	if token != "" {
+		url += "?token=" + token
+	}
+	return url
+}
+
+// convertToK8sConfig converts model.OpenClawConfig to k8s.AgentConfig for deployment
+// This is used when starting an agent to pass config to K8s deployment
+func convertToK8sConfig(agent *model.Agent, config *model.OpenClawConfig) *k8s.AgentConfig {
+	k8sConfig := &k8s.AgentConfig{
+		AccessToken: agent.AccessToken,
 	}
 
 	// Convert models/providers
@@ -67,11 +82,11 @@ func convertToK8sConfig(bot *model.Bot, config *model.OpenClawConfig) *k8s.BotCo
 	return k8sConfig
 }
 
-// convertLegacyToK8sConfig converts legacy model.BotConfig to k8s.BotConfig
+// convertLegacyToK8sConfig converts legacy model.AgentConfig to k8s.AgentConfig for deployment
 // This is for backward compatibility with old config format
-func convertLegacyToK8sConfig(bot *model.Bot, config *model.BotConfig) *k8s.BotConfig {
-	k8sConfig := &k8s.BotConfig{
-		AccessToken: bot.AccessToken,
+func convertLegacyToK8sConfig(agent *model.Agent, config *model.AgentConfig) *k8s.AgentConfig {
+	k8sConfig := &k8s.AgentConfig{
+		AccessToken: agent.AccessToken,
 		// Legacy fields
 		Provider: config.Provider,
 		Model:    config.Model,

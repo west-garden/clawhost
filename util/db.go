@@ -35,7 +35,7 @@ func InitDB() error {
 		}
 
 		dsn := fmt.Sprintf(
-			"host=%s user=%s password=%s dbname=%s port=%d sslmode=%s TimeZone=%s",
+			"host=%s user=%s password='%s' dbname=%s port=%d sslmode=%s TimeZone=%s",
 			host, user, password, database, port, sslmode, timezone,
 		)
 

@@ -14,7 +14,7 @@ import (
 
 var reconcileCmd = &cobra.Command{
 	Use:   "reconcile",
-	Short: "Sync bot status in DB with actual K8s state",
+	Short: "Sync agent status in DB with actual K8s state",
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := initConfigLight(); err != nil {
 			log.Fatalf("init config failed: %v", err)
@@ -24,7 +24,7 @@ var reconcileCmd = &cobra.Command{
 		}
 
 		log.Printf("[reconcile] starting")
-		reconcileBotStatus()
+		reconcileAgentStatus()
 		log.Printf("[reconcile] done")
 	},
 }
@@ -35,20 +35,20 @@ func init() {
 
 const startingTimeout = 10 * time.Minute
 
-func reconcileBotStatus() {
-	// Phase 1: Check bots that DB thinks are active
-	running, _ := model.ListBotsByStatus(model.BotStatusRunning)
-	starting, _ := model.ListBotsByStatus(model.BotStatusStarting)
-	activeBots := append(running, starting...)
+func reconcileAgentStatus() {
+	// Phase 1: Check agents that DB thinks are active
+	running, _ := model.ListAgentsByStatus(model.AgentStatusRunning)
+	starting, _ := model.ListAgentsByStatus(model.AgentStatusStarting)
+	activeAgents := append(running, starting...)
 
-	// Phase 2: Check bots that DB thinks are inactive but K8s might still have resources
-	stopped, _ := model.ListBotsByStatus(model.BotStatusStopped)
-	errored, _ := model.ListBotsByStatus(model.BotStatusError)
-	inactiveBots := append(stopped, errored...)
+	// Phase 2: Check agents that DB thinks are inactive but K8s might still have resources
+	stopped, _ := model.ListAgentsByStatus(model.AgentStatusStopped)
+	errored, _ := model.ListAgentsByStatus(model.AgentStatusError)
+	inactiveAgents := append(stopped, errored...)
 
-	total := len(activeBots) + len(inactiveBots)
+	total := len(activeAgents) + len(inactiveAgents)
 	if total == 0 {
-		log.Printf("[reconcile] no bots to check")
+		log.Printf("[reconcile] no agents to check")
 		return
 	}
 
@@ -58,90 +58,90 @@ func reconcileBotStatus() {
 	var wg sync.WaitGroup
 	var fixed atomic.Int64
 
-	// Phase 1: active bots — check if K8s matches DB
-	if len(activeBots) > 0 {
-		log.Printf("[reconcile] checking %d active bot(s)", len(activeBots))
-		for _, bot := range activeBots {
+	// Phase 1: active agents — check if K8s matches DB
+	if len(activeAgents) > 0 {
+		log.Printf("[reconcile] checking %d active agent(s)", len(activeAgents))
+		for _, agent := range activeAgents {
 			wg.Add(1)
 			sem <- struct{}{}
-			go func(bot *model.Bot) {
+			go func(agent *model.Agent) {
 				defer wg.Done()
 				defer func() { <-sem }()
 
-				info, err := k8s.GetDeploymentStatusInfo(ctx, bot.ID)
+				info, err := k8s.GetDeploymentStatusInfo(ctx, agent.ID)
 				if err != nil {
-					log.Printf("[reconcile] failed to check bot %s: %v", bot.ID, err)
+					log.Printf("[reconcile] failed to check agent %s: %v", agent.ID, err)
 					return
 				}
 
 				switch {
 				case info.Status == "not_found":
-					log.Printf("[reconcile] bot %s (%s): deployment not found, %s -> stopped",
-						bot.ID, bot.Name, bot.Status)
-					model.UpdateBotStatus(bot.ID, model.BotStatusStopped, "")
-					k8s.DeleteService(ctx, bot.ID)
+					log.Printf("[reconcile] agent %s (%s): deployment not found, %s -> stopped",
+						agent.ID, agent.Name, agent.Status)
+					model.UpdateAgentStatus(agent.ID, model.AgentStatusStopped, "")
+					k8s.DeleteService(ctx, agent.ID)
 					fixed.Add(1)
 
-				case info.ReadyReplicas > 0 && bot.Status == model.BotStatusStarting:
-					log.Printf("[reconcile] bot %s (%s): pod ready, starting -> running",
-						bot.ID, bot.Name)
-					model.UpdateBotStatus(bot.ID, model.BotStatusRunning, bot.Endpoint)
+				case info.ReadyReplicas > 0 && agent.Status == model.AgentStatusStarting:
+					log.Printf("[reconcile] agent %s (%s): pod ready, starting -> running",
+						agent.ID, agent.Name)
+					model.UpdateAgentStatus(agent.ID, model.AgentStatusRunning, agent.Endpoint)
 					fixed.Add(1)
 
-				case info.ReadyReplicas == 0 && bot.Status == model.BotStatusStarting &&
-					time.Since(bot.UpdatedAt) > startingTimeout:
-					log.Printf("[reconcile] bot %s (%s): stuck starting for %s, cleaning up",
-						bot.ID, bot.Name, time.Since(bot.UpdatedAt).Round(time.Second))
-					k8s.DeleteDeployment(ctx, bot.ID)
-					k8s.DeleteService(ctx, bot.ID)
-					model.UpdateBotStatus(bot.ID, model.BotStatusError, "")
+				case info.ReadyReplicas == 0 && agent.Status == model.AgentStatusStarting &&
+					time.Since(agent.UpdatedAt) > startingTimeout:
+					log.Printf("[reconcile] agent %s (%s): stuck starting for %s, cleaning up",
+						agent.ID, agent.Name, time.Since(agent.UpdatedAt).Round(time.Second))
+					k8s.DeleteDeployment(ctx, agent.ID)
+					k8s.DeleteService(ctx, agent.ID)
+					model.UpdateAgentStatus(agent.ID, model.AgentStatusError, "")
 					fixed.Add(1)
 
-				case info.ReadyReplicas == 0 && bot.Status == model.BotStatusRunning:
-					log.Printf("[reconcile] bot %s (%s): no ready pods, running -> stopped",
-						bot.ID, bot.Name)
-					k8s.DeleteDeployment(ctx, bot.ID)
-					k8s.DeleteService(ctx, bot.ID)
-					model.UpdateBotStatus(bot.ID, model.BotStatusStopped, "")
+				case info.ReadyReplicas == 0 && agent.Status == model.AgentStatusRunning:
+					log.Printf("[reconcile] agent %s (%s): no ready pods, running -> stopped",
+						agent.ID, agent.Name)
+					k8s.DeleteDeployment(ctx, agent.ID)
+					k8s.DeleteService(ctx, agent.ID)
+					model.UpdateAgentStatus(agent.ID, model.AgentStatusStopped, "")
 					fixed.Add(1)
 				}
-			}(bot)
+			}(agent)
 		}
 		wg.Wait()
 	}
 
-	// Phase 2: inactive bots — clean up orphaned K8s resources
-	if len(inactiveBots) > 0 {
-		log.Printf("[reconcile] checking %d inactive bot(s) for orphaned resources", len(inactiveBots))
-		for _, bot := range inactiveBots {
+	// Phase 2: inactive agents — clean up orphaned K8s resources
+	if len(inactiveAgents) > 0 {
+		log.Printf("[reconcile] checking %d inactive agent(s) for orphaned resources", len(inactiveAgents))
+		for _, agent := range inactiveAgents {
 			wg.Add(1)
 			sem <- struct{}{}
-			go func(bot *model.Bot) {
+			go func(agent *model.Agent) {
 				defer wg.Done()
 				defer func() { <-sem }()
 
-				exists, err := k8s.GetDeploymentStatus(ctx, bot.ID)
+				exists, err := k8s.GetDeploymentStatus(ctx, agent.ID)
 				if err != nil {
 					return // can't check, skip
 				}
 				// exists returns true if readyReplicas > 0, but we also need
 				// to catch deployments with 0 ready replicas (CrashLoopBackOff etc.)
 				// So check if deployment exists at all via GetDeploymentStatusInfo
-				info, err := k8s.GetDeploymentStatusInfo(ctx, bot.ID)
+				info, err := k8s.GetDeploymentStatusInfo(ctx, agent.ID)
 				if err != nil || info.Status == "not_found" {
 					return // no K8s resources, nothing to clean
 				}
 				_ = exists
 
-				log.Printf("[reconcile] bot %s (%s): DB=%s but K8s deployment exists (ready=%d), cleaning up",
-					bot.ID, bot.Name, bot.Status, info.ReadyReplicas)
-				k8s.DeleteDeployment(ctx, bot.ID)
-				k8s.DeleteService(ctx, bot.ID)
+				log.Printf("[reconcile] agent %s (%s): DB=%s but K8s deployment exists (ready=%d), cleaning up",
+					agent.ID, agent.Name, agent.Status, info.ReadyReplicas)
+				k8s.DeleteDeployment(ctx, agent.ID)
+				k8s.DeleteService(ctx, agent.ID)
 				fixed.Add(1)
-			}(bot)
+			}(agent)
 		}
 		wg.Wait()
 	}
 
-	log.Printf("[reconcile] fixed %d bot(s)", fixed.Load())
+	log.Printf("[reconcile] fixed %d agent(s)", fixed.Load())
 }

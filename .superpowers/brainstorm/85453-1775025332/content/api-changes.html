@@ -1,0 +1,79 @@
+<h2>ClawHost API — Before vs After</h2>
+<p class="subtitle">Backend refactoring: what changes, what stays</p>
+
+<div class="mockup">
+  <div class="mockup-header">New API Routes</div>
+  <div class="mockup-body" style="padding: 20px; font-family: monospace; font-size: 12px; color: #94a3b8; line-height: 2;">
+
+    <div style="color: #34d399; font-weight: bold; margin-bottom: 4px;">✅ NEW — Auth endpoints</div>
+    <div style="padding-left: 16px; margin-bottom: 16px;">
+      POST /auth/register <span style="color: #475569;">— email, password, name → JWT</span><br>
+      POST /auth/login <span style="color: #475569;">— email, password → JWT</span><br>
+      POST /auth/refresh <span style="color: #475569;">— refresh token → new JWT</span><br>
+      GET  /auth/oauth/:provider <span style="color: #475569;">— redirect to GitHub/Google</span><br>
+      GET  /auth/oauth/:provider/callback <span style="color: #475569;">— exchange code → JWT</span><br>
+      GET  /auth/me <span style="color: #475569;">— current user profile</span><br>
+      PUT  /auth/me <span style="color: #475569;">— update profile</span><br>
+      PUT  /auth/me/password <span style="color: #475569;">— change password</span>
+    </div>
+
+    <div style="color: #60a5fa; font-weight: bold; margin-bottom: 4px;">🔄 RENAMED — Bot → Agent (same logic)</div>
+    <div style="padding-left: 16px; margin-bottom: 16px;">
+      <span style="color: #ef4444; text-decoration: line-through;">/bot/api/v1/bots</span> → <span style="color: #34d399;">/api/v1/agents</span><br>
+      <span style="color: #ef4444; text-decoration: line-through;">/bot/api/v1/bots/:id/*</span> → <span style="color: #34d399;">/api/v1/agents/:id/*</span><br>
+      <span style="color: #475569;">All sub-routes stay the same: /start, /stop, /restart, /status,</span><br>
+      <span style="color: #475569;">/channels, /skills, /devices, /config/models, etc.</span>
+    </div>
+
+    <div style="color: #f59e0b; font-weight: bold; margin-bottom: 4px;">🔄 CHANGED — Auth middleware</div>
+    <div style="padding-left: 16px; margin-bottom: 16px;">
+      <span style="color: #ef4444; text-decoration: line-through;">BearerAuth: validates api_token against apps table</span><br>
+      <span style="color: #34d399;">JWTAuth: validates JWT, extracts user from token</span><br>
+      <br>
+      <span style="color: #ef4444; text-decoration: line-through;">BotOwnerAuth: checks bot.app_id == app.id</span><br>
+      <span style="color: #34d399;">AgentOwnerAuth: checks agent.user_id == jwt_user.id</span><br>
+      <br>
+      <span style="color: #ef4444; text-decoration: line-through;">AdminAuth: validates admin_token from config</span><br>
+      <span style="color: #34d399;">AdminAuth: checks jwt_user.role == "admin"</span>
+    </div>
+
+    <div style="color: #ef4444; font-weight: bold; margin-bottom: 4px;">❌ REMOVED</div>
+    <div style="padding-left: 16px; margin-bottom: 16px;">
+      <span style="text-decoration: line-through;">/bot/api/v1/admin/apps/*</span> <span style="color: #475569;">— App CRUD (no more apps)</span><br>
+      <span style="text-decoration: line-through;">api.token, api.admin_token config</span> <span style="color: #475569;">— replaced by JWT + user roles</span>
+    </div>
+
+    <div style="color: #a78bfa; font-weight: bold; margin-bottom: 4px;">➕ NEW — Admin endpoints</div>
+    <div style="padding-left: 16px;">
+      GET  /api/v1/admin/users <span style="color: #475569;">— list all users</span><br>
+      PUT  /api/v1/admin/users/:id <span style="color: #475569;">— update user (role, status)</span><br>
+      GET  /api/v1/admin/agents <span style="color: #475569;">— list all agents (across users)</span><br>
+      POST /api/v1/admin/agents/upgrade <span style="color: #475569;">— upgrade all (kept from before)</span><br>
+      POST /api/v1/admin/agents/:id/upgrade <span style="color: #475569;">— upgrade specific</span><br>
+      GET  /api/v1/admin/stats <span style="color: #475569;">— system overview (user count, agent count, running count)</span>
+    </div>
+
+  </div>
+</div>
+
+<div style="margin-top: 20px;">
+  <div class="mockup">
+    <div class="mockup-header">Migration Summary</div>
+    <div class="mockup-body" style="padding: 20px; font-size: 13px;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+        <div style="text-align: center; padding: 16px; background: #1e293b; border-radius: 8px;">
+          <div style="color: #34d399; font-size: 24px; font-weight: bold;">+3</div>
+          <div style="color: #64748b; font-size: 12px;">New files<br>(user model, auth handler, JWT middleware)</div>
+        </div>
+        <div style="text-align: center; padding: 16px; background: #1e293b; border-radius: 8px;">
+          <div style="color: #60a5fa; font-size: 24px; font-weight: bold;">~15</div>
+          <div style="color: #64748b; font-size: 12px;">Modified files<br>(rename bot→agent, swap auth middleware)</div>
+        </div>
+        <div style="text-align: center; padding: 16px; background: #1e293b; border-radius: 8px;">
+          <div style="color: #ef4444; font-size: 24px; font-weight: bold;">-2</div>
+          <div style="color: #64748b; font-size: 12px;">Deleted files<br>(app model, app handler)</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

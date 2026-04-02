@@ -19,10 +19,10 @@ type ChannelConfig struct {
 	Extra         map[string]interface{} `json:"extra,omitempty"`         // Additional config
 }
 
-// AddChannelToBot adds an IM channel account to a bot's OpenClaw instance
+// AddChannelToAgent adds an IM channel account to an agent's OpenClaw instance
 // This writes directly to the config file, openclaw will hot-reload
 // Supports multi-account: channels.telegram.accounts.{accountName}
-func AddChannelToBot(ctx context.Context, botID, accessToken, channel, account string, channelConfig map[string]interface{}) error {
+func AddChannelToAgent(ctx context.Context, botID, accessToken, channel, account string, channelConfig map[string]interface{}) error {
 	namespace := GetNamespace()
 
 	podName, err := WaitForPodReady(ctx, botID, 30)
@@ -119,8 +119,8 @@ type ChannelAccountInfo struct {
 	Config   map[string]interface{} `json:"config,omitempty"`
 }
 
-// ListBotChannels lists all configured channel accounts for a bot
-func ListBotChannels(ctx context.Context, botID, accessToken string) ([]ChannelAccountInfo, error) {
+// ListAgentChannels lists all configured channel accounts for an agent
+func ListAgentChannels(ctx context.Context, botID, accessToken string) ([]ChannelAccountInfo, error) {
 	namespace := GetNamespace()
 
 	podName, err := WaitForPodReady(ctx, botID, 30)
@@ -197,9 +197,9 @@ func enrichWeixinAccountNames(ctx context.Context, namespace, podName string, ac
 	}
 }
 
-// RemoveChannelFromBot removes an IM channel account from a bot
+// RemoveChannelFromAgent removes an IM channel account from an agent
 // If account is empty, removes the entire channel; otherwise removes specific account
-func RemoveChannelFromBot(ctx context.Context, botID, accessToken, channel, account string) error {
+func RemoveChannelFromAgent(ctx context.Context, botID, accessToken, channel, account string) error {
 	namespace := GetNamespace()
 
 	podName, err := WaitForPodReady(ctx, botID, 30)

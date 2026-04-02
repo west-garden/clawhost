@@ -1,0 +1,80 @@
+<h2>ClawHost User Portal — Architecture</h2>
+<p class="subtitle">Overall system architecture with data flow</p>
+
+<div class="mockup">
+  <div class="mockup-header">System Architecture</div>
+  <div class="mockup-body" style="padding: 24px; font-family: monospace; font-size: 13px; line-height: 1.8;">
+    <div style="display: flex; gap: 20px; align-items: flex-start;">
+
+      <!-- Browser -->
+      <div style="flex: 1; border: 2px solid #60a5fa; border-radius: 8px; padding: 16px; background: #1e293b;">
+        <div style="color: #60a5fa; font-weight: bold; margin-bottom: 8px;">🌐 Browser</div>
+        <div style="color: #94a3b8; font-size: 12px;">
+          • React pages<br>
+          • NextAuth session cookie<br>
+          • Never sees ClawHost tokens
+        </div>
+      </div>
+
+      <div style="color: #475569; align-self: center; font-size: 20px;">→</div>
+
+      <!-- Next.js Server -->
+      <div style="flex: 1.5; border: 2px solid #34d399; border-radius: 8px; padding: 16px; background: #1e293b;">
+        <div style="color: #34d399; font-weight: bold; margin-bottom: 8px;">⚡ Next.js Server</div>
+        <div style="color: #94a3b8; font-size: 12px;">
+          • NextAuth.js (email/pw + OAuth)<br>
+          • Server Actions / API Routes<br>
+          • Stores: users, app_tokens<br>
+          • Calls ClawHost API server-side<br>
+          <br>
+          <span style="color: #fbbf24;">DB: PostgreSQL (shared or separate)</span>
+        </div>
+      </div>
+
+      <div style="color: #475569; align-self: center; font-size: 20px;">→</div>
+
+      <!-- ClawHost API -->
+      <div style="flex: 1.5; border: 2px solid #f472b6; border-radius: 8px; padding: 16px; background: #1e293b;">
+        <div style="color: #f472b6; font-weight: bold; margin-bottom: 8px;">🔧 ClawHost API</div>
+        <div style="color: #94a3b8; font-size: 12px;">
+          • Existing REST API (unchanged)<br>
+          • App multi-tenancy model<br>
+          • Bot CRUD + lifecycle<br>
+          • K8s orchestration<br>
+          <br>
+          <span style="color: #fbbf24;">DB: PostgreSQL (apps, bots)</span>
+        </div>
+      </div>
+
+      <div style="color: #475569; align-self: center; font-size: 20px;">→</div>
+
+      <!-- K8s -->
+      <div style="flex: 1; border: 2px solid #a78bfa; border-radius: 8px; padding: 16px; background: #1e293b;">
+        <div style="color: #a78bfa; font-weight: bold; margin-bottom: 8px;">☸️ K8s Cluster</div>
+        <div style="color: #94a3b8; font-size: 12px;">
+          • OpenClaw Pods<br>
+          • Per-bot Service<br>
+          • Shared PVC
+        </div>
+      </div>
+    </div>
+
+    <!-- Data flow annotations -->
+    <div style="margin-top: 24px; padding: 16px; background: #0f172a; border-radius: 8px;">
+      <div style="color: #e2e8f0; font-weight: bold; margin-bottom: 8px;">Data Flow:</div>
+      <div style="color: #94a3b8; font-size: 12px;">
+        1. User registers → NextAuth creates account → Server calls ClawHost Admin API to create App<br>
+        2. User creates bot → Server uses stored app_token to call ClawHost POST /bots<br>
+        3. User starts bot → Server calls ClawHost POST /bots/:id/start → K8s Deployment created<br>
+        4. User accesses bot WebUI → Redirect to ClawHost proxy with bot access_token
+      </div>
+    </div>
+
+    <!-- Key security note -->
+    <div style="margin-top: 12px; padding: 12px; background: #1a1a2e; border-left: 3px solid #f59e0b; border-radius: 4px;">
+      <div style="color: #f59e0b; font-size: 12px;">
+        🔒 Security: Browser ↔ Next.js uses session cookie only. ClawHost admin_token and app_tokens never reach the browser.
+      </div>
+    </div>
+  </div>
+</div>

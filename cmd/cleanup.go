@@ -14,7 +14,7 @@ import (
 
 var cleanupCmd = &cobra.Command{
 	Use:   "cleanup",
-	Short: "Stop expired bots and clean up K8s resources",
+	Short: "Stop expired agents and clean up K8s resources",
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := initConfigLight(); err != nil {
 			log.Fatalf("init config failed: %v", err)
@@ -34,7 +34,7 @@ var cleanupCmd = &cobra.Command{
 		grace := time.Duration(graceHours) * time.Hour
 
 		log.Printf("[cleanup] starting, grace=%dh, batch=%d", graceHours, batchSize)
-		cleanupExpiredBots(grace, batchSize)
+		cleanupExpiredAgents(grace, batchSize)
 		log.Printf("[cleanup] done")
 	},
 }
@@ -43,45 +43,45 @@ func init() {
 	rootCmd.AddCommand(cleanupCmd)
 }
 
-func cleanupExpiredBots(grace time.Duration, limit int) {
-	bots, err := model.ListExpiredBots(grace, limit)
+func cleanupExpiredAgents(grace time.Duration, limit int) {
+	agents, err := model.ListExpiredAgents(grace, limit)
 	if err != nil {
-		log.Printf("[cleanup] failed to list expired bots: %v", err)
+		log.Printf("[cleanup] failed to list expired agents: %v", err)
 		return
 	}
-	if len(bots) == 0 {
-		log.Printf("[cleanup] no expired bots found")
+	if len(agents) == 0 {
+		log.Printf("[cleanup] no expired agents found")
 		return
 	}
 
-	log.Printf("[cleanup] found %d expired bot(s)", len(bots))
+	log.Printf("[cleanup] found %d expired agent(s)", len(agents))
 
 	// Process concurrently with limited parallelism
 	concurrency := 10
 	sem := make(chan struct{}, concurrency)
 	var wg sync.WaitGroup
 
-	for _, bot := range bots {
+	for _, agent := range agents {
 		wg.Add(1)
 		sem <- struct{}{} // acquire
-		go func(bot *model.Bot) {
+		go func(agent *model.Agent) {
 			defer wg.Done()
 			defer func() { <-sem }() // release
 
-			log.Printf("[cleanup] removing bot %s (%s), status=%s, expired at %s",
-				bot.ID, bot.Name, bot.Status, bot.ExpiresAt.Format(time.RFC3339))
+			log.Printf("[cleanup] removing agent %s (%s), status=%s, expired at %s",
+				agent.ID, agent.Name, agent.Status, agent.ExpiresAt.Format(time.RFC3339))
 
 			ctx := context.Background()
-			k8s.DeleteDeployment(ctx, bot.ID)
-			k8s.DeleteService(ctx, bot.ID)
+			k8s.DeleteDeployment(ctx, agent.ID)
+			k8s.DeleteService(ctx, agent.ID)
 
-			if err := model.UpdateBotStatus(bot.ID, model.BotStatusDeleted, ""); err != nil {
-				log.Printf("[cleanup] failed to mark bot %s as deleted: %v", bot.ID, err)
+			if err := model.UpdateAgentStatus(agent.ID, model.AgentStatusDeleted, ""); err != nil {
+				log.Printf("[cleanup] failed to mark agent %s as deleted: %v", agent.ID, err)
 				return
 			}
 
-			log.Printf("[cleanup] bot %s done", bot.ID)
-		}(bot)
+			log.Printf("[cleanup] agent %s done", agent.ID)
+		}(agent)
 	}
 
 	wg.Wait()
