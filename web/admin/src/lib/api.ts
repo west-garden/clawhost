@@ -167,3 +167,15 @@ export async function restartAllBots() {
 export async function getAdminConfig() {
   return request<{ bot_domain_template: string }>("/config");
 }
+
+// User APIs
+export async function listUsers() {
+  return request<User[]>("/users");
+}
+
+export async function updateUser(id: string, data: { role?: string; status?: string }) {
+  return request<User>(`/users/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
+}
