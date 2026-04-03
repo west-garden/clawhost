@@ -512,6 +512,7 @@ func buildProvidersJSON(config *AgentConfig) string {
 				"authHeader": p.AuthHeader,
 				"api":        getAPIOrDefault(p.API, p.Name),
 			}
+			// Always include models array (even if empty) for OpenClaw validation
 			if len(p.Models) > 0 {
 				models := make([]map[string]interface{}, len(p.Models))
 				for i, m := range p.Models {
@@ -539,6 +540,9 @@ func buildProvidersJSON(config *AgentConfig) string {
 					models[i] = modelObj
 				}
 				providerObj["models"] = models
+			} else {
+				// Always set empty array for OpenClaw validation
+				providerObj["models"] = []interface{}{}
 			}
 			providers[p.Name] = providerObj
 		}
