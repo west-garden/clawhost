@@ -8,7 +8,7 @@ fullnameOverride: ""
 server:
   image:
     repository: 014388475497.dkr.ecr.us-east-2.amazonaws.com/metaverse
-    tag: clawhost
+    tag: clawhost11
     pullPolicy: IfNotPresent
   replicas: 1
   port: 18080
@@ -45,9 +45,9 @@ adminToken: "change-me"
 ## Initial admin user (optional, created on first startup)
 ## Uncomment and configure to auto-create an admin user
 initialAdmin:
-  email: ""
-  password: ""
-  name: ""
+  email: "admin@cookieclicker.ai"
+  password: "irrZVjSmJ9UFVss1"
+  name: "admin"
 
 ## Database
 postgresql:
@@ -94,7 +94,7 @@ domain:
 
 ## OpenClaw bot config
 openclaw:
-  image: "014388475497.dkr.ecr.us-east-2.amazonaws.com/metaverse:openclaw"
+  image: "014388475497.dkr.ecr.us-east-2.amazonaws.com/metaverse:openclaw5"
   imagePullSecret: ""
   gatewayPort: 18789
   nodeMaxOldSpaceSize: 6144
