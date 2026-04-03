@@ -26,7 +26,7 @@ export function ChatPageClient({
         return `${providerName}/${provider.models[0].id}`;
       }
     }
-    return "";
+    return "default";
   })();
 
   const {
@@ -46,10 +46,10 @@ export function ChatPageClient({
 
   // Create initial session if none exists
   useEffect(() => {
-    if (sessions.length === 0 && defaultModel) {
+    if (sessions.length === 0) {
       createNewSession();
     }
-  }, [sessions.length, defaultModel, createNewSession]);
+  }, [sessions.length, createNewSession]);
 
   return (
     <div className="flex-1 flex overflow-hidden">
