@@ -93,7 +93,7 @@ export function ManagementPanel({
       </div>
 
       {/* Connection Info */}
-      {connectInfo && currentStatus === "running" && (
+      {currentStatus === "running" && (
         <div className="glass-panel">
           <div className="glass-panel-header">
             <div className="flex items-center gap-2">
@@ -104,80 +104,87 @@ export function ManagementPanel({
             </div>
           </div>
           <div className="glass-panel-content space-y-3">
-            {connectInfo.webchat_url && (
-              <div className="flex items-center justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
-                    WebUI
-                  </p>
-                  <p className="text-xs text-muted-foreground truncate font-mono">
-                    {connectInfo.webchat_url}
-                  </p>
-                  <p className="text-xs text-yellow-600 dark:text-yellow-500 mt-1">
-                    {t("agent.connect.webuiHint")}
-                  </p>
-                </div>
-                <button
-                  onClick={() =>
-                    window.open(connectInfo.webchat_url, "_blank")
-                  }
-                  className="glass-btn-secondary py-1.5 px-3 text-xs shrink-0"
-                >
-                  <ExternalLink className="w-3.5 h-3.5" />
-                  <span>{t("common.open")}</span>
-                </button>
+            {!connectInfo || !connectInfo.webchat_url ? (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <div className="animate-spin w-4 h-4 border-2 border-current border-t-transparent rounded-full" />
+                <span className="text-xs">{t("agent.connect.webuiLoading")}</span>
               </div>
-            )}
-
-            <div className="h-px bg-border" />
-
-            {connectInfo.endpoint && (
+            ) : (
               <>
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
-                      {t("agent.connect.apiEndpoint")}
+                      WebUI
                     </p>
                     <p className="text-xs text-muted-foreground truncate font-mono">
-                      {connectInfo.endpoint}
+                      {connectInfo.webchat_url}
+                    </p>
+                    <p className="text-xs text-yellow-600 dark:text-yellow-500 mt-1">
+                      {t("agent.connect.webuiHint")}
                     </p>
                   </div>
                   <button
-                    onClick={() => copyToClipboard(connectInfo.endpoint!)}
+                    onClick={() =>
+                      window.open(connectInfo.webchat_url, "_blank")
+                    }
                     className="glass-btn-secondary py-1.5 px-3 text-xs shrink-0"
                   >
-                    <Copy className="w-3.5 h-3.5" />
-                    <span>{t("common.copy")}</span>
+                    <ExternalLink className="w-3.5 h-3.5" />
+                    <span>{t("common.open")}</span>
                   </button>
                 </div>
+
                 <div className="h-px bg-border" />
+
+                {connectInfo.endpoint && (
+                  <>
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
+                          {t("agent.connect.apiEndpoint")}
+                        </p>
+                        <p className="text-xs text-muted-foreground truncate font-mono">
+                          {connectInfo.endpoint}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => copyToClipboard(connectInfo.endpoint!)}
+                        className="glass-btn-secondary py-1.5 px-3 text-xs shrink-0"
+                      >
+                        <Copy className="w-3.5 h-3.5" />
+                        <span>{t("common.copy")}</span>
+                      </button>
+                    </div>
+                    <div className="h-px bg-border" />
+                  </>
+                )}
+
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
+                      {t("agent.connect.accessToken")}
+                    </p>
+                    <p className="text-xs text-muted-foreground font-mono">
+                      {agent.access_token.slice(0, 8)}••••••••
+                    </p>
+                  </div>
+                  <div className="flex gap-1.5 shrink-0">
+                    <button
+                      onClick={() => copyToClipboard(agent.access_token)}
+                      className="glass-btn-secondary py-1.5 px-3 text-xs"
+                    >
+                      <Copy className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => setResetTokenOpen(true)}
+                      className="glass-btn-secondary py-1.5 px-3 text-xs"
+                    >
+                      <RefreshCw className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
               </>
             )}
-
-            <div className="flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
-                  {t("agent.connect.accessToken")}
-                </p>
-                <p className="text-xs text-muted-foreground font-mono">
-                  {agent.access_token.slice(0, 8)}••••••••
-                </p>
-              </div>
-              <div className="flex gap-1.5 shrink-0">
-                <button
-                  onClick={() => copyToClipboard(agent.access_token)}
-                  className="glass-btn-secondary py-1.5 px-3 text-xs"
-                >
-                  <Copy className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  onClick={() => setResetTokenOpen(true)}
-                  className="glass-btn-secondary py-1.5 px-3 text-xs"
-                >
-                  <RefreshCw className="w-3.5 h-3.5" />
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       )}
