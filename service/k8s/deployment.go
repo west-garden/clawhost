@@ -250,6 +250,11 @@ if command -v node > /dev/null 2>&1 && [ -f /home/node/.openclaw/openclaw.json ]
         c.gateway.controlUi = wantUi;
         changed = true;
       }
+      // Enable dangerouslyDisableDeviceAuth globally so CLI clients can get operator.pairing scope
+      if (!c.gateway.dangerouslyDisableDeviceAuth) {
+        c.gateway.dangerouslyDisableDeviceAuth = true;
+        changed = true;
+      }
       if (!c.gateway.http || !c.gateway.http.endpoints || !c.gateway.http.endpoints.chatCompletions) {
         c.gateway.http = { endpoints: { chatCompletions: { enabled: true } } };
         changed = true;
