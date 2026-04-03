@@ -329,7 +329,7 @@ export async function revokeDevice(agentId: string, deviceId: string) {
 export async function installSkill(agentId: string, urlOrSpec: string) {
   const res = await fetchWithAuth(`/api/v1/agents/${agentId}/skills/install`, {
     method: "POST",
-    body: JSON.stringify({ source: "github", url: urlOrSpec, spec: urlOrSpec }),
+    body: JSON.stringify({ source: "github", spec: urlOrSpec }),
   });
   const data = await res.json();
   if (!res.ok || data.code !== 0) {
