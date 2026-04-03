@@ -142,3 +142,38 @@ export interface UserSubscription {
   bonus_credits: number;
   current_period_end: string | null;
 }
+
+// --- Chat Sessions ---
+
+export interface ChatMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+  timestamp: number;
+}
+
+export interface ChatSession {
+  id: string;
+  title: string;
+  model: string;
+  messages: ChatMessage[];
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface SessionsStorage {
+  sessions: ChatSession[];
+  activeSessionId: string | null;
+}
+
+export interface ModelInfo {
+  id: string;           // e.g., "gpt-4o"
+  name: string;         // e.g., "GPT-4o"
+  provider: string;     // e.g., "openai"
+}
+
+export interface ProviderWithModels {
+  name: string;
+  baseUrl?: string;
+  models?: Array<{ id: string; name?: string }>;
+}

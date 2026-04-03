@@ -82,6 +82,7 @@
     },
     "connect": {
       "webui": "WebUI",
+      "webuiLoading": "Loading connection info...",
       "webuiHint": "WebUI may take a few seconds to be ready after startup",
       "apiEndpoint": "API Endpoint",
       "accessToken": "Access Token",
@@ -190,7 +191,10 @@
     "startingHint": "Please wait, you can chat once it's ready",
     "connecting": "Connecting...",
     "connectionError": "Connection failed, please retry",
-    "send": "Send"
+    "send": "Send",
+    "newChat": "New Chat",
+    "selectModel": "Select Model",
+    "noModel": "Please configure a model first"
   },
   "settings": {
     "title": "Settings",

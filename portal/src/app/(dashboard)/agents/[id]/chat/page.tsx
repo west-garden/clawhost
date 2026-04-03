@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getAgent, ApiError } from "@/lib/api";
-import { ChatPanel } from "@/components/chat-panel";
+import { listModelProviders } from "@/lib/actions";
+import { ChatPageClient } from "@/components/chat-page-client";
 
 export default async function AgentChatPage({
   params,
@@ -19,11 +20,16 @@ export default async function AgentChatPage({
     throw e;
   }
 
+  // Load model providers
+  const result = await listModelProviders(id);
+  const providers = result.providers || {};
+
   return (
-    <ChatPanel
+    <ChatPageClient
       agentId={agent.id}
       agentName={agent.name}
       initialStatus={agent.status}
+      providers={providers}
     />
   );
 }
