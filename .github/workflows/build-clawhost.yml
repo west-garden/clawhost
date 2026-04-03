@@ -13,7 +13,30 @@ env:
   IMAGE_NAME: ${{ github.repository }}
 
 jobs:
+  check-lockfile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'pnpm'
+          cache-dependency-path: 'portal/pnpm-lock.yaml'
+
+      - name: Check portal lockfile sync
+        run: |
+          cd portal
+          pnpm install --frozen-lockfile
+
   build:
+    needs: check-lockfile
     runs-on: ubuntu-latest
     permissions:
       contents: read
