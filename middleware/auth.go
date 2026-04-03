@@ -1,6 +1,8 @@
 package middleware
 
 import (
+	"regexp"
+
 	"github.com/clawhost/clawhost/model"
 	"github.com/clawhost/clawhost/util"
 	"github.com/labstack/echo/v4"
@@ -11,8 +13,17 @@ const (
 	ContextKeyAgent = "authorized_agent"
 )
 
+// UUID format regex
+var uuidRegex = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+
+// isUUID checks if a string is in UUID format
+func isUUID(s string) bool {
+	return uuidRegex.MatchString(s)
+}
+
 // AgentOwnerAuth validates that the JWT-authenticated user owns the agent
 // identified by the ":id" path parameter.
+// Supports both UUID (agent.ID) and slug (agent.Slug) lookup.
 // Must be used after JWTAuth middleware.
 func AgentOwnerAuth() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
@@ -22,7 +33,14 @@ func AgentOwnerAuth() echo.MiddlewareFunc {
 				return util.BadRequest(c, "agent id is required")
 			}
 
-			agent, err := model.GetAgentByID(agentID)
+			// Lookup by UUID or slug (same logic as proxy layer)
+			var agent *model.Agent
+			var err error
+			if isUUID(agentID) {
+				agent, err = model.GetAgentByID(agentID)
+			} else {
+				agent, err = model.GetAgentBySlug(agentID)
+			}
 			if err != nil {
 				if err == gorm.ErrRecordNotFound {
 					return util.NotFound(c, "agent not found")
