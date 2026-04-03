@@ -27,8 +27,13 @@ spec:
           env:
             - name: NEXT_PUBLIC_API_URL
               value: {{ .Values.portal.env.NEXT_PUBLIC_API_URL | quote }}
+            {{- if and .Values.portal.env.CLAWHOST_API_URL (ne .Values.portal.env.CLAWHOST_API_URL "") }}
             - name: CLAWHOST_API_URL
-              value: {{ .Values.portal.env.NEXT_PUBLIC_API_URL | quote }}
+              value: {{ .Values.portal.env.CLAWHOST_API_URL | quote }}
+            {{- else }}
+            - name: CLAWHOST_API_URL
+              value: {{ printf "http://%s" (include "clawhost.fullname" .) | quote }}
+            {{- end }}
           resources:
             {{- toYaml .Values.portal.resources | nindent 12 }}
           livenessProbe:
