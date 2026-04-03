@@ -241,6 +241,14 @@ func (a *Agent) GetOpenClawConfig() (*OpenClawConfig, error) {
 	if err := json.Unmarshal(a.Config, &config); err != nil {
 		return nil, err
 	}
+	// Fix: ensure all providers have models array (not nil) for OpenClaw validation
+	if config.Models != nil && config.Models.Providers != nil {
+		for name, p := range config.Models.Providers {
+			if p.Models == nil {
+				config.Models.Providers[name].Models = []ProviderModelConfig{}
+			}
+		}
+	}
 	return &config, nil
 }
 
