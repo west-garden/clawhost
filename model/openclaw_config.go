@@ -38,7 +38,7 @@ type ProviderConfig struct {
 	Auth       string                `json:"auth,omitempty"`       // api-key, bearer
 	AuthHeader bool                  `json:"authHeader,omitempty"` // whether to send API key in Authorization header
 	API        string                `json:"api,omitempty"`        // anthropic-messages, openai-completions
-	Models     []ProviderModelConfig `json:"models,omitempty"`
+	Models     []ProviderModelConfig `json:"models"`               // always include, even if empty (OpenClaw validation requires array)
 }
 
 // ProviderModelConfig represents a model configuration within a provider
