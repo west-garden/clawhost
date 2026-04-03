@@ -88,7 +88,7 @@ export function SkillList({
         open={!!deleteTarget}
         onOpenChange={() => setDeleteTarget(null)}
         title={t("agent.skills.delete")}
-        description={t("agent.skills.deleteConfirm", { name: deleteTarget })}
+        description={deleteTarget ? t("agent.skills.deleteConfirm", { name: deleteTarget }) : ""}
         loading={deleting}
         onConfirm={handleDelete}
         variant="destructive"

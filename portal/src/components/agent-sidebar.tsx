@@ -1,6 +1,7 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { CreateAgentDialog } from "./create-agent-dialog";
@@ -54,19 +55,12 @@ export function AgentSidebarContent({
 }: AgentSidebarContentProps) {
   const t = useTranslations();
   const pathname = usePathname();
-  const router = useRouter();
 
   const activeAgentId = pathname.match(/\/agents\/([^/]+)/)?.[1];
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
-    router.refresh();
-  }
-
-  function navigateTo(path: string) {
-    onNavigate?.();
-    router.push(path);
+    window.location.href = "/login";
   }
 
   return (
@@ -102,13 +96,10 @@ export function AgentSidebarContent({
           const color = getAgentColor(agent.name);
 
           return (
-            <a
+            <Link
               key={agent.id}
               href={`/agents/${agent.id}`}
-              onClick={(e) => {
-                e.preventDefault();
-                navigateTo(`/agents/${agent.id}`);
-              }}
+              onClick={onNavigate}
               className={cn(
                 "agent-sidebar-item",
                 isActive && "agent-sidebar-item-active"
@@ -133,18 +124,15 @@ export function AgentSidebarContent({
               <div
                 className={cn("status-dot", getStatusDotClass(agent.status))}
               />
-            </a>
+            </Link>
           );
         })}
 
         {/* Subscription + Settings nav items */}
         <div className="!mt-2 pt-2 border-t border-border space-y-0.5">
-        <a
+        <Link
           href="/subscription"
-          onClick={(e) => {
-            e.preventDefault();
-            navigateTo("/subscription");
-          }}
+          onClick={onNavigate}
           className={cn(
             "agent-sidebar-item",
             pathname === "/subscription" && "agent-sidebar-item-active"
@@ -164,13 +152,10 @@ export function AgentSidebarContent({
           >
             {t("sidebar.subscription")}
           </span>
-        </a>
-        <a
+        </Link>
+        <Link
           href="/settings"
-          onClick={(e) => {
-            e.preventDefault();
-            navigateTo("/settings");
-          }}
+          onClick={onNavigate}
           className={cn(
             "agent-sidebar-item",
             pathname === "/settings" && "agent-sidebar-item-active"
@@ -190,7 +175,7 @@ export function AgentSidebarContent({
           >
             {t("sidebar.settings")}
           </span>
-        </a>
+        </Link>
         </div>
       </nav>
 
