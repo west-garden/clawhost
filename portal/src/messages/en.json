@@ -82,6 +82,7 @@
     },
     "connect": {
       "webui": "WebUI",
+      "webuiHint": "WebUI may take a few seconds to be ready after startup",
       "apiEndpoint": "API Endpoint",
       "accessToken": "Access Token",
       "resetToken": "Reset Token",
