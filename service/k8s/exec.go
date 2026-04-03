@@ -42,7 +42,12 @@ func GetPodName(ctx context.Context, botID string) (string, error) {
 
 	for _, pod := range pods.Items {
 		if pod.Status.Phase == corev1.PodRunning {
-			return pod.Name, nil
+			// Also check that the pod is Ready (containers are actually running)
+			for _, cond := range pod.Status.Conditions {
+				if cond.Type == corev1.PodReady && cond.Status == corev1.ConditionTrue {
+					return pod.Name, nil
+				}
+			}
 		}
 	}
 

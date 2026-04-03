@@ -165,6 +165,14 @@ func startServer() {
 		agentAPI.GET("/skills", v1.ListSkills)
 		agentAPI.PUT("/skills/:name", v1.UpdateSkill)
 		agentAPI.DELETE("/skills/:name", v1.DeleteSkill)
+		agentAPI.POST("/skills/install", v1.InstallSkill)
+		agentAPI.POST("/skills/create", v1.CreateSkill)
+
+		// Cron job management
+		agentAPI.GET("/cron", v1.ListCronJobs)
+		agentAPI.POST("/cron/:jobId/run", v1.RunCronJob)
+		agentAPI.POST("/cron/:jobId/toggle", v1.ToggleCronJob)
+		agentAPI.DELETE("/cron/:jobId", v1.DeleteCronJob)
 
 		// Channels management (IM integrations)
 		agentAPI.POST("/channels", v1.AddChannel)

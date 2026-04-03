@@ -323,3 +323,87 @@ export async function revokeDevice(agentId: string, deviceId: string) {
   revalidatePath(`/agents/${agentId}`);
   return { success: true };
 }
+
+// --- Skill Install/Create ---
+
+export async function installSkill(agentId: string, urlOrSpec: string) {
+  const res = await fetchWithAuth(`/api/v1/agents/${agentId}/skills/install`, {
+    method: "POST",
+    body: JSON.stringify({ source: "github", spec: urlOrSpec }),
+  });
+  const data = await res.json();
+  if (!res.ok || data.code !== 0) {
+    return { error: data.message || "Failed to install skill" };
+  }
+  revalidatePath(`/agents/${agentId}`);
+  return { success: true, name: data.data?.name };
+}
+
+export async function createSkill(agentId: string, name: string, content: string) {
+  const res = await fetchWithAuth(`/api/v1/agents/${agentId}/skills/create`, {
+    method: "POST",
+    body: JSON.stringify({ name, content }),
+  });
+  const data = await res.json();
+  if (!res.ok || data.code !== 0) {
+    return { error: data.message || "Failed to create skill" };
+  }
+  revalidatePath(`/agents/${agentId}`);
+  return { success: true, name: data.data?.name };
+}
+
+// --- Cron Jobs ---
+
+interface CronJob {
+  id: string;
+  name: string;
+  schedule: string;
+  timezone?: string;
+  enabled: boolean;
+  lastRun?: string;
+  nextRun?: string;
+}
+
+export async function listCronJobs(agentId: string) {
+  const res = await fetchWithAuth(`/api/v1/agents/${agentId}/cron`);
+  const data = await res.json();
+  if (!res.ok || data.code !== 0) {
+    return { error: data.message || "Failed to list cron jobs" };
+  }
+  return { jobs: (data.data?.jobs || []) as CronJob[] };
+}
+
+export async function runCronJob(agentId: string, jobId: string) {
+  const res = await fetchWithAuth(`/api/v1/agents/${agentId}/cron/${jobId}/run`, {
+    method: "POST",
+  });
+  const data = await res.json();
+  if (!res.ok || data.code !== 0) {
+    return { error: data.message || "Failed to run cron job" };
+  }
+  return { success: true };
+}
+
+export async function toggleCronJob(agentId: string, jobId: string, enabled: boolean) {
+  const res = await fetchWithAuth(`/api/v1/agents/${agentId}/cron/${jobId}/toggle`, {
+    method: "POST",
+    body: JSON.stringify({ enabled }),
+  });
+  const data = await res.json();
+  if (!res.ok || data.code !== 0) {
+    return { error: data.message || "Failed to toggle cron job" };
+  }
+  return { success: true };
+}
+
+export async function deleteCronJob(agentId: string, jobId: string) {
+  const res = await fetchWithAuth(`/api/v1/agents/${agentId}/cron/${jobId}`, {
+    method: "DELETE",
+  });
+  const data = await res.json();
+  if (!res.ok || data.code !== 0) {
+    return { error: data.message || "Failed to delete cron job" };
+  }
+  revalidatePath(`/agents/${agentId}`);
+  return { success: true };
+}

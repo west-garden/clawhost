@@ -140,6 +140,15 @@ export function AgentDetailHeader({
           {t("agent.skills.title")}
         </Link>
         <Link
+          href={`/agents/${agentId}/tasks`}
+          className={cn(
+            "view-tab",
+            pathname.includes("/tasks") && "view-tab-active"
+          )}
+        >
+          {t("agent.tasks.title")}
+        </Link>
+        <Link
           href={`/agents/${agentId}/devices`}
           className={cn(
             "view-tab",

@@ -241,10 +241,9 @@ if command -v node > /dev/null 2>&1 && [ -f /home/node/.openclaw/openclaw.json ]
         c.gateway.auth.token = '%s';
         changed = true;
       }
-      // Set auth scopes to allow operator.pairing for device management
-      const wantScopes = ['operator.admin', 'operator.read', 'operator.write', 'operator.approvals', 'operator.pairing'];
-      if (!c.gateway.auth.scopes || JSON.stringify(c.gateway.auth.scopes) !== JSON.stringify(wantScopes)) {
-        c.gateway.auth.scopes = wantScopes;
+      // Remove unsupported scopes key if present (OpenClaw doesn't recognize gateway.auth.scopes)
+      if (c.gateway.auth.scopes) {
+        delete c.gateway.auth.scopes;
         changed = true;
       }
       const wantUi = { allowedOrigins: ['*'], dangerouslyDisableDeviceAuth: true };
