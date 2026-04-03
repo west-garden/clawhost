@@ -35,7 +35,8 @@ export async function POST(
   const body = await request.json();
 
   // Proxy to the agent's OpenAI-compatible chat completions endpoint
-  const agentUrl = `${connectInfo.endpoint}/v1/chat/completions`;
+  // Endpoint is host:port format, add http:// scheme
+  const agentUrl = `http://${connectInfo.endpoint}/v1/chat/completions`;
 
   const agentRes = await fetch(agentUrl, {
     method: "POST",
