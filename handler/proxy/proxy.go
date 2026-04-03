@@ -109,6 +109,9 @@ func websocketUpgrader() *websocket.Upgrader {
 						return true
 					}
 				}
+			} else {
+				// If no api_domain configured, allow all origins (for development/self-hosted)
+				return true
 			}
 			return false
 		},
