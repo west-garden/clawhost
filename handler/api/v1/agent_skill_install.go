@@ -99,6 +99,12 @@ func CreateSkill(c echo.Context) error {
 		return util.BadRequest(c, "content is required")
 	}
 
+	// Validate content size (max 100KB)
+	const maxSkillSize = 100 * 1024
+	if len(req.Content) > maxSkillSize {
+		return util.BadRequest(c, "content too large (max 100KB)")
+	}
+
 	// Validate name format
 	if !regexp.MustCompile(`^[a-z0-9_-]+$`).MatchString(req.Name) {
 		return util.BadRequest(c, "name must be lowercase letters, numbers, hyphens and underscores only")
