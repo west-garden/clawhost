@@ -35,6 +35,7 @@ export function ChatPanel({
   const { status: liveStatus } = useAgentStatus(agentId, true);
   const currentStatus = liveStatus?.status ?? initialStatus;
   const isRunning = currentStatus === "running";
+  const isStarting = currentStatus === "starting";
 
   const initial = (agentName || "?")[0].toUpperCase();
 
@@ -143,6 +144,23 @@ export function ChatPanel({
       e.preventDefault();
       handleSend();
     }
+  }
+
+  // Starting state
+  if (isStarting) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-8">
+        <div className="text-center">
+          <div className="w-12 h-12 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center mx-auto mb-4">
+            <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
+          </div>
+          <p className="text-sm font-medium text-muted-foreground mb-1">
+            {t("starting")}
+          </p>
+          <p className="text-xs text-muted-foreground">{t("startingHint")}</p>
+        </div>
+      </div>
+    );
   }
 
   // Not running state
