@@ -71,20 +71,20 @@ export function ManagementPanel({
       <div className="glass-panel">
         <div className="glass-panel-header">
           <div className="flex items-center gap-2">
-            <RotateCcw className="w-4 h-4 text-red-400" />
-            <span className="font-medium text-white text-sm">
+            <RotateCcw className="w-4 h-4 text-red-500" />
+            <span className="font-medium text-foreground text-sm">
               {t("agent.toolbox")}
             </span>
           </div>
         </div>
         <div className="glass-panel-content">
-          <button className="w-full flex items-center gap-3 p-3 rounded-lg bg-white/[0.02] hover:bg-white/5 transition-colors text-left">
-            <div className="w-9 h-9 rounded-lg bg-white/5 flex items-center justify-center">
-              <RotateCcw className="w-4 h-4 text-white/50" />
+          <button className="w-full flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-left">
+            <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
+              <RotateCcw className="w-4 h-4 text-muted-foreground" />
             </div>
             <div>
-              <p className="text-sm font-medium text-white">重置 Agent</p>
-              <p className="text-xs text-white/40">
+              <p className="text-sm font-medium text-foreground">重置 Agent</p>
+              <p className="text-xs text-muted-foreground">
                 强制重启 Agent，清除所有运行状态
               </p>
             </div>
@@ -97,8 +97,8 @@ export function ManagementPanel({
         <div className="glass-panel">
           <div className="glass-panel-header">
             <div className="flex items-center gap-2">
-              <Link2 className="w-4 h-4 text-red-400" />
-              <span className="font-medium text-white text-sm">
+              <Link2 className="w-4 h-4 text-red-500" />
+              <span className="font-medium text-foreground text-sm">
                 {t("agent.connect.webui")}
               </span>
             </div>
@@ -107,10 +107,10 @@ export function ManagementPanel({
             {connectInfo.webchat_url && (
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-xs font-medium text-white/60 uppercase tracking-wider mb-1">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
                     WebUI
                   </p>
-                  <p className="text-xs text-white/40 truncate font-mono">
+                  <p className="text-xs text-muted-foreground truncate font-mono">
                     {connectInfo.webchat_url}
                   </p>
                 </div>
@@ -126,16 +126,16 @@ export function ManagementPanel({
               </div>
             )}
 
-            <div className="h-px bg-white/5" />
+            <div className="h-px bg-border" />
 
             {connectInfo.endpoint && (
               <>
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-xs font-medium text-white/60 uppercase tracking-wider mb-1">
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
                       {t("agent.connect.apiEndpoint")}
                     </p>
-                    <p className="text-xs text-white/40 truncate font-mono">
+                    <p className="text-xs text-muted-foreground truncate font-mono">
                       {connectInfo.endpoint}
                     </p>
                   </div>
@@ -147,16 +147,16 @@ export function ManagementPanel({
                     <span>{t("common.copy")}</span>
                   </button>
                 </div>
-                <div className="h-px bg-white/5" />
+                <div className="h-px bg-border" />
               </>
             )}
 
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
-                <p className="text-xs font-medium text-white/60 uppercase tracking-wider mb-1">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
                   {t("agent.connect.accessToken")}
                 </p>
-                <p className="text-xs text-white/40 font-mono">
+                <p className="text-xs text-muted-foreground font-mono">
                   {agent.access_token.slice(0, 8)}••••••••
                 </p>
               </div>
@@ -186,8 +186,8 @@ export function ManagementPanel({
       <div className="glass-panel border-red-500/20">
         <div className="glass-panel-header border-b-red-500/10">
           <div className="flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 text-red-400" />
-            <span className="font-medium text-red-400 text-sm">
+            <AlertTriangle className="w-4 h-4 text-red-500" />
+            <span className="font-medium text-red-500 text-sm">
               {t("agent.danger.title")}
             </span>
           </div>
@@ -198,13 +198,13 @@ export function ManagementPanel({
             className="flex items-center gap-3 p-3 rounded-lg border border-red-500/15 hover:bg-red-500/5 transition-colors w-full text-left"
           >
             <div className="w-9 h-9 rounded-lg bg-red-500/10 flex items-center justify-center">
-              <Trash2 className="w-4 h-4 text-red-400" />
+              <Trash2 className="w-4 h-4 text-red-500" />
             </div>
             <div>
-              <p className="text-sm font-medium text-red-400">
+              <p className="text-sm font-medium text-red-500">
                 {t("agent.danger.deleteAgent")}
               </p>
-              <p className="text-xs text-white/40">
+              <p className="text-xs text-muted-foreground">
                 永久删除此 Agent 及其所有数据，此操作不可撤销
               </p>
             </div>

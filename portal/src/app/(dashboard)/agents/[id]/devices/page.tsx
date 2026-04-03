@@ -49,7 +49,7 @@ export default function DevicesPage() {
     <div className="flex-1 overflow-y-auto p-5 space-y-4">
       <div className="glass-panel">
         <div className="glass-panel-header">
-          <span className="font-medium text-white text-sm">
+          <span className="font-medium text-foreground text-sm">
             {t("agent.devices.pending")} ({pendingDevices.length})
           </span>
         </div>
@@ -66,7 +66,7 @@ export default function DevicesPage() {
 
       <div className="glass-panel">
         <div className="glass-panel-header">
-          <span className="font-medium text-white text-sm">
+          <span className="font-medium text-foreground text-sm">
             {t("agent.devices.paired")} ({pairedDevices.length})
           </span>
         </div>

@@ -19,13 +19,13 @@ export default async function DashboardPage() {
   return (
     <main className="flex-1 flex items-center justify-center p-4">
       <div className="text-center">
-        <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-red-500/20 to-red-700/20 border border-white/10 flex items-center justify-center mb-6 backdrop-blur-xl mx-auto">
-          <ClawIcon className="w-14 h-14" />
+        <div className="w-24 h-24 rounded-3xl bg-gradient-to-br from-red-500/20 to-red-700/20 border border-border flex items-center justify-center mb-6 backdrop-blur-xl mx-auto">
+          <ClawIcon className="w-14 h-14 text-red-500" />
         </div>
-        <h2 className="text-2xl font-bold text-white mb-3">
+        <h2 className="text-2xl font-bold text-foreground mb-3">
           {t("emptyTitle")}
         </h2>
-        <p className="text-sm text-white/50 mb-8 max-w-sm mx-auto">
+        <p className="text-sm text-muted-foreground mb-8 max-w-sm mx-auto">
           {t("emptyDescription")}
         </p>
         <CreateAgentDialog>

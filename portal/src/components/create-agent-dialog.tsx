@@ -47,7 +47,7 @@ export function CreateAgentDialog({ children }: { children: React.ReactNode }) {
         <SheetHeader>
           <SheetTitle>
             <div className="flex items-center gap-2">
-              <Bot className="w-5 h-5 text-red-400" />
+              <Bot className="w-5 h-5 text-red-500" />
               {t("dashboard.createAgent")}
             </div>
           </SheetTitle>

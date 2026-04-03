@@ -45,12 +45,12 @@ export function SkillList({
   }
 
   if (loading) {
-    return <div className="text-white/50 text-sm">{t("common.loading")}</div>;
+    return <div className="text-muted-foreground text-sm">{t("common.loading")}</div>;
   }
 
   if (skills.length === 0) {
     return (
-      <div className="text-center py-8 text-white/50 text-sm">
+      <div className="text-center py-8 text-muted-foreground text-sm">
         {t("agent.skills.empty")}
       </div>
     );
@@ -62,20 +62,20 @@ export function SkillList({
         {skills.map((skill) => (
           <div
             key={skill.name}
-            className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] hover:bg-white/5"
+            className="flex items-center justify-between p-3 rounded-lg bg-muted hover:bg-accent"
           >
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded bg-white/5 flex items-center justify-center">
-                <FileCode className="w-4 h-4 text-white/50" />
+              <div className="w-8 h-8 rounded bg-muted flex items-center justify-center">
+                <FileCode className="w-4 h-4 text-muted-foreground" />
               </div>
-              <span className="text-sm font-medium text-white">
+              <span className="text-sm font-medium text-foreground">
                 {skill.name}
               </span>
             </div>
             <Button
               size="sm"
               variant="ghost"
-              className="text-red-400 hover:text-red-300"
+              className="text-destructive hover:text-destructive"
               onClick={() => setDeleteTarget(skill.name)}
             >
               <Trash2 className="w-4 h-4" />

@@ -101,7 +101,7 @@ export function ConfigModelsPanel({ agentId, providers, loading, onRefresh }: Pr
   }
 
   if (loading) {
-    return <div className="text-white/50 text-sm">Loading...</div>;
+    return <div className="text-muted-foreground text-sm">Loading...</div>;
   }
 
   return (
@@ -109,12 +109,12 @@ export function ConfigModelsPanel({ agentId, providers, loading, onRefresh }: Pr
       {Object.entries(providers).map(([name, provider]) => (
         <div
           key={name}
-          className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] hover:bg-white/5"
+          className="flex items-center justify-between p-3 rounded-lg bg-muted hover:bg-accent"
         >
           <div>
-            <p className="text-sm font-medium text-white">{name}</p>
+            <p className="text-sm font-medium text-foreground">{name}</p>
             {provider.baseUrl && (
-              <p className="text-xs text-white/40 font-mono">{provider.baseUrl}</p>
+              <p className="text-xs text-muted-foreground font-mono">{provider.baseUrl}</p>
             )}
           </div>
           <div className="flex gap-2">
@@ -128,7 +128,7 @@ export function ConfigModelsPanel({ agentId, providers, loading, onRefresh }: Pr
             <Button
               size="sm"
               variant="ghost"
-              className="text-red-400 hover:text-red-300"
+              className="text-destructive hover:text-destructive"
               onClick={() => handleDelete(name)}
             >
               Delete

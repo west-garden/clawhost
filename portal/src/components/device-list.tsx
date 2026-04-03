@@ -76,12 +76,12 @@ export function DeviceList({
   }
 
   if (loading) {
-    return <div className="text-white/50 text-sm">{t("common.loading")}</div>;
+    return <div className="text-muted-foreground text-sm">{t("common.loading")}</div>;
   }
 
   if (devices.length === 0) {
     return (
-      <div className="text-center py-4 text-white/50 text-sm">
+      <div className="text-center py-4 text-muted-foreground text-sm">
         {type === "pending" ? t("agent.devices.noPending") : t("agent.devices.noPaired")}
       </div>
     );
@@ -93,17 +93,17 @@ export function DeviceList({
         {devices.map((device) => (
           <div
             key={device.request_id || device.device_id}
-            className="flex items-center justify-between p-3 rounded-lg bg-white/[0.02] hover:bg-white/5"
+            className="flex items-center justify-between p-3 rounded-lg bg-muted hover:bg-accent"
           >
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 rounded bg-white/5 flex items-center justify-center text-white/50">
+              <div className="w-8 h-8 rounded bg-muted flex items-center justify-center text-muted-foreground">
                 {platformIcons[device.client_mode || ""] || <Monitor className="w-4 h-4" />}
               </div>
               <div>
-                <p className="text-sm font-medium text-white">
+                <p className="text-sm font-medium text-foreground">
                   {device.platform || device.client_mode || "Unknown"}
                 </p>
-                <p className="text-xs text-white/40">
+                <p className="text-xs text-muted-foreground">
                   {device.ip && `${device.ip} · `}
                   {device.age || "Just now"}
                 </p>
@@ -111,7 +111,7 @@ export function DeviceList({
             </div>
             <div className="flex items-center gap-2">
               {device.connected && (
-                <Badge variant="outline" className="text-green-400 border-green-400/30">
+                <Badge variant="outline" className="text-primary border-primary/30">
                   Connected
                 </Badge>
               )}
@@ -119,7 +119,7 @@ export function DeviceList({
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="text-green-400 hover:text-green-300"
+                  className="text-primary hover:text-primary"
                   onClick={() => setActionTarget(device)}
                 >
                   <Check className="w-4 h-4" />
@@ -129,7 +129,7 @@ export function DeviceList({
                 <Button
                   size="sm"
                   variant="ghost"
-                  className="text-red-400 hover:text-red-300"
+                  className="text-destructive hover:text-destructive"
                   onClick={() => setActionTarget(device)}
                 >
                   <X className="w-4 h-4" />

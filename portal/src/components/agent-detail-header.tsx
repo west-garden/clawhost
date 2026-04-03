@@ -42,12 +42,12 @@ export function AgentDetailHeader({
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2.5">
-            <h1 className="text-base font-semibold text-white truncate">
+            <h1 className="text-base font-semibold text-foreground truncate">
               {agentName}
             </h1>
             <AgentStatusBadge status={currentStatus} />
           </div>
-          <p className="text-[11px] text-white/30 font-mono truncate">
+          <p className="text-[11px] text-muted-foreground font-mono truncate">
             {agentSlug} · ID: {agentId.slice(0, 12)}
           </p>
         </div>
