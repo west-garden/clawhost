@@ -241,18 +241,15 @@ if command -v node > /dev/null 2>&1 && [ -f /home/node/.openclaw/openclaw.json ]
         c.gateway.auth.token = '%s';
         changed = true;
       }
-      if (c.gateway.auth.scopes) {
-        delete c.gateway.auth.scopes;
+      // Set auth scopes to allow operator.pairing for device management
+      const wantScopes = ['operator.admin', 'operator.read', 'operator.write', 'operator.approvals', 'operator.pairing'];
+      if (!c.gateway.auth.scopes || JSON.stringify(c.gateway.auth.scopes) !== JSON.stringify(wantScopes)) {
+        c.gateway.auth.scopes = wantScopes;
         changed = true;
       }
       const wantUi = { allowedOrigins: ['*'], dangerouslyDisableDeviceAuth: true };
       if (!c.gateway.controlUi || JSON.stringify(c.gateway.controlUi) !== JSON.stringify(wantUi)) {
         c.gateway.controlUi = wantUi;
-        changed = true;
-      }
-      // Enable dangerouslyDisableDeviceAuth globally so CLI clients can get operator.pairing scope
-      if (!c.gateway.dangerouslyDisableDeviceAuth) {
-        c.gateway.dangerouslyDisableDeviceAuth = true;
         changed = true;
       }
       if (!c.gateway.http || !c.gateway.http.endpoints || !c.gateway.http.endpoints.chatCompletions) {
