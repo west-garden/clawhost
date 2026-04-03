@@ -33,7 +33,7 @@ func GetAgentConnect(c echo.Context) error {
 		ID:     agent.ID,
 		Name:   agent.Name,
 		Status: agent.Status,
-		Token:  agent.ID, // Token is agent ID
+		Token:  agent.AccessToken, // Token for OpenClaw Gateway auth
 	}
 
 	if agent.Status != model.AgentStatusRunning {
