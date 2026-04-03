@@ -8,14 +8,6 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-  CardDescription,
-} from "@/components/ui/card";
 
 export default function RegisterPage() {
   const t = useTranslations();
@@ -60,12 +52,13 @@ export default function RegisterPage() {
   }
 
   return (
-    <Card>
-      <CardHeader className="text-center">
-        <CardTitle className="text-2xl">ClawHost</CardTitle>
-        <CardDescription>{t("auth.register")}</CardDescription>
-      </CardHeader>
-      <CardContent>
+    <div className="auth-card">
+      <div className="auth-card-header">
+        <h1 className="auth-card-title">ClawHost</h1>
+        <p className="auth-card-description">{t("auth.register")}</p>
+      </div>
+
+      <div className="auth-card-content">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="name">{t("auth.name")}</Label>
@@ -74,6 +67,7 @@ export default function RegisterPage() {
               name="name"
               placeholder={t("auth.namePlaceholder")}
               required
+              className="h-11"
             />
           </div>
           <div className="space-y-2">
@@ -84,6 +78,7 @@ export default function RegisterPage() {
               type="email"
               placeholder={t("auth.emailPlaceholder")}
               required
+              className="h-11"
             />
           </div>
           <div className="space-y-2">
@@ -95,19 +90,25 @@ export default function RegisterPage() {
               placeholder={t("auth.passwordPlaceholder")}
               minLength={8}
               required
+              className="h-11"
             />
           </div>
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button
+            type="submit"
+            className="w-full h-11 bg-gradient-to-r from-[oklch(0.58_0.24_20)] to-[oklch(0.48_0.22_30)] hover:from-[oklch(0.60_0.24_20)] hover:to-[oklch(0.50_0.22_30)] text-white font-semibold shadow-md hover:shadow-lg transition-all"
+            disabled={loading}
+          >
             {loading ? t("common.loading") : t("auth.register")}
           </Button>
         </form>
-      </CardContent>
-      <CardFooter className="justify-center text-sm">
+      </div>
+
+      <div className="auth-card-footer">
         <span className="text-muted-foreground">{t("auth.hasAccount")}</span>
-        <Link href="/login" className="ml-1 text-primary underline">
+        <Link href="/login" className="ml-1.5 text-primary font-medium hover:underline">
           {t("auth.goLogin")}
         </Link>
-      </CardFooter>
-    </Card>
+      </div>
+    </div>
   );
 }
