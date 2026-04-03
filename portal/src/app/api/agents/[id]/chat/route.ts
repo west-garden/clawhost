@@ -35,21 +35,18 @@ export async function POST(
   const body = await request.json();
 
   // Extract model from body (format: "provider/model")
-  const model = body.model as string | undefined;
+  // OpenClaw requires model to be "openclaw" or "openclaw/<agentId>"
+  // We don't pass model, let OpenClaw use its default model configuration
+  const { model: _, ...restBody } = body;
 
   // Proxy to the agent's OpenAI-compatible chat completions endpoint
   // Endpoint is host:port format, add http:// scheme
   const agentUrl = `http://${connectInfo.endpoint}/v1/chat/completions`;
 
   const requestBody: Record<string, unknown> = {
-    ...body,
+    ...restBody,
     stream: true,
   };
-
-  // If model specified, use it; otherwise let the agent use its default
-  if (model) {
-    requestBody.model = model;
-  }
 
   const agentRes = await fetch(agentUrl, {
     method: "POST",
