@@ -138,6 +138,10 @@ func startServer() {
 		// Agent collection routes (no ownership check needed)
 		api.POST("/agents", v1.CreateAgent)
 		api.GET("/agents", v1.ListAgents)
+
+		// Built-in providers metadata (no ownership check needed)
+		api.GET("/providers", v1.ListBuiltInProviders)
+		api.GET("/providers/:name", v1.GetBuiltInProvider)
 	}
 
 	// Agent instance routes: require ownership validation

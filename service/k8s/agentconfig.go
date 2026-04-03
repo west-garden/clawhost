@@ -282,6 +282,9 @@ func buildProvidersMap(config *AgentConfig) map[string]interface{} {
 					models[i] = modelObj
 				}
 				providerObj["models"] = models
+			} else {
+				// Always set empty array for OpenClaw validation
+				providerObj["models"] = []interface{}{}
 			}
 			providers[p.Name] = providerObj
 		}

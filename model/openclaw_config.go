@@ -38,7 +38,7 @@ type ProviderConfig struct {
 	Auth       string                `json:"auth,omitempty"`       // api-key, bearer
 	AuthHeader bool                  `json:"authHeader,omitempty"` // whether to send API key in Authorization header
 	API        string                `json:"api,omitempty"`        // anthropic-messages, openai-completions
-	Models     []ProviderModelConfig `json:"models,omitempty"`
+	Models     []ProviderModelConfig `json:"models"`               // always include, even if empty (OpenClaw validation requires array)
 }
 
 // ProviderModelConfig represents a model configuration within a provider
@@ -240,6 +240,14 @@ func (a *Agent) GetOpenClawConfig() (*OpenClawConfig, error) {
 	var config OpenClawConfig
 	if err := json.Unmarshal(a.Config, &config); err != nil {
 		return nil, err
+	}
+	// Fix: ensure all providers have models array (not nil) for OpenClaw validation
+	if config.Models != nil && config.Models.Providers != nil {
+		for name, p := range config.Models.Providers {
+			if p.Models == nil {
+				config.Models.Providers[name].Models = []ProviderModelConfig{}
+			}
+		}
 	}
 	return &config, nil
 }

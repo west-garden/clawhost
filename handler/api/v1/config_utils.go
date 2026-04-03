@@ -39,6 +39,7 @@ func convertToK8sConfig(agent *model.Agent, config *model.OpenClawConfig) *k8s.A
 				AuthHeader: p.AuthHeader,
 				API:        p.API,
 			}
+			// Ensure Models is always an array for OpenClaw validation
 			if len(p.Models) > 0 {
 				provider.Models = make([]k8s.ModelConfigEntry, len(p.Models))
 				for j, m := range p.Models {
@@ -51,6 +52,8 @@ func convertToK8sConfig(agent *model.Agent, config *model.OpenClawConfig) *k8s.A
 						MaxTokens:     m.MaxTokens,
 					}
 				}
+			} else {
+				provider.Models = []k8s.ModelConfigEntry{}
 			}
 			k8sConfig.Providers = append(k8sConfig.Providers, provider)
 		}
@@ -107,6 +110,7 @@ func convertLegacyToK8sConfig(agent *model.Agent, config *model.AgentConfig) *k8
 				Auth:    p.Auth,
 				API:     p.API,
 			}
+			// Ensure Models is always an array for OpenClaw validation
 			if len(p.Models) > 0 {
 				k8sConfig.Providers[i].Models = make([]k8s.ModelConfigEntry, len(p.Models))
 				for j, m := range p.Models {
@@ -119,6 +123,8 @@ func convertLegacyToK8sConfig(agent *model.Agent, config *model.AgentConfig) *k8
 						MaxTokens:     m.MaxTokens,
 					}
 				}
+			} else {
+				k8sConfig.Providers[i].Models = []k8s.ModelConfigEntry{}
 			}
 		}
 	}

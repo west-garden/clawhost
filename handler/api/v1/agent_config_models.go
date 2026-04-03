@@ -20,6 +20,29 @@ type ProviderRequest struct {
 	Models  []model.ProviderModelConfig `json:"models,omitempty"`
 }
 
+// ListBuiltInProviders returns all built-in provider metadata
+// GET /providers
+func ListBuiltInProviders(c echo.Context) error {
+	providers := model.GetAllProviders()
+	return util.Success(c, providers)
+}
+
+// GetBuiltInProvider returns a single built-in provider metadata
+// GET /providers/:name
+func GetBuiltInProvider(c echo.Context) error {
+	providerName := c.Param("name")
+	if providerName == "" {
+		return util.BadRequest(c, "provider name is required")
+	}
+
+	meta := model.GetProviderMeta(providerName)
+	if meta == nil {
+		return util.NotFound(c, "provider not found")
+	}
+
+	return util.Success(c, meta)
+}
+
 // ListModelProviders returns all model providers for an agent
 // GET /agents/:id/config/models
 func ListModelProviders(c echo.Context) error {
@@ -80,19 +103,47 @@ func AddModelProvider(c echo.Context) error {
 		return util.BadRequest(c, "provider already exists")
 	}
 
-	// Add provider
-	config.Models.Providers[req.Name] = &model.ProviderConfig{
+	// Build provider config, auto-filling from metadata if built-in provider
+	providerConfig := &model.ProviderConfig{
 		BaseURL: req.BaseURL,
 		APIKey:  req.APIKey,
 		Auth:    req.Auth,
 		API:     req.API,
-		Models:  req.Models, // can be nil, will be set to empty array below
+		Models:  req.Models,
+	}
+
+	// Auto-fill from provider metadata if it's a built-in provider
+	if meta := model.GetProviderMeta(req.Name); meta != nil {
+		if providerConfig.BaseURL == "" {
+			providerConfig.BaseURL = meta.BaseURL
+		}
+		if providerConfig.API == "" {
+			providerConfig.API = meta.API
+		}
+		if providerConfig.Auth == "" {
+			providerConfig.Auth = meta.Auth
+		}
+		// Auto-fill models from metadata if not provided
+		if len(providerConfig.Models) == 0 && len(meta.Models) > 0 {
+			providerConfig.Models = make([]model.ProviderModelConfig, len(meta.Models))
+			for i, m := range meta.Models {
+				providerConfig.Models[i] = model.ProviderModelConfig{
+					ID:            m.ID,
+					Name:          m.Name,
+					ContextWindow: m.ContextWindow,
+					MaxTokens:     m.MaxTokens,
+					Input:         m.Input,
+				}
+			}
+		}
 	}
 
 	// Ensure Models is always an array (not nil) for OpenClaw validation
-	if config.Models.Providers[req.Name].Models == nil {
-		config.Models.Providers[req.Name].Models = []model.ProviderModelConfig{}
+	if providerConfig.Models == nil {
+		providerConfig.Models = []model.ProviderModelConfig{}
 	}
+
+	config.Models.Providers[req.Name] = providerConfig
 
 	// Save to database
 	if err := agent.SetOpenClawConfig(config); err != nil {
@@ -179,8 +230,11 @@ func UpdateModelProvider(c echo.Context) error {
 		config.Models.Providers = make(map[string]*model.ProviderConfig)
 	}
 
-	// Update provider
-	config.Models.Providers[providerName] = &model.ProviderConfig{
+	// Get existing config to preserve fields not provided
+	existing := config.Models.Providers[providerName]
+
+	// Build provider config, preserving existing values if not provided
+	providerConfig := &model.ProviderConfig{
 		BaseURL: req.BaseURL,
 		APIKey:  req.APIKey,
 		Auth:    req.Auth,
@@ -188,10 +242,55 @@ func UpdateModelProvider(c echo.Context) error {
 		Models:  req.Models,
 	}
 
-	// Ensure Models is always an array (not nil) for OpenClaw validation
-	if config.Models.Providers[providerName].Models == nil {
-		config.Models.Providers[providerName].Models = []model.ProviderModelConfig{}
+	// Preserve existing values if not provided in request
+	if providerConfig.BaseURL == "" && existing != nil && existing.BaseURL != "" {
+		providerConfig.BaseURL = existing.BaseURL
 	}
+	if providerConfig.APIKey == "" && existing != nil && existing.APIKey != "" {
+		providerConfig.APIKey = existing.APIKey
+	}
+	if providerConfig.Auth == "" && existing != nil && existing.Auth != "" {
+		providerConfig.Auth = existing.Auth
+	}
+	if providerConfig.API == "" && existing != nil && existing.API != "" {
+		providerConfig.API = existing.API
+	}
+	if len(providerConfig.Models) == 0 && existing != nil && len(existing.Models) > 0 {
+		providerConfig.Models = existing.Models
+	}
+
+	// Auto-fill from provider metadata if it's a built-in provider
+	if meta := model.GetProviderMeta(providerName); meta != nil {
+		if providerConfig.BaseURL == "" {
+			providerConfig.BaseURL = meta.BaseURL
+		}
+		if providerConfig.API == "" {
+			providerConfig.API = meta.API
+		}
+		if providerConfig.Auth == "" {
+			providerConfig.Auth = meta.Auth
+		}
+		// Auto-fill models from metadata if not provided
+		if len(providerConfig.Models) == 0 && len(meta.Models) > 0 {
+			providerConfig.Models = make([]model.ProviderModelConfig, len(meta.Models))
+			for i, m := range meta.Models {
+				providerConfig.Models[i] = model.ProviderModelConfig{
+					ID:            m.ID,
+					Name:          m.Name,
+					ContextWindow: m.ContextWindow,
+					MaxTokens:     m.MaxTokens,
+					Input:         m.Input,
+				}
+			}
+		}
+	}
+
+	// Ensure Models is always an array (not nil) for OpenClaw validation
+	if providerConfig.Models == nil {
+		providerConfig.Models = []model.ProviderModelConfig{}
+	}
+
+	config.Models.Providers[providerName] = providerConfig
 
 	// Save to database
 	if err := agent.SetOpenClawConfig(config); err != nil {
