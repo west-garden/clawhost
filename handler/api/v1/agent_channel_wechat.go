@@ -135,9 +135,9 @@ func WechatLoginStatus(c echo.Context) error {
 		delete(weixinSessions, agent.ID)
 		weixinSessionsMu.Unlock()
 
-		// Write credentials to agent pod
+		// Write credentials to agent pod (synchronous to ensure config is ready before frontend refresh)
 		if statusResp.BotToken != "" && statusResp.IlinkBotID != "" {
-			go writeWechatCredentials(agent, statusResp, session.Name)
+			writeWechatCredentials(agent, statusResp, session.Name)
 		}
 
 		return util.Success(c, map[string]any{

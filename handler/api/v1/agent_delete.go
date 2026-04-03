@@ -33,7 +33,9 @@ func DeleteAgent(c echo.Context) error {
 		return util.InternalError(c, "failed to delete agent")
 	}
 
-	// TODO: Clean up NAS data directory
+	// Note: PVC data directory is intentionally preserved for recovery scenarios.
+	// If data cleanup is needed, use the cleanup job or manually delete from storage.
+	// The data path is: {storage.base_path}/{agent.ID}
 
 	return util.Success(c, map[string]string{"message": "agent deleted"})
 }

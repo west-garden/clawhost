@@ -101,18 +101,18 @@ export function DeviceList({
               </div>
               <div>
                 <p className="text-sm font-medium text-foreground">
-                  {device.platform || device.client_mode || "Unknown"}
+                  {device.platform || device.client_mode || t("agent.devices.unknown")}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {device.ip && `${device.ip} · `}
-                  {device.age || "Just now"}
+                  {device.age || t("agent.devices.justNow")}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-2">
               {device.connected && (
                 <Badge variant="outline" className="text-primary border-primary/30">
-                  Connected
+                  {t("agent.devices.connected")}
                 </Badge>
               )}
               {type === "pending" && (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -138,6 +139,7 @@ interface Props {
 }
 
 export function ConfigModelsPanel({ agentId, providers, loading, onRefresh }: Props) {
+  const t = useTranslations("agent.config");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProvider, setEditingProvider] = useState<string | null>(null);
   const [presetKey, setPresetKey] = useState<string>("custom");
@@ -189,7 +191,7 @@ export function ConfigModelsPanel({ agentId, providers, loading, onRefresh }: Pr
           toast.error(result.error);
           return;
         }
-        toast.success("Provider updated");
+        toast.success(t("providerUpdated"));
       } else {
         const result = await addModelProvider(agentId, {
           name: form.name,
@@ -201,7 +203,7 @@ export function ConfigModelsPanel({ agentId, providers, loading, onRefresh }: Pr
           toast.error(result.error);
           return;
         }
-        toast.success("Provider added");
+        toast.success(t("providerAdded"));
       }
       setDialogOpen(false);
       onRefresh();
@@ -211,12 +213,12 @@ export function ConfigModelsPanel({ agentId, providers, loading, onRefresh }: Pr
   }
 
   async function handleDelete(name: string) {
-    if (!confirm(`Delete provider "${name}"?`)) return;
+    if (!confirm(t("deleteConfirm", { name }))) return;
     const result = await deleteModelProvider(agentId, name);
     if (result.error) {
       toast.error(result.error);
     } else {
-      toast.success("Provider deleted");
+      toast.success(t("providerDeleted"));
       onRefresh();
     }
   }
@@ -246,7 +248,7 @@ export function ConfigModelsPanel({ agentId, providers, loading, onRefresh }: Pr
               variant="ghost"
               onClick={() => openEditDialog(name, provider)}
             >
-              Edit
+              {t("edit")}
             </Button>
             <Button
               size="sm"
@@ -254,33 +256,33 @@ export function ConfigModelsPanel({ agentId, providers, loading, onRefresh }: Pr
               className="text-destructive hover:text-destructive"
               onClick={() => handleDelete(name)}
             >
-              Delete
+              {t("delete")}
             </Button>
           </div>
         </div>
       ))}
 
       <Button size="sm" variant="outline" onClick={openAddDialog}>
-        Add Provider
+        {t("addProvider")}
       </Button>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
-              {editingProvider ? "Edit Provider" : "Add Provider"}
+              {editingProvider ? t("editProvider") : t("addProvider")}
             </DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
             {!editingProvider && (
               <div className="space-y-2">
-                <Label>Provider Type</Label>
+                <Label>{t("providerType")}</Label>
                 <select
                   value={presetKey}
                   onChange={(e) => handlePresetChange(e.target.value)}
                   className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                 >
-                  <option value="custom">Custom (manual input)</option>
+                  <option value="custom">{t("customProvider")}</option>
                   {Object.entries(PROVIDER_PRESETS).map(([key, preset]) => (
                     <option key={key} value={key}>
                       {preset.label}
@@ -292,17 +294,17 @@ export function ConfigModelsPanel({ agentId, providers, loading, onRefresh }: Pr
 
             {!editingProvider && presetKey === "custom" && (
               <div className="space-y-2">
-                <Label>Provider Name</Label>
+                <Label>{t("providerName")}</Label>
                 <Input
                   value={form.name}
                   onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  placeholder="openai, anthropic, etc."
+                  placeholder={t("providerNamePlaceholder")}
                 />
               </div>
             )}
 
             <div className="space-y-2">
-              <Label>Base URL {presetKey !== "custom" && "(auto-filled)"}</Label>
+              <Label>{t("baseUrl")} {presetKey !== "custom" && t("baseUrlAutoFilled")}</Label>
               <Input
                 value={form.baseUrl}
                 onChange={(e) => setForm({ ...form, baseUrl: e.target.value })}
@@ -311,27 +313,27 @@ export function ConfigModelsPanel({ agentId, providers, loading, onRefresh }: Pr
               />
               {presetKey !== "custom" && (
                 <p className="text-xs text-muted-foreground">
-                  Preset URL can be changed after adding the provider
+                  {t("baseUrlHint")}
                 </p>
               )}
             </div>
 
             <div className="space-y-2">
-              <Label>API Key</Label>
+              <Label>{t("apiKey")}</Label>
               <Input
                 type="password"
                 value={form.apiKey}
                 onChange={(e) => setForm({ ...form, apiKey: e.target.value })}
-                placeholder="sk-..."
+                placeholder={t("apiKeyPlaceholder")}
               />
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancel
+              {t("cancel")}
             </Button>
             <Button onClick={handleSubmit} disabled={submitting}>
-              {submitting ? "Saving..." : "Save"}
+              {submitting ? t("saving") : t("save")}
             </Button>
           </DialogFooter>
         </DialogContent>
