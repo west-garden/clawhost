@@ -22,6 +22,7 @@ import (
 	"github.com/clawhost/clawhost/util"
 	"github.com/gorilla/websocket"
 	"github.com/labstack/echo/v4"
+	"github.com/spf13/viper"
 	"gorm.io/gorm"
 )
 
@@ -78,11 +79,43 @@ func isUUID(s string) bool {
 	return uuidRegex.MatchString(strings.ToLower(s))
 }
 
-var upgrader = websocket.Upgrader{
-	CheckOrigin: func(r *http.Request) bool {
-		return true // Allow all origins for development
-	},
+// websocketUpgrader returns a websocket upgrader with origin validation
+func websocketUpgrader() *websocket.Upgrader {
+	return &websocket.Upgrader{
+		CheckOrigin: func(r *http.Request) bool {
+			origin := r.Header.Get("Origin")
+			// Allow same-origin requests (empty origin for same-origin)
+			if origin == "" {
+				return true
+			}
+			// Allow localhost for development
+			if strings.HasPrefix(origin, "http://localhost:") ||
+				strings.HasPrefix(origin, "http://127.0.0.1:") {
+				return true
+			}
+			// Check against configured allowed origins
+			apiDomain := viper.GetString("domain.api_domain")
+			if apiDomain != "" {
+				// Parse origin to get host
+				originURL, err := url.Parse(origin)
+				if err == nil {
+					originHost := originURL.Hostname()
+					// Allow exact match
+					if originHost == apiDomain {
+						return true
+					}
+					// Allow subdomains (e.g., slug.clawhost.ai)
+					if strings.HasSuffix(originHost, "."+apiDomain) {
+						return true
+					}
+				}
+			}
+			return false
+		},
+	}
 }
+
+var upgrader = websocketUpgrader()
 
 // pairingErrorResponse represents the NOT_PAIRED error from OpenClaw gateway
 type pairingErrorResponse struct {

@@ -2,6 +2,8 @@
 package v1
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -19,6 +21,17 @@ import (
 	"golang.org/x/oauth2/google"
 	"gorm.io/gorm"
 )
+
+const oauthStateCookieName = "oauth_state"
+
+// generateOAuthState generates a random state string for OAuth CSRF protection
+func generateOAuthState() (string, error) {
+	bytes := make([]byte, 16)
+	if _, err := rand.Read(bytes); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
+}
 
 type RegisterRequest struct {
 	Email    string `json:"email"`
@@ -347,7 +360,25 @@ func OAuthRedirect(c echo.Context) error {
 	if err != nil {
 		return util.BadRequest(c, err.Error())
 	}
-	url := cfg.AuthCodeURL("state")
+
+	// Generate random state for CSRF protection
+	state, err := generateOAuthState()
+	if err != nil {
+		return util.InternalError(c, "failed to generate state")
+	}
+
+	// Store state in cookie for validation during callback
+	c.SetCookie(&http.Cookie{
+		Name:     oauthStateCookieName,
+		Value:    state,
+		Path:     "/",
+		HttpOnly: true,
+		Secure:   viper.GetBool("auth.cookie_secure"),
+		SameSite: http.SameSiteLaxMode,
+		MaxAge:   600, // 10 minutes
+	})
+
+	url := cfg.AuthCodeURL(state)
 	return c.Redirect(http.StatusTemporaryRedirect, url)
 }
 
@@ -356,6 +387,32 @@ func OAuthCallback(c echo.Context) error {
 	cfg, err := getOAuthConfig(provider)
 	if err != nil {
 		return util.BadRequest(c, err.Error())
+	}
+
+	// Validate state parameter for CSRF protection
+	state := c.QueryParam("state")
+	if state == "" {
+		return util.BadRequest(c, "missing state parameter")
+	}
+
+	// Get stored state from cookie
+	cookie, err := c.Cookie(oauthStateCookieName)
+	if err != nil || cookie.Value == "" {
+		return util.BadRequest(c, "missing or expired OAuth state")
+	}
+
+	// Clear state cookie after use
+	c.SetCookie(&http.Cookie{
+		Name:     oauthStateCookieName,
+		Value:    "",
+		Path:     "/",
+		HttpOnly: true,
+		MaxAge:   -1,
+	})
+
+	// Verify state matches
+	if state != cookie.Value {
+		return util.BadRequest(c, "invalid OAuth state")
 	}
 
 	code := c.QueryParam("code")
