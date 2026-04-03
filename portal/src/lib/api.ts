@@ -1,7 +1,15 @@
 import { getAccessToken } from "./auth";
 import type { ApiResponse } from "@/types";
 
-const API_URL = process.env.CLAWHOST_API_URL || "http://localhost:18080";
+// Server-side uses internal K8s service URL, client-side uses relative path (via ingress)
+function getApiUrl(): string {
+  if (typeof window === "undefined") {
+    // Server-side: use internal URL
+    return process.env.CLAWHOST_API_URL || "http://localhost:18080";
+  }
+  // Client-side: use relative path (ingress routes /api/v1 to clawhost)
+  return "";
+}
 
 export class ApiError extends Error {
   constructor(
@@ -22,7 +30,7 @@ async function fetchApi<T>(path: string, options: RequestInit = {}): Promise<T> 
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetch(`${getApiUrl()}${path}`, {
     ...options,
     headers,
     cache: "no-store",
@@ -47,7 +55,7 @@ export async function fetchApiWithToken<T>(
   if (token) {
     headers["Authorization"] = `Bearer ${token}`;
   }
-  const res = await fetch(`${API_URL}${path}`, {
+  const res = await fetch(`${getApiUrl()}${path}`, {
     ...options,
     headers,
     cache: "no-store",
@@ -60,7 +68,7 @@ export async function fetchApiRaw(path: string, options: RequestInit = {}): Prom
     "Content-Type": "application/json",
     ...(options.headers as Record<string, string>),
   };
-  return fetch(`${API_URL}${path}`, {
+  return fetch(`${getApiUrl()}${path}`, {
     ...options,
     headers,
     cache: "no-store",
