@@ -120,7 +120,8 @@ type ChannelAccountInfo struct {
 }
 
 // ListAgentChannels lists all configured channel accounts for an agent
-func ListAgentChannels(ctx context.Context, botID, accessToken string) ([]ChannelAccountInfo, error) {
+// Returns a map of channel -> account info for frontend compatibility
+func ListAgentChannels(ctx context.Context, botID, accessToken string) (map[string]interface{}, error) {
 	namespace := GetNamespace()
 
 	podName, err := WaitForPodReady(ctx, botID, 30)
@@ -134,8 +135,8 @@ func ListAgentChannels(ctx context.Context, botID, accessToken string) ([]Channe
 		return nil, fmt.Errorf("failed to read config: %w", err)
 	}
 
-	// Extract channels and accounts
-	var result []ChannelAccountInfo
+	// Extract channels and build result map
+	result := make(map[string]interface{})
 	if channels, ok := config["channels"].(map[string]interface{}); ok {
 		for channelName, channelData := range channels {
 			channelConfig, ok := channelData.(map[string]interface{})
@@ -143,31 +144,28 @@ func ListAgentChannels(ctx context.Context, botID, accessToken string) ([]Channe
 				continue
 			}
 
-			// Check for multi-account structure
-			if accounts, ok := channelConfig["accounts"].(map[string]interface{}); ok {
-				for accountName, accountData := range accounts {
-					accountConfig, _ := accountData.(map[string]interface{})
-					result = append(result, ChannelAccountInfo{
-						Channel: channelName,
-						Account: accountName,
-						Status:  "configured",
-						Config:  accountConfig,
-					})
-				}
-			} else {
-				// Legacy single-account structure
-				result = append(result, ChannelAccountInfo{
-					Channel: channelName,
-					Account: "default",
-					Status:  "configured",
-					Config:  channelConfig,
-				})
+			// Create channel entry with basic info
+			channelInfo := map[string]interface{}{
+				"enabled": true,
 			}
+
+			// Copy enabled status if present
+			if enabled, ok := channelConfig["enabled"]; ok {
+				channelInfo["enabled"] = enabled
+			}
+
+			// Extract accounts
+			if accounts, ok := channelConfig["accounts"].(map[string]interface{}); ok {
+				accountNames := make([]string, 0, len(accounts))
+				for accountName := range accounts {
+					accountNames = append(accountNames, accountName)
+				}
+				channelInfo["accounts"] = accountNames
+			}
+
+			result[channelName] = channelInfo
 		}
 	}
-
-	// For openclaw-weixin accounts, enrich with name from credential files
-	enrichWeixinAccountNames(ctx, namespace, podName, result)
 
 	return result, nil
 }
