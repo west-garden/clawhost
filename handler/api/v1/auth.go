@@ -121,11 +121,29 @@ func Login(c echo.Context) error {
 
 	user, err := model.GetUserByEmail(req.Email)
 	if err != nil {
+		// Don't reveal whether email exists - return same error
 		return util.Unauthorized(c, "invalid email or password")
 	}
+
+	// Check if account is locked
+	if user.IsLocked() {
+		remaining := time.Until(user.LockedUntil).Round(time.Minute)
+		return util.Unauthorized(c, fmt.Sprintf("account temporarily locked, try again in %v", remaining))
+	}
+
+	// Check password
 	if !user.CheckPassword(req.Password) {
+		// Increment failed attempts (5 max, 15 min lock)
+		locked, _ := user.IncrementFailedLogin(5, 15*time.Minute)
+		if locked {
+			return util.Unauthorized(c, "account locked for 15 minutes due to too many failed attempts")
+		}
+		// Don't reveal how many attempts left
 		return util.Unauthorized(c, "invalid email or password")
 	}
+
+	// Successful login - reset failed attempts
+	user.ResetFailedLogin()
 
 	// Clean up expired tokens on login
 	model.DeleteExpiredRefreshTokens()
@@ -145,7 +163,7 @@ func Login(c echo.Context) error {
 			Value:    value,
 			Path:     "/",
 			HttpOnly: true,
-			Secure:   false, // set true in production
+			Secure:   viper.GetBool("auth.cookie_secure"), // configurable
 			SameSite: http.SameSiteLaxMode,
 			MaxAge:   86400 * 7, // 7 days
 		}

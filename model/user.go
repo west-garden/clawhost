@@ -9,6 +9,7 @@ import (
 
 	"github.com/clawhost/clawhost/util"
 	"github.com/google/uuid"
+	"github.com/spf13/viper"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
@@ -24,8 +25,11 @@ type User struct {
 	Role          string    `json:"role" gorm:"type:varchar(20);default:'user'"`
 	Status        string    `json:"status" gorm:"type:varchar(20);default:'active'"`
 	APIToken      string    `json:"api_token,omitempty" gorm:"type:varchar(64)"`
-	CreatedAt     time.Time `json:"created_at"`
-	UpdatedAt     time.Time `json:"updated_at"`
+	// Security fields for brute-force protection
+	FailedLoginAttempts int       `json:"-" gorm:"default:0"`
+	LockedUntil         time.Time `json:"-" gorm:"type:timestamp;default:null"`
+	CreatedAt           time.Time `json:"created_at"`
+	UpdatedAt           time.Time `json:"updated_at"`
 }
 
 func (User) TableName() string {
@@ -58,6 +62,33 @@ func (u *User) SetPassword(password string) error {
 // CheckPassword verifies a password against the stored hash.
 func (u *User) CheckPassword(password string) bool {
 	return bcrypt.CompareHashAndPassword([]byte(u.PasswordHash), []byte(password)) == nil
+}
+
+// IsLocked checks if the account is temporarily locked due to failed login attempts.
+func (u *User) IsLocked() bool {
+	return u.LockedUntil.After(time.Now())
+}
+
+// IncrementFailedLogin increments failed attempts and locks account if threshold reached.
+// Returns the lock duration if account was locked.
+func (u *User) IncrementFailedLogin(maxAttempts int, lockDuration time.Duration) (locked bool, lockUntil time.Time) {
+	u.FailedLoginAttempts++
+	if u.FailedLoginAttempts >= maxAttempts && !u.IsLocked() {
+		u.LockedUntil = time.Now().Add(lockDuration)
+		util.GetDB().Save(u)
+		return true, u.LockedUntil
+	}
+	util.GetDB().Save(u)
+	return false, time.Time{}
+}
+
+// ResetFailedLogin clears failed login attempts on successful login.
+func (u *User) ResetFailedLogin() {
+	if u.FailedLoginAttempts > 0 || !u.LockedUntil.IsZero() {
+		u.FailedLoginAttempts = 0
+		u.LockedUntil = time.Time{}
+		util.GetDB().Save(u)
+	}
 }
 
 type RefreshToken struct {
@@ -181,4 +212,59 @@ func AutoMigrateUser() error {
 		return err
 	}
 	return db.AutoMigrate(&RefreshToken{})
+}
+
+// CreateInitialAdmin creates the initial admin user from config if not exists.
+// Config: [auth.initial_admin] email, password, name
+// Security: Only creates if user doesn't exist, requires min 8 char password
+func CreateInitialAdmin() error {
+	email := viper.GetString("auth.initial_admin.email")
+	password := viper.GetString("auth.initial_admin.password")
+	name := viper.GetString("auth.initial_admin.name")
+
+	if email == "" || password == "" {
+		// No initial admin configured, skip
+		return nil
+	}
+
+	// Password strength check
+	if len(password) < 8 {
+		return fmt.Errorf("initial admin password must be at least 8 characters")
+	}
+
+	// Check if user already exists - NEVER overwrite existing user
+	existing, err := GetUserByEmailUnfiltered(email)
+	if err == nil && existing != nil {
+		// User exists, skip silently (don't log to avoid info disclosure)
+		return nil
+	}
+
+	if name == "" {
+		name = email
+	}
+
+	user := &User{
+		Email: email,
+		Name:  name,
+		Role:  "admin",
+	}
+	if err := user.SetPassword(password); err != nil {
+		return fmt.Errorf("failed to set password: %w", err)
+	}
+	if err := CreateUser(user); err != nil {
+		return fmt.Errorf("failed to create initial admin: %w", err)
+	}
+
+	// Log only to stdout, not to external logs
+	fmt.Printf("Initial admin user created: %s\n", email)
+	return nil
+}
+
+// GetUserByEmailUnfiltered gets user by email without status filter (for internal checks)
+func GetUserByEmailUnfiltered(email string) (*User, error) {
+	var user User
+	if err := util.GetDB().Where("email = ?", email).First(&user).Error; err != nil {
+		return nil, err
+	}
+	return &user, nil
 }

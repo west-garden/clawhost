@@ -11,6 +11,7 @@ import (
 	v1 "github.com/clawhost/clawhost/handler/api/v1"
 	"github.com/clawhost/clawhost/handler/proxy"
 	authmw "github.com/clawhost/clawhost/middleware"
+	"github.com/clawhost/clawhost/model"
 	"github.com/clawhost/clawhost/service/k8s"
 	"github.com/clawhost/clawhost/web"
 	"github.com/labstack/echo/v4"
@@ -29,6 +30,11 @@ var serverCmd = &cobra.Command{
 
 		if err := k8s.InitClient(); err != nil {
 			log.Fatalf("init k8s client failed: %v", err)
+		}
+
+		// Create initial admin user if configured
+		if err := model.CreateInitialAdmin(); err != nil {
+			log.Printf("warning: failed to create initial admin: %v", err)
 		}
 
 		startServer()

@@ -15,6 +15,13 @@ jwt_secret = "change-me-to-a-random-string"
 jwt_access_ttl = "15m"
 jwt_refresh_ttl = "168h"
 # frontend_url = "http://localhost:3000"  # Uncomment for OAuth redirect to frontend
+# cookie_secure = true  # Set true in production for HTTPS
+
+# Initial admin user (optional, created on first startup only if not exists)
+# [auth.initial_admin]
+# email = "admin@example.com"
+# password = "change-me-min-8-chars"
+# name = "Admin"
 
 # [auth.oauth.github]
 # client_id = ""

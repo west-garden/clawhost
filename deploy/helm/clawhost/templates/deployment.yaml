@@ -39,6 +39,23 @@ spec:
                 secretKeyRef:
                   name: {{ include "clawhost.fullname" . }}
                   key: db-password
+            {{- if .Values.initialAdmin.email }}
+            - name: CLAWHOST_AUTH_INITIAL_ADMIN_EMAIL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clawhost.fullname" . }}
+                  key: initial-admin-email
+            - name: CLAWHOST_AUTH_INITIAL_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clawhost.fullname" . }}
+                  key: initial-admin-password
+            - name: CLAWHOST_AUTH_INITIAL_ADMIN_NAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "clawhost.fullname" . }}
+                  key: initial-admin-name
+            {{- end }}
           volumeMounts:
             - name: config
               mountPath: /app/config.toml
