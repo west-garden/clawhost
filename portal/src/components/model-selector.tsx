@@ -39,12 +39,12 @@ export function ModelSelector({
   }
 
   return (
-    <div className="relative">
+    <div className="relative inline-flex">
       <select
         value={value}
         onChange={(e) => onChange(e.target.value)}
         disabled={disabled}
-        className="appearance-none bg-muted border border-border rounded-lg px-3 py-1.5 pr-8 text-sm text-foreground cursor-pointer hover:bg-accent focus:outline-none focus:border-primary disabled:opacity-50 disabled:cursor-not-allowed"
+        className="glass-btn-secondary !py-1.5 !px-3 !text-xs appearance-none pr-7 cursor-pointer"
       >
         {modelOptions.map((option) => (
           <option key={option.value} value={option.value}>
@@ -52,7 +52,7 @@ export function ModelSelector({
           </option>
         ))}
       </select>
-      <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+      <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground pointer-events-none" />
     </div>
   );
 }

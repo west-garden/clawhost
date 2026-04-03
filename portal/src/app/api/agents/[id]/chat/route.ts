@@ -35,8 +35,22 @@ export async function POST(
   const body = await request.json();
 
   // Extract model from body (format: "provider/model")
+  // If specified, update agent's default model before sending chat
+  const model = body.model as string | undefined;
+  if (model && model.includes("/")) {
+    try {
+      await fetchApi(`/api/v1/agents/${id}/config/defaults`, {
+        method: "PUT",
+        body: JSON.stringify({ primary_model: model }),
+      });
+    } catch {
+      // Continue even if model update fails
+      console.error("Failed to update default model");
+    }
+  }
+
   // OpenClaw requires model to be "openclaw" or "openclaw/<agentId>"
-  // We don't pass model, let OpenClaw use its default model configuration
+  // Don't pass the provider/model format, let OpenClaw use its default
   const { model: _, ...restBody } = body;
 
   // Proxy to the agent's OpenAI-compatible chat completions endpoint
