@@ -10,6 +10,8 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+const maxConfigSize = 64 * 1024 // 64KB max config size
+
 type CreateAgentRequest struct {
 	Name      string                 `json:"name" validate:"required"`
 	Slug      string                 `json:"slug,omitempty"` // Optional custom slug
@@ -32,6 +34,11 @@ func CreateAgent(c echo.Context) error {
 		return util.BadRequest(c, "name is required")
 	}
 
+	// Validate name length
+	if len(req.Name) > 100 {
+		return util.BadRequest(c, "name must be 100 characters or less")
+	}
+
 	// Validate slug if provided
 	if req.Slug != "" {
 		if !isValidSlug(req.Slug) {
@@ -41,6 +48,13 @@ func CreateAgent(c echo.Context) error {
 		existing, _ := model.GetAgentBySlug(req.Slug)
 		if existing != nil {
 			return util.BadRequest(c, "slug is already taken")
+		}
+	}
+
+	// Validate config size if provided
+	if req.Config != nil {
+		if err := util.ValidateConfigSize(req.Config, maxConfigSize); err != nil {
+			return util.BadRequest(c, "config too large (max 64KB)")
 		}
 	}
 
