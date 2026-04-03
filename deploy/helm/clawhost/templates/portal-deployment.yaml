@@ -28,7 +28,7 @@ spec:
             - name: NEXT_PUBLIC_API_URL
               value: {{ .Values.portal.env.NEXT_PUBLIC_API_URL | quote }}
             - name: CLAWHOST_API_URL
-              value: {{ .Values.portal.env.NEXT_PUBLIC_API_URL | quote }}
+              value: {{ .Values.portal.env.CLAWHOST_API_URL | default (printf "http://%s" (include "clawhost.fullname" .)) | quote }}
           resources:
             {{- toYaml .Values.portal.resources | nindent 12 }}
           livenessProbe:
