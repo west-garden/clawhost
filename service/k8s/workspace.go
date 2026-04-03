@@ -17,6 +17,8 @@ var (
 	validFilenameRegex = regexp.MustCompile(`^[a-zA-Z0-9._-]+$`)
 	// Valid skill name: lowercase alphanumeric, dashes, underscores
 	validSkillNameRegex = regexp.MustCompile(`^[a-z0-9_-]+$`)
+	// Valid agent ID: alphanumeric, dashes, underscores
+	validAgentIDRegex = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
 )
 
 // validateFilename checks for path traversal and invalid characters
@@ -61,8 +63,8 @@ func validateAgentID(agentID string) error {
 	if len(agentID) > 100 {
 		return errors.New("agent ID too long")
 	}
-	if strings.ContainsAny(agentID, "./\\") {
-		return errors.New("invalid agent ID")
+	if !validAgentIDRegex.MatchString(agentID) {
+		return errors.New("invalid agent ID: only alphanumeric, dashes, and underscores allowed")
 	}
 	return nil
 }
@@ -175,6 +177,10 @@ func WriteWorkspaceFile(ctx context.Context, botID, agentID, filename, content s
 
 // ListWorkspaceFiles lists all .md files in an agent's workspace
 func ListWorkspaceFiles(ctx context.Context, botID, agentID string) ([]string, error) {
+	if err := validateAgentID(agentID); err != nil {
+		return nil, err
+	}
+
 	namespace := GetNamespace()
 	podName, err := WaitForPodReady(ctx, botID, 10)
 	if err != nil {
@@ -199,6 +205,10 @@ func ListWorkspaceFiles(ctx context.Context, botID, agentID string) ([]string, e
 
 // ListSkills lists skill files for an agent
 func ListSkills(ctx context.Context, botID, agentID string) ([]map[string]string, error) {
+	if err := validateAgentID(agentID); err != nil {
+		return nil, err
+	}
+
 	namespace := GetNamespace()
 	podName, err := WaitForPodReady(ctx, botID, 10)
 	if err != nil {
