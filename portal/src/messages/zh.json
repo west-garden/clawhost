@@ -191,7 +191,10 @@
     "startingHint": "请稍候，启动完成后即可开始对话",
     "connecting": "连接中...",
     "connectionError": "连接失败，请重试",
-    "send": "发送"
+    "send": "发送",
+    "newChat": "新对话",
+    "selectModel": "选择模型",
+    "noModel": "请先配置模型"
   },
   "settings": {
     "title": "设置",

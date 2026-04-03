@@ -191,7 +191,10 @@
     "startingHint": "Please wait, you can chat once it's ready",
     "connecting": "Connecting...",
     "connectionError": "Connection failed, please retry",
-    "send": "Send"
+    "send": "Send",
+    "newChat": "New Chat",
+    "selectModel": "Select Model",
+    "noModel": "Please configure a model first"
   },
   "settings": {
     "title": "Settings",

@@ -34,9 +34,22 @@ export async function POST(
 
   const body = await request.json();
 
+  // Extract model from body (format: "provider/model")
+  const model = body.model as string | undefined;
+
   // Proxy to the agent's OpenAI-compatible chat completions endpoint
   // Endpoint is host:port format, add http:// scheme
   const agentUrl = `http://${connectInfo.endpoint}/v1/chat/completions`;
+
+  const requestBody: Record<string, unknown> = {
+    ...body,
+    stream: true,
+  };
+
+  // If model specified, use it; otherwise let the agent use its default
+  if (model) {
+    requestBody.model = model;
+  }
 
   const agentRes = await fetch(agentUrl, {
     method: "POST",
@@ -44,10 +57,7 @@ export async function POST(
       "Content-Type": "application/json",
       Authorization: `Bearer ${connectInfo.token}`,
     },
-    body: JSON.stringify({
-      ...body,
-      stream: true,
-    }),
+    body: JSON.stringify(requestBody),
   });
 
   if (!agentRes.ok) {

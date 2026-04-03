@@ -5,26 +5,33 @@ import { useTranslations } from "next-intl";
 import { useAgentStatus } from "@/hooks/use-agent-status";
 import { startAgent } from "@/lib/actions";
 import { toast } from "sonner";
-import type { AgentStatus } from "@/types";
+import type { AgentStatus, ChatSession, ProviderWithModels } from "@/types";
 import { Send, AlertTriangle, Play, X, Loader2 } from "lucide-react";
+import { ModelSelector } from "./model-selector";
 
-interface Message {
-  role: "user" | "assistant";
-  content: string;
+interface ChatPanelProps {
+  agentId: string;
+  agentName: string;
+  initialStatus: AgentStatus;
+  activeSession: ChatSession | null;
+  onAddUserMessage: (content: string) => void;
+  onUpdateLastAssistantMessage: (content: string) => void;
+  onSetModel: (model: string) => void;
+  providers: Record<string, ProviderWithModels>;
 }
 
 export function ChatPanel({
   agentId,
   agentName,
   initialStatus,
-}: {
-  agentId: string;
-  agentName: string;
-  initialStatus: AgentStatus;
-}) {
+  activeSession,
+  onAddUserMessage,
+  onUpdateLastAssistantMessage,
+  onSetModel,
+  providers,
+}: ChatPanelProps) {
   const t = useTranslations("chat");
   const ta = useTranslations("agent");
-  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
   const [warningDismissed, setWarningDismissed] = useState(false);
@@ -38,6 +45,8 @@ export function ChatPanel({
   const isStarting = currentStatus === "starting";
 
   const initial = (agentName || "?")[0].toUpperCase();
+
+  const messages = activeSession?.messages || [];
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -60,26 +69,25 @@ export function ChatPanel({
 
   async function handleSend() {
     const text = input.trim();
-    if (!text || isStreaming || !isRunning) return;
+    if (!text || isStreaming || !isRunning || !activeSession) return;
 
-    const userMessage: Message = { role: "user", content: text };
-    const newMessages = [...messages, userMessage];
-    setMessages(newMessages);
+    onAddUserMessage(text);
     setInput("");
     setIsStreaming(true);
 
-    // Add empty assistant message for streaming
-    setMessages((prev) => [...prev, { role: "assistant", content: "" }]);
+    // Add placeholder for streaming response
+    onUpdateLastAssistantMessage("");
 
     try {
       const res = await fetch(`/api/agents/${agentId}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          messages: newMessages.map((m) => ({
+          messages: [...messages, { role: "user", content: text }].map((m) => ({
             role: m.role,
             content: m.content,
           })),
+          model: activeSession.model,
         }),
       });
 
@@ -109,14 +117,7 @@ export function ChatPanel({
                 const delta = parsed.choices?.[0]?.delta?.content;
                 if (delta) {
                   accumulated += delta;
-                  setMessages((prev) => {
-                    const updated = [...prev];
-                    updated[updated.length - 1] = {
-                      role: "assistant",
-                      content: accumulated,
-                    };
-                    return updated;
-                  });
+                  onUpdateLastAssistantMessage(accumulated);
                 }
               } catch {
                 // Skip non-JSON lines
@@ -125,15 +126,13 @@ export function ChatPanel({
           }
         }
       }
+
+      // Final update with complete message
+      if (accumulated) {
+        onUpdateLastAssistantMessage(accumulated);
+      }
     } catch (err) {
       toast.error(t("connectionError"));
-      // Remove the empty assistant message on error
-      setMessages((prev) => {
-        if (prev[prev.length - 1]?.content === "") {
-          return prev.slice(0, -1);
-        }
-        return prev;
-      });
     } finally {
       setIsStreaming(false);
     }
@@ -194,6 +193,11 @@ export function ChatPanel({
     );
   }
 
+  // Check if we have models configured
+  const hasModels = Object.values(providers).some(
+    (p) => p.models && p.models.length > 0
+  );
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       {/* Messages */}
@@ -217,7 +221,7 @@ export function ChatPanel({
         {/* Messages */}
         {messages.map((msg, i) => (
           <div
-            key={i}
+            key={msg.id || i}
             className={`flex gap-2.5 items-start ${
               msg.role === "user" ? "flex-row-reverse" : ""
             }`}
@@ -249,6 +253,24 @@ export function ChatPanel({
 
       {/* Input */}
       <div className="chat-input-area">
+        {/* Model selector */}
+        {hasModels && activeSession && (
+          <div className="mb-2">
+            <ModelSelector
+              providers={providers}
+              value={activeSession.model}
+              onChange={onSetModel}
+              disabled={isStreaming}
+            />
+          </div>
+        )}
+
+        {!hasModels && (
+          <p className="text-xs text-yellow-600 dark:text-yellow-500 mb-2">
+            {t("noModel")}
+          </p>
+        )}
+
         <div className="flex items-end gap-2.5 bg-muted border border-border rounded-xl p-2.5 focus-within:border-primary transition-colors">
           <textarea
             ref={inputRef}
@@ -261,7 +283,7 @@ export function ChatPanel({
           />
           <button
             onClick={handleSend}
-            disabled={!input.trim() || isStreaming}
+            disabled={!input.trim() || isStreaming || !activeSession}
             className="glass-btn w-8 h-8 flex items-center justify-center flex-shrink-0 disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <Send className="w-3.5 h-3.5" />

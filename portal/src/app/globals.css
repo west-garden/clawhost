@@ -386,6 +386,70 @@
     color: var(--muted-foreground);
     padding: 0.25rem 0;
   }
+
+  /* Chat Session Sidebar */
+  .chat-sidebar {
+    width: 12rem;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    background: oklch(0.97 0.005 30 / 0.3);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .dark .chat-sidebar {
+    background: oklch(0.18 0.01 250 / 0.5);
+  }
+
+  .chat-sidebar-new-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0.5rem 0.5rem 0;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-lg);
+    background: var(--primary);
+    color: var(--primary-foreground);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .chat-sidebar-new-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px oklch(0.55 0.22 25 / 0.25);
+  }
+
+  .chat-sidebar-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+
+  .chat-sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    border-radius: var(--radius-lg);
+    cursor: pointer;
+    color: var(--muted-foreground);
+    transition: all 0.15s;
+  }
+
+  .chat-sidebar-item:hover {
+    background: var(--accent);
+    color: var(--foreground);
+  }
+
+  .chat-sidebar-item.active {
+    background: var(--accent);
+    color: var(--foreground);
+  }
 }
 
 /* Scrollbar */
