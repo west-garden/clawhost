@@ -49,14 +49,8 @@ func init() {
 func startServer() {
 	e := echo.New()
 
-	// Get domains to exclude from subdomain routing
+	// Get API domain to exclude from subdomain routing
 	apiDomain := viper.GetString("domain.api_domain")
-	botDomain := viper.GetString("domain.bot_domain")
-	portalDomain := viper.GetString("domain.portal_domain")
-	// If portal_domain not set, default to portal.{bot_domain}
-	if portalDomain == "" && botDomain != "" {
-		portalDomain = "portal." + botDomain
-	}
 
 	// Subdomain routing middleware (must run BEFORE routing with e.Pre)
 	// {agent-id}.any-domain/* -> /proxy/{agent-id}/*
@@ -75,16 +69,6 @@ func startServer() {
 
 			// Skip if this is the API domain itself (no subdomain)
 			if host == apiDomain {
-				return next(c)
-			}
-
-			// Skip if this is the portal domain
-			if portalDomain != "" && host == portalDomain {
-				return next(c)
-			}
-
-			// Skip if this is the bot domain itself (no subdomain)
-			if host == botDomain {
 				return next(c)
 			}
 
