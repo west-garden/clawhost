@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { ConfirmDialog } from "./confirm-dialog";
 import { ChannelList } from "./channel-list";
 import { useAgentStatus } from "@/hooks/use-agent-status";
-import { deleteAgent, resetAgentToken } from "@/lib/actions";
+import { deleteAgent, resetAgentToken, restartAgent } from "@/lib/actions";
 import type { AgentDetail, AgentConnectResponse } from "@/types";
 import {
   Copy,
@@ -31,6 +31,7 @@ export function ManagementPanel({
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [resetTokenOpen, setResetTokenOpen] = useState(false);
+  const [restartOpen, setRestartOpen] = useState(false);
 
   const { status: liveStatus } = useAgentStatus(agent.id, true);
   const currentStatus = liveStatus?.status ?? agent.status;
@@ -60,6 +61,19 @@ export function ManagementPanel({
     setActionLoading(null);
   }
 
+  async function handleRestart() {
+    setActionLoading("restart");
+    const result = await restartAgent(agent.id);
+    if (result.error) {
+      toast.error(result.error);
+    } else {
+      toast.success(t("agent.restartSuccess"));
+      router.refresh();
+    }
+    setRestartOpen(false);
+    setActionLoading(null);
+  }
+
   function copyToClipboard(text: string) {
     navigator.clipboard.writeText(text);
     toast.success(t("common.copied"));
@@ -78,7 +92,10 @@ export function ManagementPanel({
           </div>
         </div>
         <div className="glass-panel-content">
-          <button className="w-full flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-left">
+          <button
+            onClick={() => setRestartOpen(true)}
+            className="w-full flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-left"
+          >
             <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
               <RotateCcw className="w-4 h-4 text-muted-foreground" />
             </div>
@@ -223,6 +240,14 @@ export function ManagementPanel({
       </div>
 
       {/* Dialogs */}
+      <ConfirmDialog
+        open={restartOpen}
+        onOpenChange={setRestartOpen}
+        title="重置 Agent"
+        description="确定要重置此 Agent 吗？这将强制重启并清除所有运行状态。"
+        loading={actionLoading === "restart"}
+        onConfirm={handleRestart}
+      />
       <ConfirmDialog
         open={resetTokenOpen}
         onOpenChange={setResetTokenOpen}
