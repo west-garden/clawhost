@@ -15,7 +15,6 @@ type ProviderRequest struct {
 	Name    string                      `json:"name"`
 	BaseURL string                      `json:"baseUrl,omitempty"`
 	APIKey  string                      `json:"apiKey,omitempty"`
-	Auth    string                      `json:"auth,omitempty"`
 	API     string                      `json:"api,omitempty"`
 	Models  []model.ProviderModelConfig `json:"models,omitempty"`
 }
@@ -107,7 +106,6 @@ func AddModelProvider(c echo.Context) error {
 	providerConfig := &model.ProviderConfig{
 		BaseURL: req.BaseURL,
 		APIKey:  req.APIKey,
-		Auth:    req.Auth,
 		API:     req.API,
 		Models:  req.Models,
 	}
@@ -119,9 +117,6 @@ func AddModelProvider(c echo.Context) error {
 		}
 		if providerConfig.API == "" {
 			providerConfig.API = meta.API
-		}
-		if providerConfig.Auth == "" {
-			providerConfig.Auth = meta.Auth
 		}
 		// Auto-fill models from metadata if not provided
 		if len(providerConfig.Models) == 0 && len(meta.Models) > 0 {
@@ -237,7 +232,6 @@ func UpdateModelProvider(c echo.Context) error {
 	providerConfig := &model.ProviderConfig{
 		BaseURL: req.BaseURL,
 		APIKey:  req.APIKey,
-		Auth:    req.Auth,
 		API:     req.API,
 		Models:  req.Models,
 	}
@@ -248,9 +242,6 @@ func UpdateModelProvider(c echo.Context) error {
 	}
 	if providerConfig.APIKey == "" && existing != nil && existing.APIKey != "" {
 		providerConfig.APIKey = existing.APIKey
-	}
-	if providerConfig.Auth == "" && existing != nil && existing.Auth != "" {
-		providerConfig.Auth = existing.Auth
 	}
 	if providerConfig.API == "" && existing != nil && existing.API != "" {
 		providerConfig.API = existing.API
@@ -266,9 +257,6 @@ func UpdateModelProvider(c echo.Context) error {
 		}
 		if providerConfig.API == "" {
 			providerConfig.API = meta.API
-		}
-		if providerConfig.Auth == "" {
-			providerConfig.Auth = meta.Auth
 		}
 		// Auto-fill models from metadata if not provided
 		if len(providerConfig.Models) == 0 && len(meta.Models) > 0 {
