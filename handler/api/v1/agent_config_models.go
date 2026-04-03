@@ -230,8 +230,11 @@ func UpdateModelProvider(c echo.Context) error {
 		config.Models.Providers = make(map[string]*model.ProviderConfig)
 	}
 
-	// Update provider
-	config.Models.Providers[providerName] = &model.ProviderConfig{
+	// Get existing config to preserve fields not provided
+	existing := config.Models.Providers[providerName]
+
+	// Build provider config, preserving existing values if not provided
+	providerConfig := &model.ProviderConfig{
 		BaseURL: req.BaseURL,
 		APIKey:  req.APIKey,
 		Auth:    req.Auth,
@@ -239,10 +242,55 @@ func UpdateModelProvider(c echo.Context) error {
 		Models:  req.Models,
 	}
 
-	// Ensure Models is always an array (not nil) for OpenClaw validation
-	if config.Models.Providers[providerName].Models == nil {
-		config.Models.Providers[providerName].Models = []model.ProviderModelConfig{}
+	// Preserve existing values if not provided in request
+	if providerConfig.BaseURL == "" && existing != nil && existing.BaseURL != "" {
+		providerConfig.BaseURL = existing.BaseURL
 	}
+	if providerConfig.APIKey == "" && existing != nil && existing.APIKey != "" {
+		providerConfig.APIKey = existing.APIKey
+	}
+	if providerConfig.Auth == "" && existing != nil && existing.Auth != "" {
+		providerConfig.Auth = existing.Auth
+	}
+	if providerConfig.API == "" && existing != nil && existing.API != "" {
+		providerConfig.API = existing.API
+	}
+	if len(providerConfig.Models) == 0 && existing != nil && len(existing.Models) > 0 {
+		providerConfig.Models = existing.Models
+	}
+
+	// Auto-fill from provider metadata if it's a built-in provider
+	if meta := model.GetProviderMeta(providerName); meta != nil {
+		if providerConfig.BaseURL == "" {
+			providerConfig.BaseURL = meta.BaseURL
+		}
+		if providerConfig.API == "" {
+			providerConfig.API = meta.API
+		}
+		if providerConfig.Auth == "" {
+			providerConfig.Auth = meta.Auth
+		}
+		// Auto-fill models from metadata if not provided
+		if len(providerConfig.Models) == 0 && len(meta.Models) > 0 {
+			providerConfig.Models = make([]model.ProviderModelConfig, len(meta.Models))
+			for i, m := range meta.Models {
+				providerConfig.Models[i] = model.ProviderModelConfig{
+					ID:            m.ID,
+					Name:          m.Name,
+					ContextWindow: m.ContextWindow,
+					MaxTokens:     m.MaxTokens,
+					Input:         m.Input,
+				}
+			}
+		}
+	}
+
+	// Ensure Models is always an array (not nil) for OpenClaw validation
+	if providerConfig.Models == nil {
+		providerConfig.Models = []model.ProviderModelConfig{}
+	}
+
+	config.Models.Providers[providerName] = providerConfig
 
 	// Save to database
 	if err := agent.SetOpenClawConfig(config); err != nil {
