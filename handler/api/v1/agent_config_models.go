@@ -2,6 +2,7 @@ package v1
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/clawhost/clawhost/middleware"
 	"github.com/clawhost/clawhost/model"
@@ -17,6 +18,48 @@ type ProviderRequest struct {
 	APIKey  string                      `json:"apiKey,omitempty"`
 	API     string                      `json:"api,omitempty"`
 	Models  []model.ProviderModelConfig `json:"models,omitempty"`
+}
+
+// setDefaultModelIfNeeded sets the default model if none exists and the provider has models
+// Also adds all provider models to agents.defaults.models
+// Returns true if default model was set
+func setDefaultModelIfNeeded(config *model.OpenClawConfig, providerName string, providerConfig *model.ProviderConfig) bool {
+	// Check if provider has an API key (usable) and at least one model
+	if providerConfig.APIKey == "" || len(providerConfig.Models) == 0 {
+		return false
+	}
+
+	// Ensure agents section exists
+	if config.Agents == nil {
+		config.Agents = &model.AgentsConfig{}
+	}
+	if config.Agents.Defaults == nil {
+		config.Agents.Defaults = &model.AgentDefaultsConfig{}
+	}
+	if config.Agents.Defaults.Model == nil {
+		config.Agents.Defaults.Model = &model.AgentModelConfig{}
+	}
+	if config.Agents.Defaults.Models == nil {
+		config.Agents.Defaults.Models = make(map[string]*model.AgentModelAlias)
+	}
+
+	// Add all provider models to agents.defaults.models
+	for _, m := range providerConfig.Models {
+		modelID := fmt.Sprintf("%s/%s", providerName, m.ID)
+		if _, exists := config.Agents.Defaults.Models[modelID]; !exists {
+			config.Agents.Defaults.Models[modelID] = &model.AgentModelAlias{}
+		}
+	}
+
+	// Check if default model already exists
+	if config.Agents.Defaults.Model.Primary != "" {
+		return false
+	}
+
+	// Set default model to first model of the provider
+	defaultModel := fmt.Sprintf("%s/%s", providerName, providerConfig.Models[0].ID)
+	config.Agents.Defaults.Model.Primary = defaultModel
+	return true
 }
 
 // ListBuiltInProviders returns all built-in provider metadata
@@ -140,6 +183,9 @@ func AddModelProvider(c echo.Context) error {
 
 	config.Models.Providers[req.Name] = providerConfig
 
+	// Auto-set default model if this is the first usable provider
+	defaultModelSet := setDefaultModelIfNeeded(config, req.Name, providerConfig)
+
 	// Save to database
 	if err := agent.SetOpenClawConfig(config); err != nil {
 		return util.InternalError(c, "failed to set config")
@@ -148,11 +194,15 @@ func AddModelProvider(c echo.Context) error {
 		return util.InternalError(c, "failed to update agent")
 	}
 
-	// Sync only models section to pod if agent is running (don't touch gateway)
+	// Sync to pod if agent is running
 	if agent.Status == model.AgentStatusRunning {
 		go func() {
 			ctx := context.Background()
-			if err := k8s.SyncSectionsToPod(ctx, agent.ID, "models"); err != nil {
+			sections := []string{"models"}
+			if defaultModelSet {
+				sections = append(sections, "agents")
+			}
+			if err := k8s.SyncSectionsToPod(ctx, agent.ID, sections...); err != nil {
 				c.Logger().Errorf("failed to sync config to pod: %v", err)
 			}
 		}()
@@ -280,6 +330,9 @@ func UpdateModelProvider(c echo.Context) error {
 
 	config.Models.Providers[providerName] = providerConfig
 
+	// Auto-set default model if this provider now has an API key and no default exists
+	defaultModelSet := setDefaultModelIfNeeded(config, providerName, providerConfig)
+
 	// Save to database
 	if err := agent.SetOpenClawConfig(config); err != nil {
 		return util.InternalError(c, "failed to set config")
@@ -288,11 +341,15 @@ func UpdateModelProvider(c echo.Context) error {
 		return util.InternalError(c, "failed to update agent")
 	}
 
-	// Sync only models section to pod if agent is running (don't touch gateway)
+	// Sync to pod if agent is running
 	if agent.Status == model.AgentStatusRunning {
 		go func() {
 			ctx := context.Background()
-			if err := k8s.SyncSectionsToPod(ctx, agent.ID, "models"); err != nil {
+			sections := []string{"models"}
+			if defaultModelSet {
+				sections = append(sections, "agents")
+			}
+			if err := k8s.SyncSectionsToPod(ctx, agent.ID, sections...); err != nil {
 				c.Logger().Errorf("failed to sync config to pod: %v", err)
 			}
 		}()

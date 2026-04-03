@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
+import { QRCodeSVG } from "qrcode.react";
 import {
   Dialog,
   DialogContent,
@@ -100,8 +101,9 @@ export function WechatQrDialog({
         </DialogHeader>
         <div className="flex flex-col items-center space-y-4 py-4">
           {qrUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={qrUrl} alt="WeChat QR Code" className="w-64 h-64" />
+            <div className="w-64 h-64 bg-white rounded-lg flex items-center justify-center p-4">
+              <QRCodeSVG value={qrUrl} size={224} level="H" />
+            </div>
           ) : (
             <div className="w-64 h-64 bg-gray-100 rounded flex items-center justify-center">
               <span className="text-muted-foreground text-sm">
