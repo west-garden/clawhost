@@ -37,7 +37,7 @@ export function ChatSessionSidebar({
         {sessions.map((session) => (
           <div
             key={session.id}
-            className={`chat-sidebar-item ${
+            className={`chat-sidebar-item group ${
               session.id === activeSessionId ? "active" : ""
             }`}
             onClick={() => onSelectSession(session.id)}
