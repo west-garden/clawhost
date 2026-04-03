@@ -72,8 +72,9 @@ func setSessionCookie(c echo.Context, agent *model.Agent) {
 }
 
 // isUUID checks if a string is in UUID format
+var uuidRegex = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+
 func isUUID(s string) bool {
-	uuidRegex := regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 	return uuidRegex.MatchString(strings.ToLower(s))
 }
 

@@ -5,6 +5,7 @@ const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  allowedDevOrigins: ["54.46.3.148", "localhost"],
 };
 
 export default withNextIntl(nextConfig);

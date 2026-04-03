@@ -21,17 +21,27 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import { LayoutDashboardIcon, BotIcon, LogOutIcon, EllipsisVerticalIcon, CircleUserRoundIcon } from "lucide-react"
+import {
+  UsersIcon,
+  BotIcon,
+  CreditCardIcon,
+  PackageIcon,
+  LogOutIcon,
+  EllipsisVerticalIcon,
+  CircleUserRoundIcon,
+} from "lucide-react"
 import { useAuth } from "@/components/auth-provider"
 
 const navItems = [
-  { title: "Apps", href: "/", icon: <LayoutDashboardIcon /> },
-  { title: "Bots", href: "/bots", icon: <BotIcon /> },
+  { title: "Users", href: "/users", icon: <UsersIcon /> },
+  { title: "Agents", href: "/agents", icon: <BotIcon /> },
+  { title: "Plans", href: "/subscription/plans", icon: <CreditCardIcon /> },
+  { title: "Credit Packs", href: "/subscription/packs", icon: <PackageIcon /> },
 ]
 
 export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   const pathname = usePathname()
-  const { logout } = useAuth()
+  const { user, logout } = useAuth()
 
   return (
     <Sidebar collapsible="offcanvas" {...props}>
@@ -87,9 +97,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
               >
                 <CircleUserRoundIcon className="size-5 text-muted-foreground" />
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">Admin</span>
+                  <span className="truncate font-medium">{user?.name || "Admin"}</span>
                   <span className="truncate text-xs text-foreground/70">
-                    Authenticated
+                    {user?.email || ""}
                   </span>
                 </div>
                 <EllipsisVerticalIcon className="ml-auto size-4" />

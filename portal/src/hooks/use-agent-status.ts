@@ -8,7 +8,10 @@ export function useAgentStatus(agentId: string, enabled = true) {
   const { data, error, isLoading, mutate } = useSWR(
     enabled ? `/api/agents/${agentId}/status` : null,
     fetcher,
-    { refreshInterval: 5000 }
+    {
+      refreshInterval: enabled ? 5000 : 0,
+      revalidateOnReconnect: true,
+    }
   );
 
   return {

@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { AuthProvider } from "@/components/auth-provider";
 import { AppShell } from "@/components/app-shell";
+import { AdminRouteGuard } from "@/components/admin-route-guard";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
@@ -34,7 +35,9 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col">
         <AuthProvider>
           <TooltipProvider>
-            <AppShell>{children}</AppShell>
+            <AdminRouteGuard>
+              <AppShell>{children}</AppShell>
+            </AdminRouteGuard>
           </TooltipProvider>
           <Toaster />
         </AuthProvider>

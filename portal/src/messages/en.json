@@ -102,7 +102,33 @@
     "notRunning": "Agent is not running. Start it first.",
     "startSuccess": "Agent started",
     "stopSuccess": "Agent stopped",
-    "restartSuccess": "Agent restarted"
+    "restartSuccess": "Agent restarted",
+    "config": {
+      "title": "Config",
+      "models": "Model Providers",
+      "defaults": "Defaults",
+      "raw": "Raw Config"
+    },
+    "skills": {
+      "title": "Skills",
+      "delete": "Delete Skill",
+      "deleteConfirm": "Are you sure you want to delete \"{name}\"?",
+      "deleted": "Skill deleted",
+      "empty": "No skills configured"
+    },
+    "devices": {
+      "title": "Devices",
+      "pending": "Pending",
+      "paired": "Paired",
+      "approve": "Approve",
+      "revoke": "Revoke",
+      "approved": "Device approved",
+      "revoked": "Device revoked",
+      "noPending": "No pending devices",
+      "noPaired": "No paired devices",
+      "approveConfirm": "Allow this device to connect to your agent?",
+      "revokeConfirm": "This will disconnect the device from your agent."
+    }
   },
   "channels": {
     "title": "Connected Channels",

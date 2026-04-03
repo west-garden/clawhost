@@ -149,3 +149,177 @@ export async function changePassword(oldPassword: string, newPassword: string) {
   }
   return { success: true };
 }
+
+// --- Config Models ---
+
+export async function listModelProviders(agentId: string) {
+  const res = await fetchWithAuth(`/api/v1/agents/${agentId}/config/models`);
+  const data = await res.json();
+  if (!res.ok || data.code !== 0) {
+    return { error: data.message || "Failed to list providers" };
+  }
+  return { providers: data.data };
+}
+
+export async function addModelProvider(agentId: string, provider: {
+  name: string;
+  baseUrl?: string;
+  apiKey?: string;
+  auth?: string;
+  api?: string;
+  models?: Array<{ id: string; name?: string }>;
+}) {
+  const res = await fetchWithAuth(`/api/v1/agents/${agentId}/config/models`, {
+    method: "POST",
+    body: JSON.stringify(provider),
+  });
+  const data = await res.json();
+  if (!res.ok || data.code !== 0) {
+    return { error: data.message || "Failed to add provider" };
+  }
+  revalidatePath(`/agents/${agentId}`);
+  return { success: true };
+}
+
+export async function updateModelProvider(
+  agentId: string,
+  providerName: string,
+  provider: { baseUrl?: string; apiKey?: string; auth?: string; api?: string; models?: Array<{ id: string; name?: string }> }
+) {
+  const res = await fetchWithAuth(
+    `/api/v1/agents/${agentId}/config/models/${providerName}`,
+    {
+      method: "PUT",
+      body: JSON.stringify(provider),
+    }
+  );
+  const data = await res.json();
+  if (!res.ok || data.code !== 0) {
+    return { error: data.message || "Failed to update provider" };
+  }
+  revalidatePath(`/agents/${agentId}`);
+  return { success: true };
+}
+
+export async function deleteModelProvider(agentId: string, providerName: string) {
+  const res = await fetchWithAuth(
+    `/api/v1/agents/${agentId}/config/models/${providerName}`,
+    { method: "DELETE" }
+  );
+  const data = await res.json();
+  if (!res.ok || data.code !== 0) {
+    return { error: data.message || "Failed to delete provider" };
+  }
+  revalidatePath(`/agents/${agentId}`);
+  return { success: true };
+}
+
+// --- Config Defaults ---
+
+export async function getAgentDefaults(agentId: string) {
+  const res = await fetchWithAuth(`/api/v1/agents/${agentId}/config/defaults`);
+  const data = await res.json();
+  if (!res.ok || data.code !== 0) {
+    return { error: data.message || "Failed to get defaults" };
+  }
+  return { defaults: data.data };
+}
+
+export async function setAgentDefaults(agentId: string, defaults: Record<string, unknown>) {
+  const res = await fetchWithAuth(`/api/v1/agents/${agentId}/config/defaults`, {
+    method: "PUT",
+    body: JSON.stringify(defaults),
+  });
+  const data = await res.json();
+  if (!res.ok || data.code !== 0) {
+    return { error: data.message || "Failed to set defaults" };
+  }
+  revalidatePath(`/agents/${agentId}`);
+  return { success: true };
+}
+
+// --- Raw Config ---
+
+export async function getAgentRawConfig(agentId: string) {
+  const res = await fetchWithAuth(`/api/v1/agents/${agentId}/config/raw`);
+  const data = await res.json();
+  if (!res.ok || data.code !== 0) {
+    return { error: data.message || "Failed to get raw config" };
+  }
+  return { config: data.data };
+}
+
+export async function updateAgentRawConfig(agentId: string, config: Record<string, unknown>) {
+  const res = await fetchWithAuth(`/api/v1/agents/${agentId}/config/raw`, {
+    method: "PUT",
+    body: JSON.stringify(config),
+  });
+  const data = await res.json();
+  if (!res.ok || data.code !== 0) {
+    return { error: data.message || "Failed to update raw config" };
+  }
+  revalidatePath(`/agents/${agentId}`);
+  return { success: true };
+}
+
+// --- Skills ---
+
+export async function listSkills(agentId: string) {
+  const res = await fetchWithAuth(`/api/v1/agents/${agentId}/skills`);
+  const data = await res.json();
+  if (!res.ok || data.code !== 0) {
+    return { error: data.message || "Failed to list skills" };
+  }
+  return { skills: data.data };
+}
+
+export async function deleteSkill(agentId: string, skillName: string) {
+  const res = await fetchWithAuth(
+    `/api/v1/agents/${agentId}/skills/${skillName}`,
+    { method: "DELETE" }
+  );
+  const data = await res.json();
+  if (!res.ok || data.code !== 0) {
+    return { error: data.message || "Failed to delete skill" };
+  }
+  revalidatePath(`/agents/${agentId}`);
+  return { success: true };
+}
+
+// --- Devices ---
+
+export async function listDevices(agentId: string, status?: string) {
+  const query = status ? `?status=${status}` : "";
+  const res = await fetchWithAuth(`/api/v1/agents/${agentId}/devices${query}`);
+  const data = await res.json();
+  if (!res.ok || data.code !== 0) {
+    return { error: data.message || "Failed to list devices" };
+  }
+  return { devices: data.data?.devices || [] };
+}
+
+export async function approveDevice(agentId: string, requestId: string) {
+  const res = await fetchWithAuth(
+    `/api/v1/agents/${agentId}/devices/${requestId}/approve`,
+    { method: "POST" }
+  );
+  const data = await res.json();
+  if (!res.ok || data.code !== 0) {
+    return { error: data.message || "Failed to approve device" };
+  }
+  revalidatePath(`/agents/${agentId}`);
+  return { success: true };
+}
+
+export async function revokeDevice(agentId: string, deviceId: string) {
+  const res = await fetchWithAuth(
+    `/api/v1/agents/${agentId}/devices/${deviceId}`,
+    { method: "DELETE" }
+  );
+  const data = await res.json();
+  if (!res.ok || data.code !== 0) {
+    return { error: data.message || "Failed to revoke device" };
+  }
+  revalidatePath(`/agents/${agentId}`);
+  return { success: true };
+}

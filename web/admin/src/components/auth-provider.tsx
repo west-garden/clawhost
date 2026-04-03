@@ -8,74 +8,75 @@ import {
   useCallback,
   type ReactNode,
 } from "react";
-import {
-  getStoredToken,
-  setToken,
-  clearToken,
-  verifyToken,
-} from "@/lib/api";
+import type { User } from "@/lib/api";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
 
 interface AuthContextType {
-  token: string;
+  user: User | null;
   isAuthed: boolean;
-  verifying: boolean;
-  login: (token: string) => Promise<boolean>;
-  logout: () => void;
+  loading: boolean;
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType>({
-  token: "",
+  user: null,
   isAuthed: false,
-  verifying: true,
-  login: async () => false,
-  logout: () => {},
+  loading: true,
+  login: async () => ({ success: false }),
+  logout: async () => {},
 });
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [token, setTokenState] = useState("");
-  const [isAuthed, setIsAuthed] = useState(false);
-  const [verifying, setVerifying] = useState(true);
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  // Verify stored token on mount
   useEffect(() => {
-    const stored = getStoredToken();
-    if (!stored) {
-      setVerifying(false);
-      return;
-    }
-    setTokenState(stored);
-    verifyToken(stored).then((valid) => {
-      if (valid) {
-        setIsAuthed(true);
-      } else {
-        clearToken();
-        setTokenState("");
+    fetch(`${API_URL}/auth/me`, { credentials: "include" })
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.data?.user && data.data.user.role === "admin") {
+          setUser(data.data.user);
+        }
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const login = useCallback(async (email: string, password: string) => {
+    try {
+      const res = await fetch(`${API_URL}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || data.code !== 0) {
+        return { success: false, error: data.message || "Login failed" };
       }
-      setVerifying(false);
-    });
-  }, []);
 
-  const login = useCallback(async (t: string): Promise<boolean> => {
-    const valid = await verifyToken(t);
-    if (valid) {
-      setToken(t);
-      setTokenState(t);
-      setIsAuthed(true);
-      return true;
+      if (!data.data?.user || data.data.user.role !== "admin") {
+        return { success: false, error: "Admin access required" };
+      }
+
+      setUser(data.data.user);
+      return { success: true };
+    } catch (e) {
+      return { success: false, error: "Login failed" };
     }
-    return false;
   }, []);
 
-  const logout = useCallback(() => {
-    clearToken();
-    setTokenState("");
-    setIsAuthed(false);
+  const logout = useCallback(async () => {
+    await fetch(`${API_URL}/auth/logout`, { method: "POST", credentials: "include" });
+    setUser(null);
   }, []);
 
   return (
-    <AuthContext.Provider
-      value={{ token, isAuthed, verifying, login, logout }}
-    >
+    <AuthContext.Provider value={{ user, isAuthed: !!user, loading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

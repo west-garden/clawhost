@@ -8,6 +8,22 @@ import (
 	"github.com/labstack/echo/v4"
 )
 
+func AdminListPlans(c echo.Context) error {
+	plans, err := model.ListAllSubscriptionPlans()
+	if err != nil {
+		return util.InternalError(c, "failed to list plans")
+	}
+	return util.Success(c, plans)
+}
+
+func AdminListCreditPacks(c echo.Context) error {
+	packs, err := model.ListAllCreditPacks()
+	if err != nil {
+		return util.InternalError(c, "failed to list credit packs")
+	}
+	return util.Success(c, packs)
+}
+
 func AdminCreatePlan(c echo.Context) error {
 	var plan model.SubscriptionPlan
 	if err := c.Bind(&plan); err != nil {

@@ -1,43 +1,35 @@
-const API_BASE = "/bot/api/v1/admin";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "";
+const API_BASE = `${API_URL}/api/v1/admin`;
 
-function getToken(): string {
-  if (typeof window === "undefined") return "";
-  return localStorage.getItem("admin_token") || "";
+export interface User {
+  id: string;
+  email: string;
+  name: string;
+  role: "user" | "admin";
+  status: "active" | "disabled";
+  created_at: string;
 }
 
-export function setToken(token: string) {
-  localStorage.setItem("admin_token", token);
-}
-
-export function getStoredToken(): string {
-  return getToken();
-}
-
-export function clearToken() {
-  localStorage.removeItem("admin_token");
-}
-
-export async function verifyToken(token: string): Promise<boolean> {
-  try {
-    const res = await fetch(`${API_BASE}/verify`, {
-      headers: { Authorization: `Bearer ${token}` },
-    });
-    return res.ok;
-  } catch {
-    return false;
+export async function getProfile(): Promise<User> {
+  const res = await fetch(`${API_URL}/auth/me`, {
+    credentials: "include",
+  });
+  const json = await res.json();
+  if (!res.ok) {
+    throw new Error(json.message || `Request failed: ${res.status}`);
   }
+  return json.data?.user;
 }
 
 async function request<T>(
   path: string,
   options: RequestInit = {}
 ): Promise<{ code: number; message: string; data: T }> {
-  const token = getToken();
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
+    credentials: "include",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${token}`,
       ...options.headers,
     },
   });
@@ -175,4 +167,16 @@ export async function restartAllBots() {
 // Config APIs
 export async function getAdminConfig() {
   return request<{ bot_domain_template: string }>("/config");
+}
+
+// User APIs
+export async function listUsers() {
+  return request<User[]>("/users");
+}
+
+export async function updateUser(id: string, data: { role?: string; status?: string }) {
+  return request<User>(`/users/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(data),
+  });
 }

@@ -1,0 +1,19 @@
+{{- if .Values.portal.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "clawhost.fullname" . }}-portal
+  labels:
+    {{- include "clawhost.labels" . | nindent 4 }}
+    app.kubernetes.io/component: portal
+spec:
+  type: ClusterIP
+  ports:
+    - port: {{ .Values.portal.port }}
+      targetPort: {{ .Values.portal.port }}
+      protocol: TCP
+      name: http
+  selector:
+    {{- include "clawhost.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: portal
+{{- end }}

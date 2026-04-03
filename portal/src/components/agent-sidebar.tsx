@@ -1,6 +1,7 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { CreateAgentDialog } from "./create-agent-dialog";
@@ -54,29 +55,22 @@ export function AgentSidebarContent({
 }: AgentSidebarContentProps) {
   const t = useTranslations();
   const pathname = usePathname();
-  const router = useRouter();
 
   const activeAgentId = pathname.match(/\/agents\/([^/]+)/)?.[1];
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
-    router.refresh();
-  }
-
-  function navigateTo(path: string) {
-    onNavigate?.();
-    router.push(path);
+    window.location.href = "/login";
   }
 
   return (
     <div className="flex h-full flex-col">
       {/* Logo */}
-      <div className="flex items-center gap-3 px-5 py-5 border-b border-white/10">
+      <div className="flex items-center gap-3 px-5 py-5 border-b border-border">
         <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center">
-          <ClawIcon className="w-5 h-5" />
+          <ClawIcon className="w-5 h-5 text-white" />
         </div>
-        <span className="font-semibold text-base text-white">ClawHost</span>
+        <span className="font-semibold text-base text-foreground">ClawHost</span>
       </div>
 
       {/* New Agent button */}
@@ -90,7 +84,7 @@ export function AgentSidebarContent({
       </div>
 
       {/* Agent list label */}
-      <div className="px-4 pt-4 pb-2 text-[10px] uppercase tracking-widest text-white/30">
+      <div className="px-4 pt-4 pb-2 text-[10px] uppercase tracking-widest text-muted-foreground">
         Agents
       </div>
 
@@ -102,13 +96,10 @@ export function AgentSidebarContent({
           const color = getAgentColor(agent.name);
 
           return (
-            <a
+            <Link
               key={agent.id}
               href={`/agents/${agent.id}`}
-              onClick={(e) => {
-                e.preventDefault();
-                navigateTo(`/agents/${agent.id}`);
-              }}
+              onClick={onNavigate}
               className={cn(
                 "agent-sidebar-item",
                 isActive && "agent-sidebar-item-active"
@@ -125,7 +116,7 @@ export function AgentSidebarContent({
               <span
                 className={cn(
                   "text-[13px] font-medium flex-1 truncate",
-                  isActive ? "text-white" : "text-white/50"
+                  isActive ? "text-foreground" : "text-muted-foreground"
                 )}
               >
                 {agent.name}
@@ -133,18 +124,15 @@ export function AgentSidebarContent({
               <div
                 className={cn("status-dot", getStatusDotClass(agent.status))}
               />
-            </a>
+            </Link>
           );
         })}
 
         {/* Subscription + Settings nav items */}
-        <div className="!mt-2 pt-2 border-t border-white/10 space-y-0.5">
-        <a
+        <div className="!mt-2 pt-2 border-t border-border space-y-0.5">
+        <Link
           href="/subscription"
-          onClick={(e) => {
-            e.preventDefault();
-            navigateTo("/subscription");
-          }}
+          onClick={onNavigate}
           className={cn(
             "agent-sidebar-item",
             pathname === "/subscription" && "agent-sidebar-item-active"
@@ -153,24 +141,21 @@ export function AgentSidebarContent({
           <CreditCard
             className={cn(
               "w-4 h-4 flex-shrink-0",
-              pathname === "/subscription" ? "text-white" : "text-white/40"
+              pathname === "/subscription" ? "text-foreground" : "text-muted-foreground"
             )}
           />
           <span
             className={cn(
               "text-[13px] font-medium",
-              pathname === "/subscription" ? "text-white" : "text-white/50"
+              pathname === "/subscription" ? "text-foreground" : "text-muted-foreground"
             )}
           >
             {t("sidebar.subscription")}
           </span>
-        </a>
-        <a
+        </Link>
+        <Link
           href="/settings"
-          onClick={(e) => {
-            e.preventDefault();
-            navigateTo("/settings");
-          }}
+          onClick={onNavigate}
           className={cn(
             "agent-sidebar-item",
             pathname === "/settings" && "agent-sidebar-item-active"
@@ -179,36 +164,36 @@ export function AgentSidebarContent({
           <Settings
             className={cn(
               "w-4 h-4 flex-shrink-0",
-              pathname === "/settings" ? "text-white" : "text-white/40"
+              pathname === "/settings" ? "text-foreground" : "text-muted-foreground"
             )}
           />
           <span
             className={cn(
               "text-[13px] font-medium",
-              pathname === "/settings" ? "text-white" : "text-white/50"
+              pathname === "/settings" ? "text-foreground" : "text-muted-foreground"
             )}
           >
             {t("sidebar.settings")}
           </span>
-        </a>
+        </Link>
         </div>
       </nav>
 
       {/* Footer: user info + logout */}
-      <div className="border-t border-white/10 p-3">
+      <div className="border-t border-border p-3">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-md bg-gradient-to-br from-red-500/20 to-red-700/20 border border-white/10 flex items-center justify-center">
-            <span className="text-[10px] font-medium text-white">
+          <div className="w-7 h-7 rounded-md bg-gradient-to-br from-red-500/20 to-red-700/20 border border-border flex items-center justify-center">
+            <span className="text-[10px] font-medium text-foreground">
               {(user.name || user.email || "?").slice(0, 2).toUpperCase()}
             </span>
           </div>
-          <span className="text-xs text-white/60 truncate flex-1">
+          <span className="text-xs text-muted-foreground truncate flex-1">
             {user.name || user.email}
           </span>
           <LocaleSwitcher locale={locale} />
           <button
             onClick={handleLogout}
-            className="w-7 h-7 rounded-md bg-white/5 border border-white/10 flex items-center justify-center text-white/40 hover:bg-red-500/10 hover:text-red-400 hover:border-red-500/30 transition-all"
+            className="w-7 h-7 rounded-md bg-muted border border-border flex items-center justify-center text-muted-foreground hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/30 transition-all"
             title={t("sidebar.logout")}
           >
             <LogOut className="w-3.5 h-3.5" />

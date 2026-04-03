@@ -61,25 +61,35 @@ func ParseToken(tokenStr string) (*UserClaims, error) {
 	return claims, nil
 }
 
-// JWTAuth returns middleware that validates JWT from the Authorization header.
+// JWTAuth returns middleware that validates JWT from Authorization header or cookie.
 func JWTAuth() echo.MiddlewareFunc {
 	return func(next echo.HandlerFunc) echo.HandlerFunc {
 		return func(c echo.Context) error {
+			var tokenStr string
+
+			// First, try Authorization header
 			authHeader := c.Request().Header.Get("Authorization")
-			if authHeader == "" {
+			if authHeader != "" {
+				parts := strings.SplitN(authHeader, " ", 2)
+				if len(parts) == 2 && strings.ToLower(parts[0]) == "bearer" {
+					tokenStr = parts[1]
+				}
+			}
+
+			// Fallback to cookie (for Admin static export)
+			if tokenStr == "" {
+				if cookie, err := c.Cookie("token"); err == nil && cookie.Value != "" {
+					tokenStr = cookie.Value
+				}
+			}
+
+			if tokenStr == "" {
 				return c.JSON(http.StatusUnauthorized, map[string]interface{}{
-					"code": 401, "message": "missing authorization header",
+					"code": 401, "message": "missing authorization",
 				})
 			}
 
-			parts := strings.SplitN(authHeader, " ", 2)
-			if len(parts) != 2 || strings.ToLower(parts[0]) != "bearer" {
-				return c.JSON(http.StatusUnauthorized, map[string]interface{}{
-					"code": 401, "message": "invalid authorization format, expected: Bearer <token>",
-				})
-			}
-
-			claims, err := ParseToken(parts[1])
+			claims, err := ParseToken(tokenStr)
 			if err != nil {
 				return c.JSON(http.StatusUnauthorized, map[string]interface{}{
 					"code": 401, "message": "invalid or expired token",

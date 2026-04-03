@@ -38,33 +38,33 @@ export function SubscriptionPage({
       <div className="glass-panel mb-6">
         <div className="p-4 flex items-center justify-between flex-wrap gap-3">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-red-500/20 to-red-700/20 flex items-center justify-center">
-              <CreditCard className="w-4 h-4 text-red-400" />
+            <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
+              <CreditCard className="w-4 h-4 text-primary" />
             </div>
             <div>
-              <p className="text-sm font-medium text-white">
+              <p className="text-sm font-medium text-foreground">
                 {t("currentPlan")}:{" "}
-                <span className="text-red-400">
+                <span className="text-primary">
                   {isSubscribed ? subscription.plan?.name : t("freeTier")}
                 </span>
               </p>
               {!isSubscribed && (
-                <p className="text-xs text-white/40">{t("upgradePrompt")}</p>
+                <p className="text-xs text-muted-foreground">{t("upgradePrompt")}</p>
               )}
             </div>
           </div>
           {isSubscribed && subscription && (
-            <div className="flex items-center gap-4 text-xs text-white/50">
+            <div className="flex items-center gap-4 text-xs text-muted-foreground">
               <span>
                 {t("creditsRemaining")}:{" "}
-                <span className="text-white font-medium">
+                <span className="text-foreground font-medium">
                   {subscription.credits_balance.toLocaleString()}
                 </span>
               </span>
               {subscription.current_period_end && (
                 <span>
                   {t("expiresAt")}:{" "}
-                  <span className="text-white/70">
+                  <span className="text-foreground">
                     {new Date(subscription.current_period_end).toLocaleDateString()}
                   </span>
                 </span>
@@ -75,7 +75,7 @@ export function SubscriptionPage({
       </div>
 
       {/* Title */}
-      <h1 className="text-xl font-bold text-white mb-4">{t("title")}</h1>
+      <h1 className="text-xl font-bold text-foreground mb-4">{t("title")}</h1>
 
       {/* Tabs */}
       <div className="flex gap-0 mb-6">
@@ -108,15 +108,15 @@ export function SubscriptionPage({
                 )}
               >
                 <div className="pricing-card-header">
-                  <h3 className="text-base font-semibold text-white mb-1">
+                  <h3 className="text-base font-semibold text-foreground mb-1">
                     {plan.name}
                   </h3>
-                  <p className="text-xs text-white/40">{plan.description}</p>
+                  <p className="text-xs text-muted-foreground">{plan.description}</p>
                   <div className="mt-4 flex items-baseline gap-1">
-                    <span className="text-3xl font-bold text-white">
+                    <span className="text-3xl font-bold text-foreground">
                       {formatPrice(plan.price_cents)}
                     </span>
-                    <span className="text-sm text-white/40">
+                    <span className="text-sm text-muted-foreground">
                       {t("perMonth")}
                     </span>
                   </div>
@@ -126,32 +126,32 @@ export function SubscriptionPage({
                     className={cn(
                       "w-full mt-4 py-2.5 rounded-lg text-sm font-medium transition-all",
                       isCurrent
-                        ? "bg-white/10 text-white/40 cursor-default"
-                        : "bg-gradient-to-r from-red-500 to-red-700 text-white hover:from-red-600 hover:to-red-800"
+                        ? "bg-muted text-muted-foreground cursor-default"
+                        : "glass-btn"
                     )}
                   >
                     {isCurrent ? t("currentBadge") : t("upgrade")}
                   </button>
                 </div>
                 <div className="pricing-card-body">
-                  <p className="text-[10px] uppercase tracking-widest text-white/30 mb-3">
+                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground mb-3">
                     {t("features")}
                   </p>
                   <div className="space-y-0.5">
                     <div className="pricing-card-feature">
-                      <Check className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
+                      <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />
                       <span>
                         {plan.monthly_credits.toLocaleString()} {t("credits")}
                       </span>
                     </div>
                     <div className="pricing-card-feature">
-                      <Check className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
+                      <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />
                       <span>
                         {plan.agent_limit} {t("agents")}
                       </span>
                     </div>
                     <div className="pricing-card-feature">
-                      <Check className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
+                      <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />
                       <span>
                         {t("dailyBonus", {
                           amount: plan.daily_bonus,
@@ -160,13 +160,13 @@ export function SubscriptionPage({
                       </span>
                     </div>
                     <div className="pricing-card-feature">
-                      <Check className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
+                      <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />
                       <span>{t("topUpAnytime")}</span>
                     </div>
                     {(plan.features as string[])?.map(
                       (feature: string, i: number) => (
                         <div key={i} className="pricing-card-feature">
-                          <Check className="w-3.5 h-3.5 text-red-400 flex-shrink-0" />
+                          <Check className="w-3.5 h-3.5 text-primary flex-shrink-0" />
                           <span>{feature}</span>
                         </div>
                       )
@@ -185,18 +185,18 @@ export function SubscriptionPage({
           {packs.map((pack) => (
             <div key={pack.id} className="pricing-card">
               <div className="pricing-card-header">
-                <h3 className="text-base font-semibold text-white mb-1">
+                <h3 className="text-base font-semibold text-foreground mb-1">
                   +{pack.credits.toLocaleString()} {t("credits")}
                 </h3>
-                <p className="text-xs text-white/40">{pack.name}</p>
+                <p className="text-xs text-muted-foreground">{pack.name}</p>
                 <div className="mt-4 flex items-baseline gap-1">
-                  <span className="text-3xl font-bold text-white">
+                  <span className="text-3xl font-bold text-foreground">
                     {formatPrice(pack.price_cents)}
                   </span>
                 </div>
                 <button
                   onClick={handlePurchase}
-                  className="w-full mt-4 py-2.5 rounded-lg text-sm font-medium bg-gradient-to-r from-red-500 to-red-700 text-white hover:from-red-600 hover:to-red-800 transition-all"
+                  className="glass-btn w-full mt-4"
                 >
                   {t("purchase")}
                 </button>

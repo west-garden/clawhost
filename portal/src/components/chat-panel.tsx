@@ -150,13 +150,13 @@ export function ChatPanel({
     return (
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="text-center">
-          <div className="w-12 h-12 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center mx-auto mb-4">
-            <AlertTriangle className="w-6 h-6 text-white/20" />
+          <div className="w-12 h-12 rounded-xl bg-muted border border-border flex items-center justify-center mx-auto mb-4">
+            <AlertTriangle className="w-6 h-6 text-muted-foreground" />
           </div>
-          <p className="text-sm font-medium text-white/60 mb-1">
+          <p className="text-sm font-medium text-muted-foreground mb-1">
             {t("notRunning")}
           </p>
-          <p className="text-xs text-white/30 mb-4">{t("startToChat")}</p>
+          <p className="text-xs text-muted-foreground mb-4">{t("startToChat")}</p>
           <button
             onClick={handleStart}
             disabled={startLoading}
@@ -183,13 +183,13 @@ export function ChatPanel({
         {/* Warning banner */}
         {!warningDismissed && (
           <div className="chat-warning">
-            <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0 mt-0.5" />
-            <p className="text-xs text-amber-400/90 leading-relaxed flex-1">
+            <AlertTriangle className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-primary leading-relaxed flex-1">
               {t("warning")}
             </p>
             <button
               onClick={() => setWarningDismissed(true)}
-              className="text-amber-400/50 hover:text-amber-400 flex-shrink-0"
+              className="text-muted-foreground hover:text-primary flex-shrink-0"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -207,8 +207,8 @@ export function ChatPanel({
             <div
               className={`w-7 h-7 rounded-md flex items-center justify-center text-[10px] font-semibold flex-shrink-0 mt-0.5 ${
                 msg.role === "assistant"
-                  ? "bg-gradient-to-br from-red-500 to-red-700 text-white"
-                  : "bg-gradient-to-br from-slate-700 to-slate-800 text-white/60"
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground"
               }`}
             >
               {msg.role === "assistant" ? initial : "U"}
@@ -221,7 +221,7 @@ export function ChatPanel({
               }
             >
               {msg.content || (
-                <Loader2 className="w-4 h-4 animate-spin text-white/30" />
+                <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
               )}
             </div>
           </div>
@@ -231,7 +231,7 @@ export function ChatPanel({
 
       {/* Input */}
       <div className="chat-input-area">
-        <div className="flex items-end gap-2.5 bg-white/[0.04] border border-white/10 rounded-xl p-2.5 focus-within:border-red-500/40 transition-colors">
+        <div className="flex items-end gap-2.5 bg-muted border border-border rounded-xl p-2.5 focus-within:border-primary transition-colors">
           <textarea
             ref={inputRef}
             value={input}
@@ -239,17 +239,17 @@ export function ChatPanel({
             onKeyDown={handleKeyDown}
             placeholder={t("inputPlaceholder")}
             rows={1}
-            className="flex-1 bg-transparent text-sm text-white placeholder-white/30 resize-none outline-none max-h-32 leading-relaxed"
+            className="flex-1 bg-transparent text-sm text-foreground placeholder-muted-foreground resize-none outline-none max-h-32 leading-relaxed"
           />
           <button
             onClick={handleSend}
             disabled={!input.trim() || isStreaming}
-            className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center text-white flex-shrink-0 disabled:opacity-30 disabled:cursor-not-allowed transition-opacity"
+            className="glass-btn w-8 h-8 flex items-center justify-center flex-shrink-0 disabled:opacity-30 disabled:cursor-not-allowed"
           >
             <Send className="w-3.5 h-3.5" />
           </button>
         </div>
-        <p className="text-[10px] text-white/20 mt-2 text-center">
+        <p className="text-[10px] text-muted-foreground mt-2 text-center">
           {t("aiDisclaimer")}
         </p>
       </div>

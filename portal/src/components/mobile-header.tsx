@@ -24,24 +24,24 @@ export function MobileHeader({
   return (
     <>
       {/* Mobile header bar */}
-      <header className="flex md:hidden items-center justify-between glass-header px-4 h-14 sticky top-0 z-30">
+      <header className="flex md:hidden items-center justify-between bg-card border-b border-border px-4 h-14 sticky top-0 z-30">
         <button
           onClick={() => setOpen(true)}
-          className="w-9 h-9 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center text-white/70 hover:bg-white/10 transition-all"
+          className="w-9 h-9 rounded-lg bg-muted border border-border flex items-center justify-center text-muted-foreground hover:bg-accent transition-all"
           aria-label="Menu"
         >
           <Menu className="w-4 h-4" />
         </button>
 
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center">
+          <div className="w-7 h-7 rounded-lg bg-primary flex items-center justify-center">
             <ClawIcon className="w-4 h-4" />
           </div>
-          <span className="font-semibold text-sm text-white">ClawHost</span>
+          <span className="font-semibold text-sm text-foreground">ClawHost</span>
         </div>
 
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-500/20 to-red-700/20 border border-white/10 flex items-center justify-center">
-          <span className="text-[10px] font-medium text-white">{initials}</span>
+        <div className="w-8 h-8 rounded-full bg-muted border border-border flex items-center justify-center">
+          <span className="text-[10px] font-medium text-foreground">{initials}</span>
         </div>
       </header>
 
