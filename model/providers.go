@@ -102,7 +102,7 @@ var builtinProviders = map[string]ProviderMeta{
 	},
 	"qwen-coding": {
 		ID:      "qwen-coding",
-		Label:   "Qwen Coding Plan (百炼)",
+		Label:   "阿里云百炼 Coding Plan",
 		BaseURL: "https://coding.dashscope.aliyuncs.com/v1",
 		API:     "openai-completions",
 		Models: []ModelInfo{

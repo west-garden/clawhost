@@ -107,7 +107,27 @@
       "title": "Config",
       "models": "Model Providers",
       "defaults": "Defaults",
-      "raw": "Raw Config"
+      "raw": "Raw Config",
+      "edit": "Edit",
+      "delete": "Delete",
+      "save": "Save",
+      "saving": "Saving...",
+      "cancel": "Cancel",
+      "editProvider": "Edit Provider",
+      "addProvider": "Add Provider",
+      "providerType": "Provider Type",
+      "customProvider": "Custom (manual input)",
+      "providerName": "Provider Name",
+      "providerNamePlaceholder": "openai, anthropic, etc.",
+      "baseUrl": "Base URL",
+      "baseUrlAutoFilled": "(auto-filled)",
+      "baseUrlHint": "Preset URL can be changed after adding",
+      "apiKey": "API Key",
+      "apiKeyPlaceholder": "sk-...",
+      "providerUpdated": "Provider updated",
+      "providerAdded": "Provider added",
+      "providerDeleted": "Provider deleted",
+      "deleteConfirm": "Delete provider \"{name}\"?"
     },
     "skills": {
       "title": "Skills",
@@ -127,7 +147,10 @@
       "noPending": "No pending devices",
       "noPaired": "No paired devices",
       "approveConfirm": "Allow this device to connect to your agent?",
-      "revokeConfirm": "This will disconnect the device from your agent."
+      "revokeConfirm": "This will disconnect the device from your agent.",
+      "unknown": "Unknown",
+      "justNow": "Just now",
+      "connected": "Connected"
     }
   },
   "channels": {
