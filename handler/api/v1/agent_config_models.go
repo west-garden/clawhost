@@ -86,7 +86,12 @@ func AddModelProvider(c echo.Context) error {
 		APIKey:  req.APIKey,
 		Auth:    req.Auth,
 		API:     req.API,
-		Models:  req.Models,
+		Models:  req.Models, // can be nil, will be set to empty array below
+	}
+
+	// Ensure Models is always an array (not nil) for OpenClaw validation
+	if config.Models.Providers[req.Name].Models == nil {
+		config.Models.Providers[req.Name].Models = []model.ProviderModelConfig{}
 	}
 
 	// Save to database
@@ -181,6 +186,11 @@ func UpdateModelProvider(c echo.Context) error {
 		Auth:    req.Auth,
 		API:     req.API,
 		Models:  req.Models,
+	}
+
+	// Ensure Models is always an array (not nil) for OpenClaw validation
+	if config.Models.Providers[providerName].Models == nil {
+		config.Models.Providers[providerName].Models = []model.ProviderModelConfig{}
 	}
 
 	// Save to database
