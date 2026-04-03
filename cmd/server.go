@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/http"
 	"strings"
+	"time"
 
 	v1 "github.com/clawhost/clawhost/handler/api/v1"
 	"github.com/clawhost/clawhost/handler/proxy"
@@ -117,8 +118,8 @@ func startServer() {
 
 	// Auth routes (no auth required)
 	auth := e.Group("/auth")
-	auth.POST("/register", v1.Register)
-	auth.POST("/login", v1.Login)
+	auth.POST("/register", v1.Register, authmw.RateLimit(5, time.Minute))  // 5 registrations per minute per IP
+	auth.POST("/login", v1.Login, authmw.RateLimit(20, time.Minute))       // 20 login attempts per minute per IP
 	auth.POST("/refresh", v1.Refresh)
 	auth.GET("/oauth/:provider", v1.OAuthRedirect)
 	auth.GET("/oauth/:provider/callback", v1.OAuthCallback)

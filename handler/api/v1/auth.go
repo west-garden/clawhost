@@ -251,6 +251,10 @@ func UpdateProfile(c echo.Context) error {
 		user.Name = req.Name
 	}
 	if req.Avatar != "" {
+		// Validate avatar URL
+		if err := util.ValidateAvatarURL(req.Avatar); err != nil {
+			return util.BadRequest(c, err.Error())
+		}
 		user.Avatar = req.Avatar
 	}
 	if err := model.UpdateUser(user); err != nil {
