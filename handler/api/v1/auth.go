@@ -121,24 +121,28 @@ func Login(c echo.Context) error {
 
 	user, err := model.GetUserByEmail(req.Email)
 	if err != nil {
-		// Don't reveal whether email exists - return same error
+		// User not found - add delay to prevent email enumeration, then return same error
+		time.Sleep(200 * time.Millisecond)
 		return util.Unauthorized(c, "invalid email or password")
 	}
 
 	// Check if account is locked
 	if user.IsLocked() {
-		remaining := time.Until(user.LockedUntil).Round(time.Minute)
-		return util.Unauthorized(c, fmt.Sprintf("account temporarily locked, try again in %v", remaining))
+		// Add same delay to match "user not found" timing, prevents enumeration
+		time.Sleep(200 * time.Millisecond)
+		return util.Unauthorized(c, "invalid email or password")
 	}
 
 	// Check password
 	if !user.CheckPassword(req.Password) {
 		// Increment failed attempts (5 max, 15 min lock)
 		locked, _ := user.IncrementFailedLogin(5, 15*time.Minute)
+		// Add delay to slow down brute force
+		time.Sleep(200 * time.Millisecond)
 		if locked {
-			return util.Unauthorized(c, "account locked for 15 minutes due to too many failed attempts")
+			// Don't reveal lock status - same error message
+			return util.Unauthorized(c, "invalid email or password")
 		}
-		// Don't reveal how many attempts left
 		return util.Unauthorized(c, "invalid email or password")
 	}
 
