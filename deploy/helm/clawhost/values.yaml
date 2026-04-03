@@ -37,7 +37,10 @@ portal:
       cpu: 500m
       memory: 512Mi
   env:
-    NEXT_PUBLIC_API_URL: ""  # Set to your API URL, e.g., https://api.example.com
+    # Browser-side API URL (leave empty for same-origin)
+    NEXT_PUBLIC_API_URL: ""
+    # Server-side API URL (defaults to K8s service name)
+    CLAWHOST_API_URL: ""
 
 ## Admin API token (required)
 adminToken: "change-me"
