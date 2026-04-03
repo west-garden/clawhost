@@ -171,7 +171,7 @@
 
   .glass-input:focus {
     border-color: var(--ring);
-    box-shadow: 0 0 0 3px var(--ring / 0.1);
+    box-shadow: 0 0 0 3px oklch(0.55 0.22 25 / 0.1);
   }
 
   .glass-input::placeholder {
@@ -251,7 +251,7 @@
 
   .status-dot-running {
     background: var(--status-running);
-    box-shadow: 0 0 6px var(--status-running / 0.4);
+    box-shadow: 0 0 6px oklch(0.6 0.15 150 / 0.4);
   }
 
   .status-dot-stopped {
