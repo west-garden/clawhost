@@ -156,7 +156,15 @@
       "delete": "Delete Skill",
       "deleteConfirm": "Are you sure you want to delete \"{name}\"?",
       "deleted": "Skill deleted",
-      "empty": "No skills yet. Install from GitHub or create a new one."
+      "empty": "No skills yet. Install from GitHub or create a new one.",
+      "marketplace": "Marketplace",
+      "installedTab": "Installed",
+      "searchPlaceholder": "Search skills...",
+      "allCategories": "All Categories",
+      "installFromMarketplace": "Install",
+      "alreadyInstalled": "Installed",
+      "byAuthor": "by {author}",
+      "version": "v{version}"
     },
     "tasks": {
       "title": "Scheduled Tasks",
