@@ -158,6 +158,7 @@ func startServer() {
 		agentAPI.POST("/start", v1.StartAgent)
 		agentAPI.POST("/stop", v1.StopAgent)
 		agentAPI.POST("/restart", v1.RestartAgent)
+		agentAPI.POST("/reset", v1.ResetAgent)
 		agentAPI.GET("/status", v1.GetAgentStatus)
 		agentAPI.GET("/connect", v1.GetAgentConnect)
 		agentAPI.POST("/reset-token", v1.ResetAgentToken)

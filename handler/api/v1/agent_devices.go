@@ -315,7 +315,7 @@ func ApproveDevice(c echo.Context) error {
 
 // RevokeDevice revokes a paired device
 // Query params:
-//   - role: the role to revoke (default: "user")
+//   - role: the role to revoke (default: "operator")
 func RevokeDevice(c echo.Context) error {
 	agent := middleware.GetAgentFromContext(c)
 	if agent == nil {

@@ -3,6 +3,7 @@ package v1
 import (
 	"context"
 	"strings"
+	"sync"
 
 	"github.com/clawhost/clawhost/middleware"
 	"github.com/clawhost/clawhost/model"
@@ -42,18 +43,35 @@ func GetAgentConnect(c echo.Context) error {
 
 	ctx := context.Background()
 
-	// Check if deployment is ready
-	ready, err := k8s.GetDeploymentStatus(ctx, agent.ID)
-	if err != nil {
+	// Parallel K8s API calls using sync.WaitGroup
+	var (
+		ready     bool
+		endpoint  string
+		readyErr  error
+		endptErr  error
+		wg        sync.WaitGroup
+	)
+
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		ready, readyErr = k8s.GetDeploymentStatus(ctx, agent.ID)
+	}()
+	go func() {
+		defer wg.Done()
+		endpoint, endptErr = k8s.GetServiceEndpoint(ctx, agent.ID)
+	}()
+	wg.Wait()
+
+	// Check errors
+	if readyErr != nil {
 		return util.InternalError(c, "failed to get deployment status")
 	}
-	response.Ready = ready
-
-	// Get service endpoint (internal)
-	endpoint, err := k8s.GetServiceEndpoint(ctx, agent.ID)
-	if err != nil {
+	if endptErr != nil {
 		return util.InternalError(c, "failed to get service endpoint")
 	}
+
+	response.Ready = ready
 	response.Endpoint = endpoint
 
 	// Build external URL based on domain template

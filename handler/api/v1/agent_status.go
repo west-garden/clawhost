@@ -34,21 +34,19 @@ func GetAgentStatus(c echo.Context) error {
 	// Check actual K8s status if agent is supposed to be running
 	if agent.Status == model.AgentStatusRunning {
 		ctx := context.Background()
-		ready, err := k8s.GetDeploymentStatus(ctx, agent.ID)
+		// Use GetDeploymentStatusInfo to get both status and existence in one call
+		info, err := k8s.GetDeploymentStatusInfo(ctx, agent.ID)
 		if err != nil {
 			response.Ready = false
 		} else {
-			response.Ready = ready
+			response.Ready = info.ReadyReplicas > 0
 			// Sync status: if K8s deployment doesn't exist, update DB to stopped
-			if !ready {
-				exists, _ := k8s.DeploymentExists(ctx, agent.ID)
-				if !exists {
-					agent.Status = model.AgentStatusStopped
-					agent.Endpoint = ""
-					model.UpdateAgent(agent)
-					response.Status = model.AgentStatusStopped
-					response.Endpoint = ""
-				}
+			if !info.Exists {
+				agent.Status = model.AgentStatusStopped
+				agent.Endpoint = ""
+				model.UpdateAgent(agent)
+				response.Status = model.AgentStatusStopped
+				response.Endpoint = ""
 			}
 		}
 	}

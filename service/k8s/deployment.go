@@ -284,6 +284,15 @@ if [ ! -d /home/node/.openclaw/extensions/openclaw-weixin ] && [ -d /opt/opencla
   mkdir -p /home/node/.openclaw/extensions
   cp -r /opt/openclaw-plugins/openclaw-weixin /home/node/.openclaw/extensions/
 fi
+# Install weixin plugin from npm if not already installed
+if [ ! -d /home/node/.openclaw/extensions/openclaw-weixin ]; then
+  mkdir -p /home/node/.openclaw/extensions
+  cd /home/node/.openclaw/extensions && npm install --no-save @tencent-weixin/openclaw-weixin 2>/dev/null
+  if [ -d /home/node/.openclaw/extensions/node_modules/@tencent-weixin/openclaw-weixin ]; then
+    mv /home/node/.openclaw/extensions/node_modules/@tencent-weixin/openclaw-weixin /home/node/.openclaw/extensions/openclaw-weixin
+    rm -rf /home/node/.openclaw/extensions/node_modules
+  fi
+fi
 exec openclaw gateway --port %d --bind lan --allow-unconfigured --dev`, configJSON, config.AccessToken, config.AccessToken, gatewayPort)}
 									}
 									return []string{"openclaw", "gateway", "--port", fmt.Sprintf("%d", gatewayPort), "--bind", "lan", "--allow-unconfigured", "--dev"}
@@ -586,13 +595,14 @@ func GetDeploymentStatus(ctx context.Context, botID string) (bool, error) {
 
 // DeploymentStatusInfo holds detailed deployment status
 type DeploymentStatusInfo struct {
-	Status          string `json:"status"`           // ready, updating, starting, not_ready, not_found
+	Status          string `json:"status"`           // ready, updating, starting, not_ready, not_found, stopped
 	ReadyReplicas   int32  `json:"ready_replicas"`   // Number of ready pods
 	DesiredReplicas int32  `json:"desired_replicas"` // Desired number of pods
 	UpdatedReplicas int32  `json:"updated_replicas"` // Number of pods with updated spec
+	Exists          bool   `json:"exists"`           // Whether deployment exists
 }
 
-// GetDeploymentStatusInfo returns detailed deployment status
+// GetDeploymentStatusInfo returns detailed deployment status (includes exists check)
 func GetDeploymentStatusInfo(ctx context.Context, botID string) (*DeploymentStatusInfo, error) {
 	client := GetClient()
 	namespace := GetNamespace()
@@ -601,12 +611,13 @@ func GetDeploymentStatusInfo(ctx context.Context, botID string) (*DeploymentStat
 	deployment, err := client.AppsV1().Deployments(namespace).Get(ctx, deploymentName, metav1.GetOptions{})
 	if err != nil {
 		if errors.IsNotFound(err) {
-			return &DeploymentStatusInfo{Status: "not_found"}, nil
+			return &DeploymentStatusInfo{Status: "not_found", Exists: false}, nil
 		}
 		return nil, fmt.Errorf("failed to get deployment: %w", err)
 	}
 
 	info := &DeploymentStatusInfo{
+		Exists:          true,
 		ReadyReplicas:   deployment.Status.ReadyReplicas,
 		DesiredReplicas: *deployment.Spec.Replicas,
 		UpdatedReplicas: deployment.Status.UpdatedReplicas,
