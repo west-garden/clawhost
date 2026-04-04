@@ -84,6 +84,8 @@ export function useWsChatSessions({
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeKey, setActiveKey] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
+  // Message version counter to trigger re-renders when cache updates
+  const [messageVersion, setMessageVersion] = useState(0);
 
   const cacheRef = useRef<Map<string, SessionCache>>(new Map());
   const activeKeyRef = useRef(activeKey);
@@ -415,7 +417,8 @@ export function useWsChatSessions({
   const getActiveMessages = useCallback((): ChatMessage[] => {
     const cached = cacheRef.current.get(activeKeyRef.current);
     return cached?.messages ?? [];
-  }, []);
+    // messageVersion ensures re-render when messages update
+  }, [messageVersion]);
 
   // Update active session messages in cache
   const updateActiveMessages = useCallback((messages: ChatMessage[]) => {
@@ -425,6 +428,8 @@ export function useWsChatSessions({
       lastAccessed: Date.now(),
       isStreaming: cached?.isStreaming ?? false,
     });
+    // Trigger re-render
+    setMessageVersion((v) => v + 1);
   }, []);
 
   // Get streaming state for a specific session
@@ -441,6 +446,10 @@ export function useWsChatSessions({
       lastAccessed: cached?.lastAccessed ?? Date.now(),
       isStreaming: value,
     });
+    // Trigger re-render if this is the active session
+    if (sessionKey === activeKeyRef.current) {
+      setMessageVersion((v) => v + 1);
+    }
   }, []);
 
   // Get active session
