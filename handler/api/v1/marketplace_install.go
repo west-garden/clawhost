@@ -2,10 +2,12 @@ package v1
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/clawhost/clawhost/middleware"
 	"github.com/clawhost/clawhost/model"
 	"github.com/clawhost/clawhost/service/k8s"
+	"github.com/clawhost/clawhost/service/marketplace"
 	"github.com/clawhost/clawhost/service/skills"
 	"github.com/clawhost/clawhost/util"
 	"github.com/labstack/echo/v4"
@@ -41,35 +43,83 @@ func InstallMarketplaceSkill(c echo.Context) error {
 		return util.InternalError(c, "failed to fetch marketplace: "+err.Error())
 	}
 
-	var skillPath string
-	for _, skill := range index.Skills {
-		if skill.Name == req.SkillName || skill.Path == req.SkillName {
-			skillPath = skill.Path
+	var skillListing *marketplace.SkillListing
+	for i := range index.Skills {
+		if index.Skills[i].Name == req.SkillName || index.Skills[i].Path == req.SkillName {
+			skillListing = &index.Skills[i]
 			break
 		}
 	}
 
-	if skillPath == "" {
+	if skillListing == nil {
 		return util.BadRequest(c, "skill not found in marketplace")
 	}
 
 	ctx := context.Background()
 
-	// Fetch skill content
-	content, err := defaultFetcher.FetchSkillContent(skillPath)
+	// Check if this is a skill pack (has sub-skills)
+	if len(skillListing.Skills) > 0 {
+		// Install each sub-skill
+		installedSkills := []string{}
+		for _, subSkillName := range skillListing.Skills {
+			content, err := defaultFetcher.FetchSubSkillContent(skillListing.Path, subSkillName)
+			if err != nil {
+				// Skip sub-skills that don't have content files
+				continue
+			}
+
+			// Write sub-skill to pod with path like "superpowers/using-superpowers"
+			subSkillPath := fmt.Sprintf("%s/%s", skillListing.Path, subSkillName)
+			if err := k8s.WriteSkill(ctx, agent.ID, "main", subSkillPath, content); err != nil {
+				return util.InternalError(c, "failed to write sub-skill "+subSkillName+": "+err.Error())
+			}
+
+			// Write metadata for sub-skill
+			meta := &skills.SkillMeta{
+				Name:        subSkillName,
+				Description: "Part of " + skillListing.DisplayName + " skill pack",
+				Author:      skillListing.Author,
+				Version:     skillListing.Version,
+				Source:      "marketplace",
+			}
+			skills.WriteSkillMeta(ctx, agent.ID, "main", subSkillPath, meta)
+
+			installedSkills = append(installedSkills, subSkillName)
+		}
+
+		// Write pack-level metadata
+		packMeta := &skills.SkillMeta{
+			Name:        skillListing.Name,
+			Description: skillListing.Description,
+			Author:      skillListing.Author,
+			Version:     skillListing.Version,
+			Source:      "marketplace",
+		}
+		skills.WriteSkillMeta(ctx, agent.ID, "main", skillListing.Path, packMeta)
+
+		return util.Success(c, map[string]interface{}{
+			"name":           skillListing.Path,
+			"installed":      true,
+			"skills":         installedSkills,
+			"skillPack":      true,
+		})
+	}
+
+	// Single skill installation
+	content, err := defaultFetcher.FetchSkillContent(skillListing.Path)
 	if err != nil {
 		return util.InternalError(c, "failed to fetch skill content: "+err.Error())
 	}
 
 	// Fetch skill meta
-	metaRaw, err := defaultFetcher.FetchSkillMeta(skillPath)
+	metaRaw, err := defaultFetcher.FetchSkillMeta(skillListing.Path)
 	if err != nil {
 		// Non-critical, we'll extract from content
 		metaRaw = nil
 	}
 
 	// Write skill to pod
-	if err := k8s.WriteSkill(ctx, agent.ID, "main", skillPath, content); err != nil {
+	if err := k8s.WriteSkill(ctx, agent.ID, "main", skillListing.Path, content); err != nil {
 		return util.InternalError(c, "failed to write skill: "+err.Error())
 	}
 
@@ -106,12 +156,12 @@ func InstallMarketplaceSkill(c echo.Context) error {
 		meta.Version = contentMeta.Version
 	}
 
-	if err := skills.WriteSkillMeta(ctx, agent.ID, "main", skillPath, meta); err != nil {
+	if err := skills.WriteSkillMeta(ctx, agent.ID, "main", skillListing.Path, meta); err != nil {
 		// Non-critical error
 	}
 
 	return util.Success(c, map[string]interface{}{
-		"name":      skillPath,
+		"name":      skillListing.Path,
 		"installed": true,
 	})
 }

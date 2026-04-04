@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/clawhost/clawhost/service/k8s"
@@ -106,6 +105,7 @@ func DeleteSkillMeta(ctx context.Context, botID, agentID, skillName string) erro
 }
 
 // ListSkillsWithMeta lists all skills with their metadata
+// Supports both simple skills (skills/{name}/SKILL.md) and nested skills (skills/{pack}/{sub}/SKILL.md)
 func ListSkillsWithMeta(ctx context.Context, botID, agentID string) ([]SkillWithMeta, error) {
 	namespace := k8s.GetNamespace()
 	podName, err := k8s.WaitForPodReady(ctx, botID, 10)
@@ -115,9 +115,10 @@ func ListSkillsWithMeta(ctx context.Context, botID, agentID string) ([]SkillWith
 
 	skillDir := getSkillDir(agentID)
 
-	// List skill directories (each skill is a directory containing SKILL.md)
+	// Find all SKILL.md files recursively to support skill packs
+	findCmd := fmt.Sprintf("find '%s' -name 'SKILL.md' -type f 2>/dev/null | sed 's|^%s/||' | sed 's|/SKILL.md$||'", skillDir, skillDir)
 	output, err := k8s.ExecInPod(ctx, namespace, podName, "openclaw",
-		[]string{"sh", "-c", fmt.Sprintf("ls -d '%s'/*/ 2>/dev/null | xargs -n1 basename 2>/dev/null || echo ''", skillDir)})
+		[]string{"sh", "-c", findCmd})
 	if err != nil {
 		return nil, err
 	}
@@ -125,18 +126,6 @@ func ListSkillsWithMeta(ctx context.Context, botID, agentID string) ([]SkillWith
 	var skills []SkillWithMeta
 	for _, name := range splitLines(output) {
 		if name == "" {
-			continue
-		}
-
-		// Remove trailing slash if present
-		name = strings.TrimSuffix(name, "/")
-
-		// Check if it's a valid skill directory (contains SKILL.md)
-		checkCmd := fmt.Sprintf("test -f '%s/%s/SKILL.md' && echo 'yes' || echo ''", skillDir, name)
-		hasMd, err := k8s.ExecInPod(ctx, namespace, podName, "openclaw",
-			[]string{"sh", "-c", checkCmd})
-		if err != nil || hasMd == "" {
-			// No SKILL.md file, skip
 			continue
 		}
 

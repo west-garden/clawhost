@@ -16,7 +16,7 @@ var (
 	// Valid filename: alphanumeric, dashes, underscores, dots (no path traversal)
 	validFilenameRegex = regexp.MustCompile(`^[a-zA-Z0-9._-]+$`)
 	// Valid skill name: lowercase alphanumeric, dashes, underscores
-	validSkillNameRegex = regexp.MustCompile(`^[a-z0-9_-]+$`)
+	validSkillNameRegex = regexp.MustCompile(`^[a-z0-9_/-]+$`)
 	// Valid agent ID: alphanumeric, dashes, underscores
 	validAgentIDRegex = regexp.MustCompile(`^[a-zA-Z0-9_-]+$`)
 )
@@ -50,7 +50,7 @@ func validateSkillName(name string) error {
 		return errors.New("skill name too long")
 	}
 	if !validSkillNameRegex.MatchString(name) {
-		return errors.New("invalid skill name: only lowercase alphanumeric, dashes, and underscores allowed")
+		return errors.New("invalid skill name: only lowercase alphanumeric, dashes, underscores, and path separators allowed")
 	}
 	return nil
 }
@@ -277,14 +277,15 @@ func WriteSkill(ctx context.Context, botID, agentID, skillName, content string) 
 	}
 
 skillsDir := fmt.Sprintf("%s/.openclaw/skills", workspacePath(agentID))
-	filePath := fmt.Sprintf("%s/%s.md", skillsDir, skillName)
+	skillDir := fmt.Sprintf("%s/%s", skillsDir, skillName)
+	filePath := fmt.Sprintf("%s/SKILL.md", skillDir)
 
 	// Use base64 encoding to avoid shell injection via content
 	contentB64 := base64.StdEncoding.EncodeToString([]byte(content))
 	// Use node to decode base64 and write file (avoids shell escaping issues)
 	script := fmt.Sprintf(
 		`const fs=require('fs');fs.mkdirSync('%s',{recursive:true});fs.writeFileSync('%s',Buffer.from('%s','base64').toString());`,
-		skillsDir, filePath, contentB64)
+		skillDir, filePath, contentB64)
 
 	_, err = ExecInPod(ctx, namespace, podName, "openclaw", []string{"node", "-e", script})
 	return err
@@ -306,10 +307,10 @@ func DeleteSkill(ctx context.Context, botID, agentID, skillName string) error {
 		return fmt.Errorf("pod not ready: %w", err)
 	}
 
-filePath := fmt.Sprintf("%s/.openclaw/skills/%s.md", workspacePath(agentID), skillName)
+skillDir := fmt.Sprintf("%s/.openclaw/skills/%s", workspacePath(agentID), skillName)
 	// Use safe path without shell interpolation
 	_, err = ExecInPod(ctx, namespace, podName, "openclaw",
-		[]string{"rm", "-f", filePath})
+		[]string{"rm", "-rf", skillDir})
 	return err
 }
 

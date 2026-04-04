@@ -25,6 +25,7 @@ type SkillListing struct {
 	Category    string   `json:"category"`
 	Tags        []string `json:"tags"`
 	Path        string   `json:"path"`
+	Skills      []string `json:"skills,omitempty"` // For skill packs: list of sub-skills
 }
 
 // Index represents the marketplace index.json
@@ -148,6 +149,34 @@ func (f *Fetcher) FetchSkillMeta(skillPath string) (map[string]interface{}, erro
 	}
 
 	return meta, nil
+}
+
+// FetchSubSkillContent fetches a sub-skill from a skill pack
+// Skill packs have sub-skills at {packPath}/skills/{subSkillName}/SKILL.md
+func (f *Fetcher) FetchSubSkillContent(packPath, subSkillName string) (string, error) {
+	if err := validatePath(packPath); err != nil {
+		return "", err
+	}
+	if err := validatePath(subSkillName); err != nil {
+		return "", err
+	}
+	url := fmt.Sprintf("%s/%s/skills/%s/SKILL.md", f.registryURL, packPath, subSkillName)
+	resp, err := f.client.Get(url)
+	if err != nil {
+		return "", fmt.Errorf("failed to fetch sub-skill content: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("failed to fetch sub-skill content: HTTP %d", resp.StatusCode)
+	}
+
+	data, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("failed to read sub-skill content: %w", err)
+	}
+
+	return string(data), nil
 }
 
 // InvalidateCache clears the cached index
