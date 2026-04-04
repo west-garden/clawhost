@@ -10,10 +10,16 @@ import { SkillInstallDialog } from "@/components/skill-install-dialog";
 import { SkillCreateDialog } from "@/components/skill-create-dialog";
 import { listSkills } from "@/lib/actions";
 import { useAgent } from "@/contexts/agent-context";
-import { Download, Plus } from "lucide-react";
+import { Download, Plus, RefreshCw } from "lucide-react";
 
 interface Skill {
   name: string;
+  name_display?: string;
+  description?: string;
+  author?: string;
+  version?: string;
+  installedAt?: number;
+  source?: string;
 }
 
 export default function SkillsPage() {
@@ -54,9 +60,17 @@ export default function SkillsPage() {
       <div className="glass-panel">
         <div className="glass-panel-header">
           <span className="font-medium text-foreground text-sm">
-            {t("agent.skills.title")}
+            {t("agent.skills.title")} ({skills.length})
           </span>
           <div className="flex gap-2">
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={loadSkills}
+              disabled={!isRunning || loading}
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+            </Button>
             <Button
               size="sm"
               variant="outline"

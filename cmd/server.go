@@ -142,6 +142,8 @@ func startServer() {
 		// Built-in providers metadata (no ownership check needed)
 		api.GET("/providers", v1.ListBuiltInProviders)
 		api.GET("/providers/:name", v1.GetBuiltInProvider)
+		api.POST("/providers/:name/validate", v1.ValidateProviderApiKey)
+		api.POST("/providers/validate-custom", v1.ValidateCustomProviderApiKey)
 	}
 
 	// Agent instance routes: require ownership validation

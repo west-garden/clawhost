@@ -129,7 +129,13 @@
       "providerUpdated": "Provider updated",
       "providerAdded": "Provider added",
       "providerDeleted": "Provider deleted",
-      "deleteConfirm": "Delete provider \"{name}\"?"
+      "deleteConfirm": "Delete provider \"{name}\"?",
+      "validate": "Validate",
+      "validating": "Validating...",
+      "apiKeyRequired": "Please enter an API key",
+      "apiKeyValid": "API key is valid",
+      "apiKeyInvalid": "API key is invalid",
+      "validationFailed": "Validation failed"
     },
     "skills": {
       "title": "Skills",

@@ -226,6 +226,42 @@ export async function deleteModelProvider(agentId: string, providerName: string)
   return { success: true };
 }
 
+// --- Provider API Key Validation ---
+
+export async function validateProviderApiKey(
+  providerName: string,
+  apiKey: string,
+  baseUrl?: string,
+  validationModel?: string
+) {
+  const res = await fetchWithAuth(`/api/v1/providers/${providerName}/validate`, {
+    method: "POST",
+    body: JSON.stringify({ apiKey, baseUrl, validationModel }),
+  });
+  const data = await res.json();
+  if (!res.ok || data.code !== 0) {
+    return { valid: false, error: data.message || "Validation failed" };
+  }
+  return data.data as { valid: boolean; error?: string };
+}
+
+export async function validateCustomProviderApiKey(
+  baseUrl: string,
+  apiKey: string,
+  api: string,
+  validationModel?: string
+) {
+  const res = await fetchWithAuth("/api/v1/providers/validate-custom", {
+    method: "POST",
+    body: JSON.stringify({ baseUrl, apiKey, api, validationModel }),
+  });
+  const data = await res.json();
+  if (!res.ok || data.code !== 0) {
+    return { valid: false, error: data.message || "Validation failed" };
+  }
+  return data.data as { valid: boolean; error?: string };
+}
+
 // --- Config Defaults ---
 
 export async function getAgentDefaults(agentId: string) {
