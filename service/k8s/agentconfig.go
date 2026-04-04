@@ -185,15 +185,16 @@ func mergeConfigForModels(existing map[string]interface{}, config *AgentConfig, 
 	// Always set/update token to match bot's AccessToken
 	if authConfig == nil {
 		authConfig = map[string]interface{}{
-			"mode":  "token",
-			"token": config.AccessToken,
+			"mode":   "token",
+			"token":  config.AccessToken,
+			"scopes": []string{"operator.admin", "operator.read", "operator.write", "operator.approvals", "operator.pairing"},
 		}
 	} else {
 		// Update token even if auth config exists
 		authConfig["token"] = config.AccessToken
+		// Ensure scopes are set for operator.pairing access
+		authConfig["scopes"] = []string{"operator.admin", "operator.read", "operator.write", "operator.approvals", "operator.pairing"}
 	}
-	// Clean up invalid keys that OpenClaw doesn't recognize
-	delete(authConfig, "scopes")
 
 	// Merge into existing gateway config to preserve key ordering and avoid
 	// unnecessary config change detection (which triggers gateway self-restart).

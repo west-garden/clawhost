@@ -144,7 +144,7 @@ export class GatewayClient {
         mode: "webchat",
       },
       role: "operator",
-      scopes: ["operator.admin", "operator.pairing"],
+      scopes: ["operator.admin"],
       caps: ["tool-events"],
       auth: this.opts.token ? { token: this.opts.token } : undefined,
       userAgent: navigator.userAgent,

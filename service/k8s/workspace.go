@@ -216,8 +216,8 @@ func ListSkills(ctx context.Context, botID, agentID string) ([]map[string]string
 		return nil, fmt.Errorf("pod not ready: %w", err)
 	}
 
-	// Skills are in workspace/.openclaw/skills/{skillName}/SKILL.md
-	skillsDir := fmt.Sprintf("%s/.openclaw/skills", workspacePath(agentID))
+	// Skills are in workspace/skills/{skillName}/SKILL.md
+	skillsDir := fmt.Sprintf("%s/skills", workspacePath(agentID))
 	// List directories (skill names) that contain SKILL.md
 	output, err := ExecInPod(ctx, namespace, podName, "openclaw",
 		[]string{"sh", "-c", fmt.Sprintf("ls -d '%s'/*/ 2>/dev/null | xargs -n1 basename 2>/dev/null || echo ''", skillsDir)})
@@ -251,7 +251,7 @@ func ReadSkill(ctx context.Context, botID, agentID, skillName string) (string, e
 		return "", fmt.Errorf("pod not ready: %w", err)
 	}
 
-	filePath := fmt.Sprintf("%s/.openclaw/skills/%s/SKILL.md", workspacePath(agentID), skillName)
+	filePath := fmt.Sprintf("%s/skills/%s/SKILL.md", workspacePath(agentID), skillName)
 	output, err := ExecInPod(ctx, namespace, podName, "openclaw",
 		[]string{"cat", filePath})
 	if err != nil {
@@ -276,7 +276,7 @@ func WriteSkill(ctx context.Context, botID, agentID, skillName, content string) 
 		return fmt.Errorf("pod not ready: %w", err)
 	}
 
-skillsDir := fmt.Sprintf("%s/.openclaw/skills", workspacePath(agentID))
+	skillsDir := fmt.Sprintf("%s/skills", workspacePath(agentID))
 	skillDir := fmt.Sprintf("%s/%s", skillsDir, skillName)
 	filePath := fmt.Sprintf("%s/SKILL.md", skillDir)
 
@@ -307,7 +307,7 @@ func DeleteSkill(ctx context.Context, botID, agentID, skillName string) error {
 		return fmt.Errorf("pod not ready: %w", err)
 	}
 
-skillDir := fmt.Sprintf("%s/.openclaw/skills/%s", workspacePath(agentID), skillName)
+skillDir := fmt.Sprintf("%s/skills/%s", workspacePath(agentID), skillName)
 	// Use safe path without shell interpolation
 	_, err = ExecInPod(ctx, namespace, podName, "openclaw",
 		[]string{"rm", "-rf", skillDir})

@@ -68,8 +68,9 @@ func InstallMarketplaceSkill(c echo.Context) error {
 				continue
 			}
 
-			// Write sub-skill to pod with path like "superpowers/using-superpowers"
-			subSkillPath := fmt.Sprintf("%s/%s", skillListing.Path, subSkillName)
+			// Write sub-skill to pod with flat naming: "superpowers-brainstorming" instead of "superpowers/brainstorming"
+			// OpenClaw doesn't support nested skill directories
+			subSkillPath := fmt.Sprintf("%s-%s", skillListing.Path, subSkillName)
 			if err := k8s.WriteSkill(ctx, agent.ID, "main", subSkillPath, content); err != nil {
 				return util.InternalError(c, "failed to write sub-skill "+subSkillName+": "+err.Error())
 			}

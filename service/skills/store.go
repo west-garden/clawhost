@@ -174,9 +174,9 @@ func extractSkillNameFromContent(ctx context.Context, namespace, podName, skillD
 // getSkillDir returns the skill directory path for an agent
 func getSkillDir(agentID string) string {
 	if agentID == "" || agentID == "main" {
-		return "/home/node/.openclaw/workspace/.openclaw/skills"
+		return "/home/node/.openclaw/workspace/skills"
 	}
-	return fmt.Sprintf("/home/node/.openclaw/workspace-%s/.openclaw/skills", agentID)
+	return fmt.Sprintf("/home/node/.openclaw/workspace-%s/skills", agentID)
 }
 
 // splitLines splits output into lines
