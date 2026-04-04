@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useRef, useCallback, useEffect } from "react";
+import { useState, useRef, useCallback } from "react";
 import type { GatewayClient, GatewayEvent } from "@/lib/gateway-client";
-import type { ChatMessage, ChatEventPayload, AgentEventPayload } from "@/types";
+import type { ChatMessage, ChatEventPayload } from "@/types";
 
 interface UseWsChatOptions {
   client: GatewayClient | null;
@@ -43,8 +43,6 @@ export function useWsChat({
       if (payload.sessionKey && payload.sessionKey !== sessionKeyRef.current) {
         return;
       }
-
-      const chatRunId = payload.runId;
 
       switch (payload.state) {
         case "delta": {
@@ -174,11 +172,6 @@ export function useWsChat({
       }
     }
   }, [getMessages, updateMessages]);
-
-  // Register event handler
-  useEffect(() => {
-    // This effect is handled by the parent component passing onEvent to useGatewayConnection
-  }, []);
 
   // Send message
   const sendMessage = useCallback((text: string) => {
