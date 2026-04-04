@@ -123,6 +123,7 @@ export function useWsChatSessions({
           key: s.key,
           id: s.key,
           title: m?.customTitle || s.derivedTitle || s.displayName || "新对话",
+          model: "",
           messages: [],
           createdAt: s.updatedAt ?? Date.now(),
           updatedAt: s.updatedAt ?? Date.now(),
@@ -138,8 +139,11 @@ export function useWsChatSessions({
           const pa = a.pinned ? 1 : 0;
           const pb = b.pinned ? 1 : 0;
           if (pa !== pb) return pb - pa;
-          const oa = orderMap.get(a.key);
-          const ob = orderMap.get(b.key);
+          const aKey = a.key;
+          const bKey = b.key;
+          if (!aKey || !bKey) return aKey ? -1 : bKey ? 1 : 0;
+          const oa = orderMap.get(aKey);
+          const ob = orderMap.get(bKey);
           if (oa !== undefined && ob !== undefined) return oa - ob;
           if (oa !== undefined) return -1;
           if (ob !== undefined) return 1;
@@ -158,7 +162,8 @@ export function useWsChatSessions({
 
       // Set active session to first one if not set
       if (!activeKeyRef.current && chatSessions.length > 0) {
-        setActiveKey(chatSessions[0].key);
+        const firstKey = chatSessions[0].key;
+        if (firstKey) setActiveKey(firstKey);
       }
     } catch (err) {
       console.error("[useWsChatSessions] Failed to fetch sessions:", err);
@@ -238,6 +243,7 @@ export function useWsChatSessions({
       key: newKey,
       id: newKey,
       title: "新对话",
+      model: "",
       messages: [],
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -267,10 +273,14 @@ export function useWsChatSessions({
     // Persist to localStorage
     updateSessionMeta(agentId, key, { archivedAt: Date.now() });
 
-    // Remove from sessions list
+    // Remove from sessions list and switch active if needed
     setSessions((prev) => {
       const filtered = prev.filter((s) => s.key !== key);
-      if (filtered.length === 0) return prev;
+      // Switch to first session if archiving active
+      if (key === activeKeyRef.current && filtered.length > 0) {
+        const firstKey = filtered[0].key;
+        if (firstKey) setActiveKey(firstKey);
+      }
       return filtered;
     });
 
@@ -282,16 +292,6 @@ export function useWsChatSessions({
 
     // Remove from cache
     cacheRef.current.delete(key);
-
-    // Switch to first session if archiving active
-    if (key === activeKeyRef.current) {
-      setSessions((prev) => {
-        if (prev.length > 0) {
-          setActiveKey(prev[0].key);
-        }
-        return prev;
-      });
-    }
   }, [agentId]);
 
   // Toggle pin
@@ -351,9 +351,10 @@ export function useWsChatSessions({
       const [moved] = next.splice(fromIndex, 1);
       next.splice(toIndex, 0, moved);
 
-      // Save new order
-      customOrderRef.current = next.map((s) => s.key);
-      setCustomOrder(agentId, customOrderRef.current);
+      // Save new order (filter out undefined keys)
+      const order = next.map((s) => s.key).filter((k): k is string => k !== undefined);
+      customOrderRef.current = order;
+      setCustomOrder(agentId, order);
 
       return next;
     });
