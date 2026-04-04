@@ -177,3 +177,16 @@ export interface ProviderWithModels {
   baseUrl?: string;
   models?: Array<{ id: string; name?: string }>;
 }
+
+// --- Marketplace Skills ---
+
+export interface MarketplaceSkill {
+  name: string;
+  display_name: string;
+  description: string;
+  author: string;
+  version: string;
+  category: string;
+  tags: string[];
+  path: string;
+}
