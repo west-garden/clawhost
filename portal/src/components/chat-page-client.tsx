@@ -32,7 +32,7 @@ export function ChatPageClient({
   const {
     sessions,
     activeSession,
-    isActiveSession,
+    isLoading,
     createNewSession,
     switchSession,
     removeSession,
@@ -44,12 +44,12 @@ export function ChatPageClient({
     defaultModel,
   });
 
-  // Create initial session if none exists
+  // Create initial session if none exists (only after localStorage loaded)
   useEffect(() => {
-    if (sessions.length === 0) {
+    if (!isLoading && sessions.length === 0) {
       createNewSession();
     }
-  }, [sessions.length, createNewSession]);
+  }, [isLoading, sessions.length, createNewSession]);
 
   return (
     <div className="flex-1 flex overflow-hidden">

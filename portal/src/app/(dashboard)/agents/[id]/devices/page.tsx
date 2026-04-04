@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
@@ -25,12 +25,7 @@ export default function DevicesPage() {
 
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    loadDevices();
-    const interval = setInterval(loadDevices, 10000);
-    return () => clearInterval(interval);
-  }, [agentId]);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   async function loadDevices() {
     const result = await listDevices(agentId);
@@ -41,6 +36,36 @@ export default function DevicesPage() {
     }
     setLoading(false);
   }
+
+  useEffect(() => {
+    loadDevices();
+
+    // Poll every 30s, but only when page is visible
+    const handleVisibility = () => {
+      if (document.visibilityState === "visible") {
+        loadDevices();
+        if (!intervalRef.current) {
+          intervalRef.current = setInterval(loadDevices, 30000);
+        }
+      } else {
+        // Stop polling when page is hidden
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+          intervalRef.current = null;
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibility);
+    intervalRef.current = setInterval(loadDevices, 30000);
+
+    return () => {
+      document.removeEventListener("visibilitychange", handleVisibility);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [agentId]);
 
   const pendingDevices = devices.filter((d) => d.status === "pending");
   const pairedDevices = devices.filter((d) => d.status === "paired");

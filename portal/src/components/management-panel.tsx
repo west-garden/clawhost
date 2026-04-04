@@ -153,29 +153,6 @@ export function ManagementPanel({
 
                 <div className="h-px bg-border" />
 
-                {connectInfo.endpoint && (
-                  <>
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
-                          {t("agent.connect.apiEndpoint")}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate font-mono">
-                          {connectInfo.endpoint}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => copyToClipboard(connectInfo.endpoint!)}
-                        className="glass-btn-secondary py-1.5 px-3 text-xs shrink-0"
-                      >
-                        <Copy className="w-3.5 h-3.5" />
-                        <span>{t("common.copy")}</span>
-                      </button>
-                    </div>
-                    <div className="h-px bg-border" />
-                  </>
-                )}
-
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
