@@ -135,7 +135,10 @@
       "apiKeyRequired": "Please enter an API key",
       "apiKeyValid": "API key is valid",
       "apiKeyInvalid": "API key is invalid",
-      "validationFailed": "Validation failed"
+      "validationFailed": "Validation failed",
+      "apiProtocol": "API Protocol",
+      "openaiCompatible": "OpenAI Compatible",
+      "anthropicMessages": "Anthropic Messages"
     },
     "skills": {
       "title": "Skills",

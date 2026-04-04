@@ -150,6 +150,7 @@ export function ConfigModelsPanel({ agentId, providers, loading, onRefresh }: Pr
     name: "",
     baseUrl: "",
     apiKey: "",
+    apiType: "openai-completions",
   });
   const [submitting, setSubmitting] = useState(false);
   const [validating, setValidating] = useState(false);
@@ -158,7 +159,7 @@ export function ConfigModelsPanel({ agentId, providers, loading, onRefresh }: Pr
   function openAddDialog() {
     setEditingProvider(null);
     setPresetKey("custom");
-    setForm({ name: "", baseUrl: "", apiKey: "" });
+    setForm({ name: "", baseUrl: "", apiKey: "", apiType: "openai-completions" });
     setValidationResult(null);
     setDialogOpen(true);
   }
@@ -187,7 +188,7 @@ export function ConfigModelsPanel({ agentId, providers, loading, onRefresh }: Pr
     setPresetKey(key);
     setValidationResult(null);
     if (key === "custom") {
-      setForm({ ...form, name: "", baseUrl: "" });
+      setForm({ ...form, name: "", baseUrl: "", apiType: "openai-completions" });
     } else {
       const preset = PROVIDER_PRESETS[key];
       setForm({ ...form, name: key, baseUrl: preset.baseUrl });
@@ -207,8 +208,7 @@ export function ConfigModelsPanel({ agentId, providers, loading, onRefresh }: Pr
       let result;
       if (presetKey === "custom") {
         // Custom provider validation
-        const api = form.baseUrl.includes("anthropic") ? "anthropic-messages" : "openai-completions";
-        result = await validateCustomProviderApiKey(form.baseUrl, form.apiKey, api);
+        result = await validateCustomProviderApiKey(form.baseUrl, form.apiKey, form.apiType);
       } else {
         // Built-in provider validation
         const preset = PROVIDER_PRESETS[presetKey];
@@ -250,7 +250,7 @@ export function ConfigModelsPanel({ agentId, providers, loading, onRefresh }: Pr
           name: form.name,
           baseUrl: form.baseUrl || undefined,
           apiKey: form.apiKey || undefined,
-          api: preset?.api || undefined,
+          api: preset?.api || form.apiType || undefined,
         });
         if (result.error) {
           toast.error(result.error);
@@ -373,6 +373,20 @@ export function ConfigModelsPanel({ agentId, providers, loading, onRefresh }: Pr
                 </p>
               )}
             </div>
+
+            {!editingProvider && presetKey === "custom" && (
+              <div className="space-y-2">
+                <Label>{t("apiProtocol")}</Label>
+                <select
+                  value={form.apiType}
+                  onChange={(e) => setForm({ ...form, apiType: e.target.value })}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  <option value="openai-completions">{t("openaiCompatible")}</option>
+                  <option value="anthropic-messages">{t("anthropicMessages")}</option>
+                </select>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>{t("apiKey")}</Label>

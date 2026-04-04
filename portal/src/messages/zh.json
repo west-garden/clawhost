@@ -135,7 +135,10 @@
       "apiKeyRequired": "请输入 API Key",
       "apiKeyValid": "API Key 有效",
       "apiKeyInvalid": "API Key 无效",
-      "validationFailed": "验证失败"
+      "validationFailed": "验证失败",
+      "apiProtocol": "API 协议",
+      "openaiCompatible": "OpenAI 兼容",
+      "anthropicMessages": "Anthropic Messages"
     },
     "skills": {
       "title": "技能",
