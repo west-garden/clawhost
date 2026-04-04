@@ -1,9 +1,12 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { ChatPanel } from "@/components/chat-panel";
 import { ChatSessionSidebar } from "@/components/chat-session-sidebar";
-import { useChatSessions } from "@/hooks/use-chat-sessions";
+import { useGatewayConnection } from "@/hooks/use-gateway-connection";
+import { useWsChatSessions } from "@/hooks/use-ws-chat-sessions";
+import { useWsChat } from "@/hooks/use-ws-chat";
+import type { GatewayEvent } from "@/lib/gateway-client";
 import type { AgentStatus, ProviderWithModels } from "@/types";
 
 interface ChatPageClientProps {
@@ -29,49 +32,103 @@ export function ChatPageClient({
     return "default";
   })();
 
-  const {
-    sessions,
-    activeSession,
-    isLoading,
-    createNewSession,
-    switchSession,
-    removeSession,
-    addUserMessage,
-    updateLastAssistantMessage,
-    setModel,
-  } = useChatSessions({
+  // Agent status
+  const [currentStatus, setCurrentStatus] = useState(initialStatus);
+
+  // Gateway connection with event handling
+  const handleGatewayEvent = useCallback((evt: GatewayEvent) => {
+    wsChatRef.current?.handleEvent(evt);
+  }, []);
+
+  const { connectionState, client } = useGatewayConnection({
     agentId,
-    defaultModel,
+    enabled: currentStatus === "running",
+    onEvent: handleGatewayEvent,
   });
 
-  // Create initial session if none exists (only after localStorage loaded)
+  const isConnected = connectionState === "connected";
+  const isConnecting = connectionState === "connecting";
+
+  // Session management
+  const {
+    sessions,
+    activeSessionKey,
+    activeSession,
+    isLoading: sessionsLoading,
+    switchSession,
+    createNewSession,
+    archiveSession,
+    togglePin,
+    renameSession,
+    reorderSessions,
+    refreshSessions,
+    getActiveMessages,
+    updateActiveMessages,
+  } = useWsChatSessions({
+    agentId,
+    client,
+    connected: isConnected,
+  });
+
+  // Ref for wsChat to call handleEvent
+  const wsChatRef = useRef<ReturnType<typeof useWsChat> | null>(null);
+
+  // Chat management
+  const wsChat = useWsChat({
+    client,
+    connected: isConnected,
+    sessionKey: activeSessionKey,
+    getMessages: getActiveMessages,
+    updateMessages: updateActiveMessages,
+  });
+  wsChatRef.current = wsChat;
+
+  const messages = getActiveMessages();
+  const isStreaming = wsChat.isStreaming;
+
+  // Update session messages in sidebar when they change
+  const sessionsWithMessages = sessions.map((s) => ({
+    ...s,
+    messages: s.key === activeSessionKey ? messages : [],
+  }));
+
+  // Create initial session if none exists
   useEffect(() => {
-    if (!isLoading && sessions.length === 0) {
+    if (!sessionsLoading && sessions.length === 0 && isConnected) {
       createNewSession();
     }
-  }, [isLoading, sessions.length, createNewSession]);
+  }, [sessionsLoading, sessions.length, isConnected, createNewSession]);
 
   return (
     <div className="flex-1 flex overflow-hidden">
       {/* Sidebar */}
       <ChatSessionSidebar
-        sessions={sessions}
-        activeSessionId={activeSession?.id || null}
+        sessions={sessionsWithMessages}
+        activeSessionId={activeSessionKey}
         onSelectSession={switchSession}
         onCreateSession={createNewSession}
-        onDeleteSession={removeSession}
+        onDeleteSession={archiveSession}
+        onTogglePin={togglePin}
+        onRename={renameSession}
+        onReorder={reorderSessions}
       />
 
       {/* Main chat area */}
       <ChatPanel
         agentId={agentId}
         agentName={agentName}
-        initialStatus={initialStatus}
-        activeSession={activeSession}
-        onAddUserMessage={addUserMessage}
-        onUpdateLastAssistantMessage={updateLastAssistantMessage}
-        onSetModel={setModel}
+        initialStatus={currentStatus}
+        activeSession={activeSession ? { ...activeSession, messages } : null}
+        onAddUserMessage={() => {}} // Handled by useWsChat
+        onUpdateLastAssistantMessage={() => {}} // Handled by useWsChat
+        onSetModel={() => {}} // TODO: implement model switching
         providers={providers}
+        // New props for WebSocket mode
+        isConnected={isConnected}
+        isConnecting={isConnecting}
+        isStreaming={isStreaming}
+        sendMessage={wsChat.sendMessage}
+        abortGeneration={wsChat.abortGeneration}
       />
     </div>
   );
