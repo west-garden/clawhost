@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 	"sync"
 	"time"
 )
@@ -98,6 +99,9 @@ func (f *Fetcher) FetchIndex() (*Index, error) {
 
 // FetchSkillContent fetches the SKILL.md content for a skill
 func (f *Fetcher) FetchSkillContent(skillPath string) (string, error) {
+	if err := validatePath(skillPath); err != nil {
+		return "", err
+	}
 	url := fmt.Sprintf("%s/%s/SKILL.md", f.registryURL, skillPath)
 	resp, err := f.client.Get(url)
 	if err != nil {
@@ -119,6 +123,9 @@ func (f *Fetcher) FetchSkillContent(skillPath string) (string, error) {
 
 // FetchSkillMeta fetches the _meta.json for a skill
 func (f *Fetcher) FetchSkillMeta(skillPath string) (map[string]interface{}, error) {
+	if err := validatePath(skillPath); err != nil {
+		return nil, err
+	}
 	url := fmt.Sprintf("%s/%s/_meta.json", f.registryURL, skillPath)
 	resp, err := f.client.Get(url)
 	if err != nil {
@@ -148,4 +155,15 @@ func (f *Fetcher) InvalidateCache() {
 	f.cacheMu.Lock()
 	f.indexCache = nil
 	f.cacheMu.Unlock()
+}
+
+// validatePath checks that skillPath is safe (no path traversal)
+func validatePath(skillPath string) error {
+	if skillPath == "" {
+		return fmt.Errorf("skill path cannot be empty")
+	}
+	if strings.Contains(skillPath, "..") || strings.Contains(skillPath, "./") || strings.HasPrefix(skillPath, "/") {
+		return fmt.Errorf("invalid skill path: potential path traversal")
+	}
+	return nil
 }

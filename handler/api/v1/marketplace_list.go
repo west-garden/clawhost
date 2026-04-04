@@ -34,12 +34,13 @@ func ListMarketplaceSkills(c echo.Context) error {
 			continue
 		}
 
-		// Filter by search (matches name, display_name, description)
+		// Filter by search (matches name, display_name, description, tags)
 		if search != "" {
 			searchLower := toLower(search)
 			if !containsLower(skill.Name, searchLower) &&
 				!containsLower(skill.DisplayName, searchLower) &&
-				!containsLower(skill.Description, searchLower) {
+				!containsLower(skill.Description, searchLower) &&
+				!containsTagsLower(skill.Tags, searchLower) {
 				continue
 			}
 		}
@@ -76,6 +77,16 @@ func containsLower(s, substr string) bool {
 	sLower := toLower(s)
 	for i := 0; i <= len(sLower)-len(substr); i++ {
 		if sLower[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}
+
+// containsTagsLower checks if any tag contains substr (case-insensitive)
+func containsTagsLower(tags []string, substr string) bool {
+	for _, tag := range tags {
+		if containsLower(tag, substr) {
 			return true
 		}
 	}
