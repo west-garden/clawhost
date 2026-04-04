@@ -1,11 +1,18 @@
-import type { SessionMeta } from "@/types";
+import type { SessionMeta, ChatSession } from "@/types";
 
 const STORAGE_KEY = "clawhost_session_meta";
+const LOCAL_SESSIONS_KEY = "clawhost_local_sessions";
 
 interface SessionMetaMap {
   [agentId: string]: {
     [sessionKey: string]: SessionMeta;
   };
+}
+
+// Local sessions are created in frontend before first message
+// They need to persist across refresh until Gateway creates them
+interface LocalSessionsMap {
+  [agentId: string]: ChatSession[];
 }
 
 function loadStorage(): SessionMetaMap {
@@ -106,6 +113,56 @@ export function setCustomOrder(agentId: string, order: string[] | null): void {
     } else {
       localStorage.removeItem(key);
     }
+  } catch {
+    // ignore
+  }
+}
+
+// --- Local sessions (created in frontend before first message) ---
+
+export function getLocalSessions(agentId: string): ChatSession[] {
+  if (typeof window === "undefined") return [];
+  try {
+    const data = localStorage.getItem(LOCAL_SESSIONS_KEY);
+    if (!data) return [];
+    const map = JSON.parse(data) as LocalSessionsMap;
+    return map[agentId] ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveLocalSession(agentId: string, session: ChatSession): void {
+  if (typeof window === "undefined") return;
+  try {
+    const data = localStorage.getItem(LOCAL_SESSIONS_KEY);
+    const map: LocalSessionsMap = data ? JSON.parse(data) : {};
+    if (!map[agentId]) map[agentId] = [];
+
+    // Add or update session
+    const existing = map[agentId].findIndex((s) => s.key === session.key);
+    if (existing >= 0) {
+      map[agentId][existing] = session;
+    } else {
+      map[agentId].unshift(session);
+    }
+
+    localStorage.setItem(LOCAL_SESSIONS_KEY, JSON.stringify(map));
+  } catch (e) {
+    console.error("Failed to save local session:", e);
+  }
+}
+
+export function removeLocalSession(agentId: string, sessionKey: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    const data = localStorage.getItem(LOCAL_SESSIONS_KEY);
+    if (!data) return;
+    const map: LocalSessionsMap = JSON.parse(data);
+    if (!map[agentId]) return;
+
+    map[agentId] = map[agentId].filter((s) => s.key !== sessionKey);
+    localStorage.setItem(LOCAL_SESSIONS_KEY, JSON.stringify(map));
   } catch {
     // ignore
   }

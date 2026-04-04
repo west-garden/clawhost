@@ -276,8 +276,7 @@ func WriteSkill(ctx context.Context, botID, agentID, skillName, content string) 
 		return fmt.Errorf("pod not ready: %w", err)
 	}
 
-<<<<<<< HEAD
-	skillsDir := fmt.Sprintf("%s/.openclaw/skills", workspacePath(agentID))
+skillsDir := fmt.Sprintf("%s/.openclaw/skills", workspacePath(agentID))
 	filePath := fmt.Sprintf("%s/%s.md", skillsDir, skillName)
 
 	// Use base64 encoding to avoid shell injection via content
@@ -288,13 +287,6 @@ func WriteSkill(ctx context.Context, botID, agentID, skillName, content string) 
 		skillsDir, filePath, contentB64)
 
 	_, err = ExecInPod(ctx, namespace, podName, "openclaw", []string{"node", "-e", script})
-=======
-	// Skills are in workspace/.openclaw/skills/{skillName}/SKILL.md
-	skillsDir := fmt.Sprintf("%s/.openclaw/skills/%s", workspacePath(agentID), skillName)
-	filePath := fmt.Sprintf("%s/SKILL.md", skillsDir)
-	cmd := fmt.Sprintf("mkdir -p '%s' && cat > '%s' << 'EOFCONTENT'\n%s\nEOFCONTENT", skillsDir, filePath, content)
-	_, err = ExecInPod(ctx, namespace, podName, "openclaw", []string{"sh", "-c", cmd})
->>>>>>> e3806f6f59746d026a5d905e92439edcbd155966
 	return err
 }
 
@@ -314,17 +306,10 @@ func DeleteSkill(ctx context.Context, botID, agentID, skillName string) error {
 		return fmt.Errorf("pod not ready: %w", err)
 	}
 
-<<<<<<< HEAD
-	filePath := fmt.Sprintf("%s/.openclaw/skills/%s.md", workspacePath(agentID), skillName)
+filePath := fmt.Sprintf("%s/.openclaw/skills/%s.md", workspacePath(agentID), skillName)
 	// Use safe path without shell interpolation
 	_, err = ExecInPod(ctx, namespace, podName, "openclaw",
 		[]string{"rm", "-f", filePath})
-=======
-	// Delete the entire skill directory (includes SKILL.md and _meta.json)
-	skillDir := fmt.Sprintf("%s/.openclaw/skills/%s", workspacePath(agentID), skillName)
-	_, err = ExecInPod(ctx, namespace, podName, "openclaw",
-		[]string{"sh", "-c", fmt.Sprintf("rm -rf '%s'", skillDir)})
->>>>>>> e3806f6f59746d026a5d905e92439edcbd155966
 	return err
 }
 

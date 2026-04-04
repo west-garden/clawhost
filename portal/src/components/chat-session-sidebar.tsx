@@ -38,8 +38,9 @@ export function ChatSessionSidebar({
   };
 
   const handleSaveEdit = () => {
-    if (editingId && onRename && editingTitle.trim()) {
-      onRename(editingId, editingTitle.trim());
+    if (editingId && onRename) {
+      // Allow empty string to clear custom title (restore to default)
+      onRename(editingId, editingTitle.trim() || null);
     }
     setEditingId(null);
     setEditingTitle("");

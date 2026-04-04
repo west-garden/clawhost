@@ -2,8 +2,6 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
-import { useAgentStatus } from "@/hooks/use-agent-status";
-import { useGatewayConnection } from "@/hooks/use-gateway-connection";
 import { startAgent } from "@/lib/actions";
 import { toast } from "sonner";
 import type { AgentStatus, ChatSession, ProviderWithModels } from "@/types";
@@ -46,30 +44,21 @@ export function ChatPanel({
   const t = useTranslations("chat");
   const ta = useTranslations("agent");
   const [input, setInput] = useState("");
-  const [isStreaming, setIsStreaming] = useState(false);
   // Use WebSocket streaming state if available
-  const effectiveStreaming = wsStreaming ?? isStreaming;
+  const effectiveStreaming = wsStreaming ?? false;
   const [warningDismissed, setWarningDismissed] = useState(false);
   const [startLoading, setStartLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  const { status: liveStatus } = useAgentStatus(agentId, true);
-  const currentStatus = liveStatus?.status ?? initialStatus;
-  const isRunning = currentStatus === "running";
-  const isStarting = currentStatus === "starting";
+  // Status comes from parent (chat-page-client) via initialStatus
+  // WebSocket connection is managed by chat-page-client, not here
+  const isRunning = initialStatus === "running";
+  const isStarting = initialStatus === "starting";
 
-  // Gateway connection state (only when agent is running)
-  const { connectionState } = useGatewayConnection({
-    agentId,
-    enabled: isRunning,
-  });
-  const isConnected = connectionState === "connected";
-  const isConnecting = connectionState === "connecting";
-
-  // Use WebSocket connection states if available, fall back to HTTP mode
-  const effectiveConnected = wsConnected ?? isConnected;
-  const effectiveConnecting = wsConnecting ?? isConnecting;
+  // Use WebSocket connection states if available
+  const effectiveConnected = wsConnected ?? false;
+  const effectiveConnecting = wsConnecting ?? false;
 
   const initial = (agentName || "?")[0].toUpperCase();
 
@@ -98,88 +87,15 @@ export function ChatPanel({
     const text = input.trim();
     if (!text || effectiveStreaming || !isRunning || !activeSession) return;
 
-    // WebSocket mode
+    // WebSocket mode only (connection managed by chat-page-client)
     if (wsSendMessage && wsConnected) {
       setInput("");
       wsSendMessage(text);
       return;
     }
 
-    // HTTP fallback (for backward compatibility)
-    // Check gateway connection
-    if (!isConnected) {
-      toast.error(t("gatewayDisconnected"));
-      return;
-    }
-
-    // Capture session ID at send time to ensure responses go to correct session
-    const sessionId = activeSession.id;
-
-    onAddUserMessage(text, sessionId);
-    setInput("");
-    setIsStreaming(true);
-
-    // Add placeholder for streaming response
-    onUpdateLastAssistantMessage("", sessionId);
-
-    try {
-      const res = await fetch(`/api/agents/${agentId}/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          messages: [...messages, { role: "user", content: text }].map((m) => ({
-            role: m.role,
-            content: m.content,
-          })),
-          model: activeSession.model,
-        }),
-      });
-
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status}`);
-      }
-
-      const reader = res.body?.getReader();
-      const decoder = new TextDecoder();
-      let accumulated = "";
-
-      if (reader) {
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-
-          const chunk = decoder.decode(value, { stream: true });
-          const lines = chunk.split("\n");
-
-          for (const line of lines) {
-            if (line.startsWith("data: ")) {
-              const data = line.slice(6);
-              if (data === "[DONE]") continue;
-
-              try {
-                const parsed = JSON.parse(data);
-                const delta = parsed.choices?.[0]?.delta?.content;
-                if (delta) {
-                  accumulated += delta;
-                  onUpdateLastAssistantMessage(accumulated, sessionId);
-                }
-              } catch {
-                // Skip non-JSON lines
-              }
-            }
-          }
-        }
-      }
-
-      // Final update with complete message
-      if (accumulated) {
-        onUpdateLastAssistantMessage(accumulated, sessionId);
-      }
-    } catch (err) {
-      toast.error(t("connectionError"));
-    } finally {
-      setIsStreaming(false);
-    }
+    // Not connected
+    toast.error(t("gatewayDisconnected"));
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {

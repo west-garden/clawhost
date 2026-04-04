@@ -9,6 +9,9 @@ import {
   getArchivedKeys,
   getCustomOrder,
   setCustomOrder,
+  getLocalSessions,
+  saveLocalSession,
+  removeLocalSession,
 } from "@/lib/session-meta-storage";
 
 const FETCH_BATCH = 100;
@@ -117,6 +120,9 @@ export function useWsChatSessions({
         (s) => !s.spawnedBy && !archived.has(s.key)
       );
 
+      // Get Gateway session keys (to identify which local sessions are now synced)
+      const gatewayKeys = new Set(filtered.map((s) => s.key));
+
       const chatSessions: ChatSession[] = filtered.map((s) => {
         const m = meta.get(s.key);
         return {
@@ -130,6 +136,26 @@ export function useWsChatSessions({
           pinned: m?.pinned,
         };
       });
+
+      // Merge local sessions (not yet synced to Gateway)
+      const localSessions = getLocalSessions(agentId);
+      for (const localSession of localSessions) {
+        const sessionKey = localSession.key;
+        if (!sessionKey) continue;
+
+        if (!gatewayKeys.has(sessionKey) && !archived.has(sessionKey)) {
+          // Local session not yet in Gateway, add to list
+          const m = meta.get(sessionKey);
+          chatSessions.unshift({
+            ...localSession,
+            title: m?.customTitle || localSession.title,
+            pinned: m?.pinned,
+          });
+        } else {
+          // Session now exists in Gateway, remove from local storage
+          removeLocalSession(agentId, sessionKey);
+        }
+      }
 
       // Apply custom order or default sort
       const customOrder = customOrderRef.current;
@@ -168,7 +194,7 @@ export function useWsChatSessions({
     } catch (err) {
       console.error("[useWsChatSessions] Failed to fetch sessions:", err);
     }
-  }, [client]);
+  }, [client, agentId]);
 
   // Load history for a session
   const loadHistory = useCallback(async (sessionKey: string): Promise<ChatMessage[]> => {
@@ -258,9 +284,15 @@ export function useWsChatSessions({
       lastAccessed: Date.now(),
     });
 
+    // Save to localStorage (persist across refresh until Gateway creates it)
+    saveLocalSession(agentId, newSession);
+
     // Update custom order
     if (customOrderRef.current) {
       customOrderRef.current = [newKey, ...customOrderRef.current];
+      setCustomOrder(agentId, customOrderRef.current);
+    } else {
+      customOrderRef.current = [newKey];
       setCustomOrder(agentId, customOrderRef.current);
     }
   }, [agentId]);
@@ -333,6 +365,13 @@ export function useWsChatSessions({
 
     // Persist to localStorage
     updateSessionMeta(agentId, key, { customTitle: title });
+
+    // Update local session if it's a local-only session
+    const localSessions = getLocalSessions(agentId);
+    const localSession = localSessions.find((s) => s.key === key);
+    if (localSession) {
+      saveLocalSession(agentId, { ...localSession, title: title || localSession.title });
+    }
 
     // Update sessions
     setSessions((prev) =>
