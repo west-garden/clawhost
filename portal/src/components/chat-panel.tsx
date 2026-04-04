@@ -286,7 +286,7 @@ export function ChatPanel({
             disabled={!input.trim() || isStreaming || !activeSession}
             className="glass-btn w-8 h-8 flex items-center justify-center flex-shrink-0 disabled:opacity-30 disabled:cursor-not-allowed"
           >
-            <Send className="w-3.5 h-3.5" />
+            <Send className="w-3.5 h-3.5 text-white" />
           </button>
         </div>
         <p className="text-[10px] text-muted-foreground mt-2 text-center">
