@@ -1,5 +1,3 @@
-"use server";
-
 import { revalidatePath } from "next/cache";
 import { getAccessToken } from "./auth";
 import type { ApiResponse, AgentCreateResponse, MarketplaceSkill } from "@/types";

@@ -21,7 +21,9 @@ export function useAgentStatus(agentId: string, options?: UseAgentStatusOptions 
     {
       // Poll every 5s, but pause when pauseWhen is true (e.g., WebSocket connected)
       refreshInterval: enabled && !pauseWhen ? 5000 : 0,
-      revalidateOnReconnect: true,
+      revalidateOnReconnect: !pauseWhen,
+      revalidateOnFocus: !pauseWhen,
+      revalidateIfStale: !pauseWhen,
     }
   );
 
