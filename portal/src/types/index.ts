@@ -150,6 +150,7 @@ export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   timestamp: number;
+  _isStreaming?: boolean; // 内部使用：流式消息标记
 }
 
 export interface ChatSession {
@@ -162,7 +163,6 @@ export interface ChatSession {
   updatedAt: number;
   pinned?: boolean; // 置顶状态
   unread?: boolean; // 未读标记
-  _isStreaming?: boolean; // 内部使用：流式消息标记
 }
 
 export interface SessionsStorage {
