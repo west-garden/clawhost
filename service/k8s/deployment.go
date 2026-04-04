@@ -284,6 +284,15 @@ if [ ! -d /home/node/.openclaw/extensions/openclaw-weixin ] && [ -d /opt/opencla
   mkdir -p /home/node/.openclaw/extensions
   cp -r /opt/openclaw-plugins/openclaw-weixin /home/node/.openclaw/extensions/
 fi
+# Install weixin plugin from npm if not already installed
+if [ ! -d /home/node/.openclaw/extensions/openclaw-weixin ]; then
+  mkdir -p /home/node/.openclaw/extensions
+  cd /home/node/.openclaw/extensions && npm install --no-save @tencent-weixin/openclaw-weixin 2>/dev/null
+  if [ -d /home/node/.openclaw/extensions/node_modules/@tencent-weixin/openclaw-weixin ]; then
+    mv /home/node/.openclaw/extensions/node_modules/@tencent-weixin/openclaw-weixin /home/node/.openclaw/extensions/openclaw-weixin
+    rm -rf /home/node/.openclaw/extensions/node_modules
+  fi
+fi
 exec openclaw gateway --port %d --bind lan --allow-unconfigured --dev`, configJSON, config.AccessToken, config.AccessToken, gatewayPort)}
 									}
 									return []string{"openclaw", "gateway", "--port", fmt.Sprintf("%d", gatewayPort), "--bind", "lan", "--allow-unconfigured", "--dev"}
