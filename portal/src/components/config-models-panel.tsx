@@ -131,6 +131,7 @@ const PROVIDER_PRESETS: Record<string, { label: string; baseUrl: string; api?: s
 interface Provider {
   baseUrl?: string;
   apiKey?: string;
+  apiType?: string;
   models?: Array<{ id: string; name?: string }>;
 }
 
@@ -179,6 +180,7 @@ export function ConfigModelsPanel({ agentId, providers, loading, onRefresh }: Pr
       name,
       baseUrl: provider.baseUrl || "",
       apiKey: "",
+      apiType: provider.apiType || "openai-completions",
     });
     setValidationResult(null);
     setDialogOpen(true);
