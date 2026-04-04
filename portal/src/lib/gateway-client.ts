@@ -140,17 +140,15 @@ export class GatewayClient {
       minProtocol: 3,
       maxProtocol: 3,
       client: {
-        id: "clawhost-portal",
+        id: "openclaw-control-ui",
         version: "1.0.0",
-        platform: "web",
+        platform: navigator.platform ?? "web",
         mode: "webchat",
       },
       role: "operator",
       scopes: ["operator.admin"],
       caps: ["tool-events"],
-      auth: this.opts.token
-        ? { token: this.opts.token, nonce: this.connectNonce }
-        : undefined,
+      auth: this.opts.token ? { token: this.opts.token } : undefined,
       userAgent: navigator.userAgent,
       locale: navigator.language,
     };
@@ -225,8 +223,8 @@ export class GatewayClient {
         const payload = evt.payload as { nonce?: string } | undefined;
         if (payload?.nonce) {
           this.connectNonce = payload.nonce;
+          this.sendConnect();
         }
-        this.sendConnect();
         return;
       }
       this.opts.onEvent?.(evt);
