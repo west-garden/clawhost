@@ -60,6 +60,12 @@ func AddChannelToAgent(ctx context.Context, botID, accessToken, channel, account
 	if _, ok := channelLevelConfig["enabled"]; !ok {
 		channelLevelConfig["enabled"] = true
 	}
+	// When dmPolicy is "open", allowFrom must include "*" (OpenClaw validation requirement)
+	if channelLevelConfig["dmPolicy"] == "open" {
+		if _, ok := channelLevelConfig["allowFrom"]; !ok {
+			channelLevelConfig["allowFrom"] = []string{"*"}
+		}
+	}
 
 	// Add/update channel account in config using multi-account structure
 	// Structure: channels.{channel}.{enabled, dmPolicy, ...}.accounts.{account}
