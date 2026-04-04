@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { CreateAgentDialog } from "./create-agent-dialog";
 import { LocaleSwitcher } from "./locale-switcher";
+import { ThemeToggle } from "./theme-toggle";
 import { ClawIcon } from "./claw-icon";
 import { Plus, Settings, LogOut, CreditCard } from "lucide-react";
 import type { Agent, User } from "@/types";
@@ -190,6 +191,7 @@ export function AgentSidebarContent({
           <span className="text-sm text-muted-foreground truncate flex-1">
             {user.name || user.email}
           </span>
+          <ThemeToggle />
           <LocaleSwitcher locale={locale} />
           <button
             onClick={handleLogout}
