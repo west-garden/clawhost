@@ -154,7 +154,7 @@ func ListAgentChannels(ctx context.Context, botID, accessToken string) (map[stri
 				channelInfo["enabled"] = enabled
 			}
 
-			// Extract accounts
+			// Extract accounts from config
 			if accounts, ok := channelConfig["accounts"].(map[string]interface{}); ok {
 				accountNames := make([]string, 0, len(accounts))
 				for accountName := range accounts {
@@ -164,6 +164,24 @@ func ListAgentChannels(ctx context.Context, botID, accessToken string) (map[stri
 			}
 
 			result[channelName] = channelInfo
+		}
+	}
+
+	// For openclaw-weixin, also check the accounts.json file (authoritative source)
+	// This handles the case where accounts are stored in files but not in openclaw.json
+	if _, exists := result["openclaw-weixin"]; exists || true {
+		accountsJSON, err := ExecInPod(ctx, namespace, podName, "openclaw",
+			[]string{"cat", "/home/node/.openclaw/openclaw-weixin/accounts.json"})
+		if err == nil && accountsJSON != "" {
+			var accountIDs []string
+			if json.Unmarshal([]byte(accountsJSON), &accountIDs) == nil && len(accountIDs) > 0 {
+				// Use accounts.json as the authoritative source
+				channelInfo := map[string]interface{}{
+					"enabled":  true,
+					"accounts": accountIDs,
+				}
+				result["openclaw-weixin"] = channelInfo
+			}
 		}
 	}
 
