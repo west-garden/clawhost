@@ -14,8 +14,8 @@ interface ChatPanelProps {
   agentName: string;
   initialStatus: AgentStatus;
   activeSession: ChatSession | null;
-  onAddUserMessage: (content: string) => void;
-  onUpdateLastAssistantMessage: (content: string) => void;
+  onAddUserMessage: (content: string, sessionId?: string) => void;
+  onUpdateLastAssistantMessage: (content: string, sessionId?: string) => void;
   onSetModel: (model: string) => void;
   providers: Record<string, ProviderWithModels>;
 }
@@ -71,12 +71,15 @@ export function ChatPanel({
     const text = input.trim();
     if (!text || isStreaming || !isRunning || !activeSession) return;
 
-    onAddUserMessage(text);
+    // Capture session ID at send time to ensure responses go to correct session
+    const sessionId = activeSession.id;
+
+    onAddUserMessage(text, sessionId);
     setInput("");
     setIsStreaming(true);
 
     // Add placeholder for streaming response
-    onUpdateLastAssistantMessage("");
+    onUpdateLastAssistantMessage("", sessionId);
 
     try {
       const res = await fetch(`/api/agents/${agentId}/chat`, {
@@ -117,7 +120,7 @@ export function ChatPanel({
                 const delta = parsed.choices?.[0]?.delta?.content;
                 if (delta) {
                   accumulated += delta;
-                  onUpdateLastAssistantMessage(accumulated);
+                  onUpdateLastAssistantMessage(accumulated, sessionId);
                 }
               } catch {
                 // Skip non-JSON lines
@@ -129,7 +132,7 @@ export function ChatPanel({
 
       // Final update with complete message
       if (accumulated) {
-        onUpdateLastAssistantMessage(accumulated);
+        onUpdateLastAssistantMessage(accumulated, sessionId);
       }
     } catch (err) {
       toast.error(t("connectionError"));

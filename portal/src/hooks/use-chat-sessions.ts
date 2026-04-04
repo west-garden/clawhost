@@ -24,11 +24,11 @@ interface UseChatSessionsReturn {
   createNewSession: () => void;
   switchSession: (id: string) => void;
   removeSession: (id: string) => void;
-  addUserMessage: (content: string) => void;
-  addAssistantMessage: (content: string) => void;
-  updateLastAssistantMessage: (content: string) => void;
-  setModel: (model: string) => void;
-  clearMessages: () => void;
+  addUserMessage: (content: string, sessionId?: string) => void;
+  addAssistantMessage: (content: string, sessionId?: string) => void;
+  updateLastAssistantMessage: (content: string, sessionId?: string) => void;
+  setModel: (model: string, sessionId?: string) => void;
+  clearMessages: (sessionId?: string) => void;
 }
 
 export function useChatSessions({
@@ -132,9 +132,10 @@ export function useChatSessions({
   );
 
   const updateActiveSession = useCallback(
-    (updater: (session: ChatSession) => ChatSession) => {
+    (updater: (session: ChatSession) => ChatSession, sessionId?: string) => {
       setStorage((prev) => {
-        const session = prev.sessions.find((s) => s.id === prev.activeSessionId);
+        const targetId = sessionId || prev.activeSessionId;
+        const session = prev.sessions.find((s) => s.id === targetId);
         if (!session) return prev;
 
         const updated = updater(session);
@@ -148,25 +149,27 @@ export function useChatSessions({
   );
 
   const addUserMessage = useCallback(
-    (content: string) => {
-      updateActiveSession((s) => addMessage(s, "user", content));
+    (content: string, sessionId?: string) => {
+      updateActiveSession((s) => addMessage(s, "user", content), sessionId);
     },
     [updateActiveSession]
   );
 
   const addAssistantMessage = useCallback(
-    (content: string) => {
-      updateActiveSession((s) => addMessage(s, "assistant", content));
+    (content: string, sessionId?: string) => {
+      updateActiveSession((s) => addMessage(s, "assistant", content), sessionId);
     },
     [updateActiveSession]
   );
 
   const updateLastAssistantMessage = useCallback(
-    (content: string) => {
-      if (!activeSession) return;
+    (content: string, sessionId?: string) => {
+      // Use provided sessionId or fall back to current activeSession
+      const targetSessionId = sessionId || activeSession?.id;
+      if (!targetSessionId) return;
 
       setStorage((prev) => {
-        const session = prev.sessions.find((s) => s.id === prev.activeSessionId);
+        const session = prev.sessions.find((s) => s.id === targetSessionId);
         if (!session) return prev;
 
         const messages = [...session.messages];
@@ -203,21 +206,23 @@ export function useChatSessions({
   );
 
   const setModel = useCallback(
-    (model: string) => {
-      updateActiveSession((s) => updateSessionModel(s, model));
+    (model: string, sessionId?: string) => {
+      updateActiveSession((s) => updateSessionModel(s, model), sessionId);
     },
     [updateActiveSession]
   );
 
-  const clearMessages = useCallback(() => {
-    if (!activeSession) return;
-    updateActiveSession((s) => ({
-      ...s,
-      messages: [],
-      title: "新对话",
-      updatedAt: Date.now(),
-    }));
-  }, [activeSession, updateActiveSession]);
+  const clearMessages = useCallback(
+    (sessionId?: string) => {
+      updateActiveSession((s) => ({
+        ...s,
+        messages: [],
+        title: "新对话",
+        updatedAt: Date.now(),
+      }), sessionId);
+    },
+    [updateActiveSession]
+  );
 
   return {
     sessions: storage.sessions,
