@@ -10,6 +10,7 @@ import {
 interface UseGatewayConnectionOptions {
   agentId: string;
   enabled: boolean;
+  onEvent?: (evt: { type: "event"; event: string; payload?: unknown }) => void;
 }
 
 interface GatewayConnectResponse {
@@ -26,10 +27,13 @@ interface GatewayConnectResponse {
 export function useGatewayConnection({
   agentId,
   enabled,
+  onEvent,
 }: UseGatewayConnectionOptions) {
   const [connectionState, setConnectionState] =
     useState<ConnectionState>("disconnected");
   const clientRef = useRef<GatewayClient | null>(null);
+  const onEventRef = useRef(onEvent);
+  onEventRef.current = onEvent;
 
   useEffect(() => {
     if (!enabled) {
@@ -73,6 +77,10 @@ export function useGatewayConnection({
           onDisconnected: () => {
             if (cancelled) return;
             setConnectionState("connecting");
+          },
+          onEvent: (evt) => {
+            if (cancelled) return;
+            onEventRef.current?.(evt);
           },
         });
 
