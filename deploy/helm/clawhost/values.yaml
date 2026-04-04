@@ -8,7 +8,7 @@ fullnameOverride: ""
 server:
   image:
     repository: 014388475497.dkr.ecr.us-east-2.amazonaws.com/metaverse
-    tag: clawhost11
+    tag: clawhost23
     pullPolicy: IfNotPresent
   replicas: 1
   port: 18080
@@ -17,24 +17,24 @@ server:
       cpu: 100m
       memory: 128Mi
     limits:
-      cpu: 500m
-      memory: 256Mi
+      cpu: 1500m
+      memory: 512Mi
 
 ## Portal frontend (Next.js)
 portal:
   enabled: true
   image:
     repository: 014388475497.dkr.ecr.us-east-2.amazonaws.com/metaverse
-    tag: clawhost-portal
+    tag: clawhost-portal11
     pullPolicy: IfNotPresent
   replicas: 1
   port: 3000
   resources:
     requests:
-      cpu: 100m
+      cpu: 200m
       memory: 128Mi
     limits:
-      cpu: 500m
+      cpu: 1500m
       memory: 512Mi
   env:
     # Browser-side API URL (leave empty for same-origin)

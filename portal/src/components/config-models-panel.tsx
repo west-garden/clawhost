@@ -17,7 +17,10 @@ import {
   addModelProvider,
   updateModelProvider,
   deleteModelProvider,
+  validateProviderApiKey,
+  validateCustomProviderApiKey,
 } from "@/lib/actions";
+import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
 
 // Provider presets with baseUrl and API format
 // Grouped by category for better UX
@@ -147,33 +150,83 @@ export function ConfigModelsPanel({ agentId, providers, loading, onRefresh }: Pr
     name: "",
     baseUrl: "",
     apiKey: "",
+    apiType: "openai-completions",
   });
   const [submitting, setSubmitting] = useState(false);
+  const [validating, setValidating] = useState(false);
+  const [validationResult, setValidationResult] = useState<{ valid: boolean; error?: string } | null>(null);
 
   function openAddDialog() {
     setEditingProvider(null);
     setPresetKey("custom");
-    setForm({ name: "", baseUrl: "", apiKey: "" });
+    setForm({ name: "", baseUrl: "", apiKey: "", apiType: "openai-completions" });
+    setValidationResult(null);
     setDialogOpen(true);
   }
 
   function openEditDialog(name: string, provider: Provider) {
     setEditingProvider(name);
+    // Find preset key by baseUrl
+    let foundPreset = "custom";
+    for (const [key, preset] of Object.entries(PROVIDER_PRESETS)) {
+      if (preset.baseUrl === provider.baseUrl) {
+        foundPreset = key;
+        break;
+      }
+    }
+    setPresetKey(foundPreset);
     setForm({
       name,
       baseUrl: provider.baseUrl || "",
       apiKey: "",
     });
+    setValidationResult(null);
     setDialogOpen(true);
   }
 
   function handlePresetChange(key: string) {
     setPresetKey(key);
+    setValidationResult(null);
     if (key === "custom") {
-      setForm({ ...form, name: "", baseUrl: "" });
+      setForm({ ...form, name: "", baseUrl: "", apiType: "openai-completions" });
     } else {
       const preset = PROVIDER_PRESETS[key];
       setForm({ ...form, name: key, baseUrl: preset.baseUrl });
+    }
+  }
+
+  async function handleValidate() {
+    if (!form.apiKey) {
+      toast.error(t("apiKeyRequired"));
+      return;
+    }
+
+    setValidating(true);
+    setValidationResult(null);
+
+    try {
+      let result;
+      if (presetKey === "custom") {
+        // Custom provider validation
+        result = await validateCustomProviderApiKey(form.baseUrl, form.apiKey, form.apiType);
+      } else {
+        // Built-in provider validation
+        const preset = PROVIDER_PRESETS[presetKey];
+        result = await validateProviderApiKey(presetKey, form.apiKey, form.baseUrl || undefined);
+      }
+
+      setValidationResult(result);
+
+      if (result.valid) {
+        toast.success(t("apiKeyValid"));
+      } else {
+        toast.error(result.error || t("apiKeyInvalid"));
+      }
+    } catch (err) {
+      setValidationResult({ valid: false, error: String(err) });
+      toast.error(t("validationFailed"));
+    } finally {
+      setValidating(false);
     }
   }
 
@@ -197,7 +250,7 @@ export function ConfigModelsPanel({ agentId, providers, loading, onRefresh }: Pr
           name: form.name,
           baseUrl: form.baseUrl || undefined,
           apiKey: form.apiKey || undefined,
-          api: preset?.api || undefined,
+          api: preset?.api || form.apiType || undefined,
         });
         if (result.error) {
           toast.error(result.error);
@@ -307,7 +360,10 @@ export function ConfigModelsPanel({ agentId, providers, loading, onRefresh }: Pr
               <Label>{t("baseUrl")} {presetKey !== "custom" && t("baseUrlAutoFilled")}</Label>
               <Input
                 value={form.baseUrl}
-                onChange={(e) => setForm({ ...form, baseUrl: e.target.value })}
+                onChange={(e) => {
+                  setForm({ ...form, baseUrl: e.target.value });
+                  setValidationResult(null);
+                }}
                 placeholder="https://api.example.com"
                 disabled={presetKey !== "custom"}
               />
@@ -318,14 +374,63 @@ export function ConfigModelsPanel({ agentId, providers, loading, onRefresh }: Pr
               )}
             </div>
 
+            {!editingProvider && presetKey === "custom" && (
+              <div className="space-y-2">
+                <Label>{t("apiProtocol")}</Label>
+                <select
+                  value={form.apiType}
+                  onChange={(e) => setForm({ ...form, apiType: e.target.value })}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                >
+                  <option value="openai-completions">{t("openaiCompatible")}</option>
+                  <option value="anthropic-messages">{t("anthropicMessages")}</option>
+                </select>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label>{t("apiKey")}</Label>
-              <Input
-                type="password"
-                value={form.apiKey}
-                onChange={(e) => setForm({ ...form, apiKey: e.target.value })}
-                placeholder={t("apiKeyPlaceholder")}
-              />
+              <div className="flex gap-2">
+                <Input
+                  type="password"
+                  value={form.apiKey}
+                  onChange={(e) => {
+                    setForm({ ...form, apiKey: e.target.value });
+                    setValidationResult(null);
+                  }}
+                  placeholder={t("apiKeyPlaceholder")}
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleValidate}
+                  disabled={validating || !form.apiKey}
+                >
+                  {validating ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    t("validate")
+                  )}
+                </Button>
+              </div>
+
+              {/* Validation result */}
+              {validationResult && (
+                <div className={`flex items-center gap-2 text-sm ${validationResult.valid ? "text-green-600" : "text-red-600"}`}>
+                  {validationResult.valid ? (
+                    <>
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>{t("apiKeyValid")}</span>
+                    </>
+                  ) : (
+                    <>
+                      <XCircle className="w-4 h-4" />
+                      <span>{validationResult.error || t("apiKeyInvalid")}</span>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
           </div>
           <DialogFooter>

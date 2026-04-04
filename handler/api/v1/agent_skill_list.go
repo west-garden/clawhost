@@ -2,18 +2,22 @@ package v1
 
 import (
 	"context"
-	"fmt"
-	"strings"
 
 	"github.com/clawhost/clawhost/middleware"
 	"github.com/clawhost/clawhost/model"
-	"github.com/clawhost/clawhost/service/k8s"
+	"github.com/clawhost/clawhost/service/skills"
 	"github.com/clawhost/clawhost/util"
 	"github.com/labstack/echo/v4"
 )
 
 type SkillInfo struct {
-	Name string `json:"name"`
+	Name        string `json:"name"`
+	NameDisplay string `json:"name_display,omitempty"`
+	Description string `json:"description,omitempty"`
+	Author      string `json:"author,omitempty"`
+	Version     string `json:"version,omitempty"`
+	InstalledAt int64  `json:"installedAt,omitempty"`
+	Source      string `json:"source,omitempty"`
 }
 
 func ListSkills(c echo.Context) error {
@@ -28,46 +32,25 @@ func ListSkills(c echo.Context) error {
 
 	ctx := context.Background()
 
-	// List skills directory in pod
-	skills, err := listSkillsInPod(ctx, agent.ID)
+	// List skills with metadata
+	skillList, err := skills.ListSkillsWithMeta(ctx, agent.ID, "main")
 	if err != nil {
 		return util.InternalError(c, "failed to list skills: "+err.Error())
 	}
 
-	return util.Success(c, skills)
-}
-
-func listSkillsInPod(ctx context.Context, agentID string) ([]SkillInfo, error) {
-	client := k8s.GetClient()
-	namespace := k8s.GetNamespace()
-
-	// Get pod name
-	deploymentName := k8s.GetDeploymentName(agentID)
-	pods, err := client.CoreV1().Pods(namespace).List(ctx, k8s.ListOptions(deploymentName))
-	if err != nil {
-		return nil, fmt.Errorf("failed to list pods: %w", err)
-	}
-
-	if len(pods.Items) == 0 {
-		return []SkillInfo{}, nil
-	}
-
-	podName := pods.Items[0].Name
-
-	// Execute ls command in pod
-	output, err := k8s.ExecInPod(ctx, namespace, podName, "openclaw", []string{"ls", "-1", "/app/.openclaw/workspace/skills"})
-	if err != nil {
-		// Directory might not exist yet
-		return []SkillInfo{}, nil
-	}
-
-	var skills []SkillInfo
-	lines := strings.Split(strings.TrimSpace(output), "\n")
-	for _, line := range lines {
-		if line != "" {
-			skills = append(skills, SkillInfo{Name: line})
+	// Convert to SkillInfo
+	result := make([]SkillInfo, len(skillList))
+	for i, s := range skillList {
+		result[i] = SkillInfo{
+			Name:        s.Name,
+			NameDisplay: s.NameDisplay,
+			Description: s.Description,
+			Author:      s.Author,
+			Version:     s.Version,
+			InstalledAt: s.InstalledAt,
+			Source:      s.Source,
 		}
 	}
 
-	return skills, nil
+	return util.Success(c, result)
 }

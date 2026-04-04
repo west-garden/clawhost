@@ -203,7 +203,8 @@ func ListWorkspaceFiles(ctx context.Context, botID, agentID string) ([]string, e
 	return files, nil
 }
 
-// ListSkills lists skill files for an agent
+// ListSkills lists skill directories for an agent
+// Returns skill names (directory names in skills/)
 func ListSkills(ctx context.Context, botID, agentID string) ([]map[string]string, error) {
 	if err := validateAgentID(agentID); err != nil {
 		return nil, err
@@ -215,10 +216,11 @@ func ListSkills(ctx context.Context, botID, agentID string) ([]map[string]string
 		return nil, fmt.Errorf("pod not ready: %w", err)
 	}
 
-	// Skills are in workspace/.openclaw/skills/
+	// Skills are in workspace/.openclaw/skills/{skillName}/SKILL.md
 	skillsDir := fmt.Sprintf("%s/.openclaw/skills", workspacePath(agentID))
+	// List directories (skill names) that contain SKILL.md
 	output, err := ExecInPod(ctx, namespace, podName, "openclaw",
-		[]string{"sh", "-c", fmt.Sprintf("ls '%s'/*.md 2>/dev/null | xargs -n1 basename 2>/dev/null || echo ''", skillsDir)})
+		[]string{"sh", "-c", fmt.Sprintf("ls -d '%s'/*/ 2>/dev/null | xargs -n1 basename 2>/dev/null || echo ''", skillsDir)})
 	if err != nil {
 		return nil, err
 	}
@@ -226,14 +228,15 @@ func ListSkills(ctx context.Context, botID, agentID string) ([]map[string]string
 	skills := []map[string]string{}
 	for _, f := range strings.Split(strings.TrimSpace(output), "\n") {
 		if f != "" {
-			name := strings.TrimSuffix(f, ".md")
-			skills = append(skills, map[string]string{"name": name, "filename": f})
+			name := strings.TrimSuffix(f, "/")
+			skills = append(skills, map[string]string{"name": name, "filename": name})
 		}
 	}
 	return skills, nil
 }
 
 // ReadSkill reads a skill file content
+// Uses directory structure: skills/{skillName}/SKILL.md
 func ReadSkill(ctx context.Context, botID, agentID, skillName string) (string, error) {
 	if err := validateAgentID(agentID); err != nil {
 		return "", err
@@ -248,8 +251,7 @@ func ReadSkill(ctx context.Context, botID, agentID, skillName string) (string, e
 		return "", fmt.Errorf("pod not ready: %w", err)
 	}
 
-	filePath := fmt.Sprintf("%s/.openclaw/skills/%s.md", workspacePath(agentID), skillName)
-	// Use safe path without shell interpolation
+	filePath := fmt.Sprintf("%s/.openclaw/skills/%s/SKILL.md", workspacePath(agentID), skillName)
 	output, err := ExecInPod(ctx, namespace, podName, "openclaw",
 		[]string{"cat", filePath})
 	if err != nil {
@@ -259,6 +261,7 @@ func ReadSkill(ctx context.Context, botID, agentID, skillName string) (string, e
 }
 
 // WriteSkill writes a skill file
+// Uses directory structure: skills/{skillName}/SKILL.md
 func WriteSkill(ctx context.Context, botID, agentID, skillName, content string) error {
 	if err := validateAgentID(agentID); err != nil {
 		return err
@@ -273,6 +276,7 @@ func WriteSkill(ctx context.Context, botID, agentID, skillName, content string) 
 		return fmt.Errorf("pod not ready: %w", err)
 	}
 
+<<<<<<< HEAD
 	skillsDir := fmt.Sprintf("%s/.openclaw/skills", workspacePath(agentID))
 	filePath := fmt.Sprintf("%s/%s.md", skillsDir, skillName)
 
@@ -284,10 +288,18 @@ func WriteSkill(ctx context.Context, botID, agentID, skillName, content string) 
 		skillsDir, filePath, contentB64)
 
 	_, err = ExecInPod(ctx, namespace, podName, "openclaw", []string{"node", "-e", script})
+=======
+	// Skills are in workspace/.openclaw/skills/{skillName}/SKILL.md
+	skillsDir := fmt.Sprintf("%s/.openclaw/skills/%s", workspacePath(agentID), skillName)
+	filePath := fmt.Sprintf("%s/SKILL.md", skillsDir)
+	cmd := fmt.Sprintf("mkdir -p '%s' && cat > '%s' << 'EOFCONTENT'\n%s\nEOFCONTENT", skillsDir, filePath, content)
+	_, err = ExecInPod(ctx, namespace, podName, "openclaw", []string{"sh", "-c", cmd})
+>>>>>>> e3806f6f59746d026a5d905e92439edcbd155966
 	return err
 }
 
-// DeleteSkill deletes a skill file
+// DeleteSkill deletes a skill directory
+// Uses directory structure: skills/{skillName}/
 func DeleteSkill(ctx context.Context, botID, agentID, skillName string) error {
 	if err := validateAgentID(agentID); err != nil {
 		return err
@@ -302,10 +314,17 @@ func DeleteSkill(ctx context.Context, botID, agentID, skillName string) error {
 		return fmt.Errorf("pod not ready: %w", err)
 	}
 
+<<<<<<< HEAD
 	filePath := fmt.Sprintf("%s/.openclaw/skills/%s.md", workspacePath(agentID), skillName)
 	// Use safe path without shell interpolation
 	_, err = ExecInPod(ctx, namespace, podName, "openclaw",
 		[]string{"rm", "-f", filePath})
+=======
+	// Delete the entire skill directory (includes SKILL.md and _meta.json)
+	skillDir := fmt.Sprintf("%s/.openclaw/skills/%s", workspacePath(agentID), skillName)
+	_, err = ExecInPod(ctx, namespace, podName, "openclaw",
+		[]string{"sh", "-c", fmt.Sprintf("rm -rf '%s'", skillDir)})
+>>>>>>> e3806f6f59746d026a5d905e92439edcbd155966
 	return err
 }
 

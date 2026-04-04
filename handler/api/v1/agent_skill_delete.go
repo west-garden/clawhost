@@ -7,6 +7,7 @@ import (
 	"github.com/clawhost/clawhost/middleware"
 	"github.com/clawhost/clawhost/model"
 	"github.com/clawhost/clawhost/service/k8s"
+	"github.com/clawhost/clawhost/service/skills"
 	"github.com/clawhost/clawhost/util"
 	"github.com/labstack/echo/v4"
 )
@@ -27,6 +28,11 @@ func DeleteSkill(c echo.Context) error {
 	}
 
 	ctx := context.Background()
+
+	// Delete skill metadata
+	if err := skills.DeleteSkillMeta(ctx, agent.ID, "main", name); err != nil {
+		// Non-critical error, continue with skill deletion
+	}
 
 	// Delete skill directory in pod
 	if err := deleteSkillFromPod(ctx, agent.ID, name); err != nil {

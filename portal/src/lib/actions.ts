@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { getAccessToken } from "./auth";
-import type { ApiResponse, AgentCreateResponse } from "@/types";
+import type { ApiResponse, AgentCreateResponse, MarketplaceSkill } from "@/types";
 
 const API_URL = process.env.CLAWHOST_API_URL || "http://localhost:18080";
 
@@ -226,6 +226,42 @@ export async function deleteModelProvider(agentId: string, providerName: string)
   return { success: true };
 }
 
+// --- Provider API Key Validation ---
+
+export async function validateProviderApiKey(
+  providerName: string,
+  apiKey: string,
+  baseUrl?: string,
+  validationModel?: string
+) {
+  const res = await fetchWithAuth(`/api/v1/providers/${providerName}/validate`, {
+    method: "POST",
+    body: JSON.stringify({ apiKey, baseUrl, validationModel }),
+  });
+  const data = await res.json();
+  if (!res.ok || data.code !== 0) {
+    return { valid: false, error: data.message || "Validation failed" };
+  }
+  return data.data as { valid: boolean; error?: string };
+}
+
+export async function validateCustomProviderApiKey(
+  baseUrl: string,
+  apiKey: string,
+  api: string,
+  validationModel?: string
+) {
+  const res = await fetchWithAuth("/api/v1/providers/validate-custom", {
+    method: "POST",
+    body: JSON.stringify({ baseUrl, apiKey, api, validationModel }),
+  });
+  const data = await res.json();
+  if (!res.ok || data.code !== 0) {
+    return { valid: false, error: data.message || "Validation failed" };
+  }
+  return data.data as { valid: boolean; error?: string };
+}
+
 // --- Config Defaults ---
 
 export async function getAgentDefaults(agentId: string) {
@@ -418,4 +454,53 @@ export async function deleteCronJob(agentId: string, jobId: string) {
   }
   revalidatePath(`/agents/${agentId}`);
   return { success: true };
+}
+
+// --- Marketplace Skills ---
+
+export async function listMarketplaceSkills(
+  category?: string,
+  search?: string
+) {
+  const params = new URLSearchParams();
+  if (category) params.append("category", category);
+  if (search) params.append("search", search);
+
+  const queryString = params.toString();
+  const path = queryString
+    ? `/api/v1/marketplace/skills?${queryString}`
+    : "/api/v1/marketplace/skills";
+
+  const res = await fetchWithAuth(path);
+  const data = (await res.json()) as ApiResponse<{
+    skills: MarketplaceSkill[];
+    categories: string[];
+  }>;
+
+  if (!res.ok || data.code !== 0) {
+    return { error: data.message || "Failed to fetch marketplace" };
+  }
+
+  return {
+    skills: data.data?.skills || [],
+    categories: data.data?.categories || [],
+  };
+}
+
+export async function installMarketplaceSkill(agentId: string, skillName: string) {
+  const res = await fetchWithAuth(
+    `/api/v1/agents/${agentId}/skills/install-marketplace`,
+    {
+      method: "POST",
+      body: JSON.stringify({ skill_name: skillName }),
+    }
+  );
+
+  const data = (await res.json()) as ApiResponse<{ name: string; installed: boolean }>;
+  if (!res.ok || data.code !== 0) {
+    return { error: data.message || "Failed to install skill" };
+  }
+
+  revalidatePath(`/agents/${agentId}/skills`);
+  return { success: true, name: data.data?.name };
 }

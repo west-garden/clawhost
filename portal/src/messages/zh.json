@@ -129,7 +129,16 @@
       "providerUpdated": "提供商已更新",
       "providerAdded": "提供商已添加",
       "providerDeleted": "提供商已删除",
-      "deleteConfirm": "确定删除提供商 \"{name}\"？"
+      "deleteConfirm": "确定删除提供商 \"{name}\"？",
+      "validate": "验证",
+      "validating": "验证中...",
+      "apiKeyRequired": "请输入 API Key",
+      "apiKeyValid": "API Key 有效",
+      "apiKeyInvalid": "API Key 无效",
+      "validationFailed": "验证失败",
+      "apiProtocol": "API 协议",
+      "openaiCompatible": "OpenAI 兼容",
+      "anthropicMessages": "Anthropic Messages"
     },
     "skills": {
       "title": "技能",
@@ -150,7 +159,15 @@
       "delete": "删除技能",
       "deleteConfirm": "确定要删除 \"{name}\" 吗？",
       "deleted": "技能已删除",
-      "empty": "暂无技能，从 GitHub 导入或创建新技能"
+      "empty": "暂无技能，从 GitHub 导入或创建新技能",
+      "marketplace": "市场",
+      "installedTab": "已安装",
+      "searchPlaceholder": "搜索技能...",
+      "allCategories": "全部分类",
+      "installFromMarketplace": "安装",
+      "alreadyInstalled": "已安装",
+      "byAuthor": "作者: {author}",
+      "version": "v{version}"
     },
     "tasks": {
       "title": "定时任务",

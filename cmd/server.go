@@ -143,6 +143,14 @@ func startServer() {
 		// Built-in providers metadata (no ownership check needed)
 		api.GET("/providers", v1.ListBuiltInProviders)
 		api.GET("/providers/:name", v1.GetBuiltInProvider)
+		api.POST("/providers/:name/validate", v1.ValidateProviderApiKey)
+		api.POST("/providers/validate-custom", v1.ValidateCustomProviderApiKey)
+	}
+
+	// Public marketplace routes (no auth required)
+	marketplace := e.Group("/api/v1/marketplace")
+	{
+		marketplace.GET("/skills", v1.ListMarketplaceSkills)
 	}
 
 	// Agent instance routes: require ownership validation
@@ -168,6 +176,7 @@ func startServer() {
 		agentAPI.PUT("/skills/:name", v1.UpdateSkill)
 		agentAPI.DELETE("/skills/:name", v1.DeleteSkill)
 		agentAPI.POST("/skills/install", v1.InstallSkill)
+		agentAPI.POST("/skills/install-marketplace", v1.InstallMarketplaceSkill)
 		agentAPI.POST("/skills/create", v1.CreateSkill)
 
 		// Cron job management

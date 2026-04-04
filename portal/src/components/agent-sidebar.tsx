@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { cn } from "@/lib/utils";
 import { CreateAgentDialog } from "./create-agent-dialog";
 import { LocaleSwitcher } from "./locale-switcher";
+import { ThemeToggle } from "./theme-toggle";
 import { ClawIcon } from "./claw-icon";
 import { Plus, Settings, LogOut, CreditCard } from "lucide-react";
 import type { Agent, User } from "@/types";
@@ -74,22 +75,22 @@ export function AgentSidebarContent({
       </div>
 
       {/* New Agent button */}
-      <div className="px-3 pt-3 pb-1">
+      <div className="px-3 pt-4 pb-2">
         <CreateAgentDialog>
-          <button className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-gradient-to-r from-red-500/20 to-red-700/20 border border-red-500/30 text-red-400 text-xs font-medium hover:from-red-500/30 hover:to-red-700/30 transition-all">
-            <Plus className="w-3.5 h-3.5" />
+          <button className="w-full flex items-center justify-center gap-2 min-h-[44px] px-4 rounded-lg bg-gradient-to-r from-red-500/20 to-red-700/20 border border-red-500/30 text-red-400 text-base font-medium hover:from-red-500/30 hover:to-red-700/30 hover:border-red-500/40 active:scale-[0.98] transition-all duration-150">
+            <Plus className="w-4 h-4" />
             {t("sidebar.newAgent")}
           </button>
         </CreateAgentDialog>
       </div>
 
       {/* Agent list label */}
-      <div className="px-4 pt-4 pb-2 text-[10px] uppercase tracking-widest text-muted-foreground">
+      <div className="px-4 pt-2 pb-2 text-xs uppercase tracking-widest text-muted-foreground font-medium">
         Agents
       </div>
 
       {/* Agent list + nav items (scrollable together) */}
-      <nav className="flex-1 overflow-y-auto min-h-0 px-2 space-y-0.5">
+      <nav className="flex-1 overflow-y-auto min-h-0 px-2 py-1 space-y-0.5">
         {agents.map((agent) => {
           const isActive = agent.id === activeAgentId;
           const initial = (agent.name || "?")[0].toUpperCase();
@@ -107,7 +108,7 @@ export function AgentSidebarContent({
             >
               <div
                 className={cn(
-                  "w-7 h-7 rounded-md bg-gradient-to-br flex items-center justify-center text-[11px] font-semibold text-white flex-shrink-0",
+                  "w-8 h-8 rounded-lg bg-gradient-to-br flex items-center justify-center text-sm font-semibold text-white flex-shrink-0",
                   color
                 )}
               >
@@ -115,7 +116,7 @@ export function AgentSidebarContent({
               </div>
               <span
                 className={cn(
-                  "text-[13px] font-medium flex-1 truncate",
+                  "text-base font-medium flex-1 truncate",
                   isActive ? "text-foreground" : "text-muted-foreground"
                 )}
               >
@@ -140,13 +141,13 @@ export function AgentSidebarContent({
         >
           <CreditCard
             className={cn(
-              "w-4 h-4 flex-shrink-0",
+              "w-5 h-5 flex-shrink-0",
               pathname === "/subscription" ? "text-foreground" : "text-muted-foreground"
             )}
           />
           <span
             className={cn(
-              "text-[13px] font-medium",
+              "text-base font-medium",
               pathname === "/subscription" ? "text-foreground" : "text-muted-foreground"
             )}
           >
@@ -163,13 +164,13 @@ export function AgentSidebarContent({
         >
           <Settings
             className={cn(
-              "w-4 h-4 flex-shrink-0",
+              "w-5 h-5 flex-shrink-0",
               pathname === "/settings" ? "text-foreground" : "text-muted-foreground"
             )}
           />
           <span
             className={cn(
-              "text-[13px] font-medium",
+              "text-base font-medium",
               pathname === "/settings" ? "text-foreground" : "text-muted-foreground"
             )}
           >
@@ -181,22 +182,23 @@ export function AgentSidebarContent({
 
       {/* Footer: user info + logout */}
       <div className="border-t border-border p-3">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-md bg-gradient-to-br from-red-500/20 to-red-700/20 border border-border flex items-center justify-center">
-            <span className="text-[10px] font-medium text-foreground">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-red-500/20 to-red-700/20 border border-border flex items-center justify-center flex-shrink-0">
+            <span className="text-xs font-medium text-foreground">
               {(user.name || user.email || "?").slice(0, 2).toUpperCase()}
             </span>
           </div>
-          <span className="text-xs text-muted-foreground truncate flex-1">
+          <span className="text-sm text-muted-foreground truncate flex-1">
             {user.name || user.email}
           </span>
+          <ThemeToggle />
           <LocaleSwitcher locale={locale} />
           <button
             onClick={handleLogout}
-            className="w-7 h-7 rounded-md bg-muted border border-border flex items-center justify-center text-muted-foreground hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/30 transition-all"
+            className="w-10 h-10 rounded-lg bg-muted border border-border flex items-center justify-center text-muted-foreground hover:bg-red-500/10 hover:text-red-500 hover:border-red-500/30 active:scale-95 transition-all duration-150"
             title={t("sidebar.logout")}
           >
-            <LogOut className="w-3.5 h-3.5" />
+            <LogOut className="w-4 h-4" />
           </button>
         </div>
       </div>

@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { DeviceList } from "@/components/device-list";
 import { listDevices } from "@/lib/actions";
+import { useAgent } from "@/contexts/agent-context";
 
 interface Device {
   request_id?: string;
@@ -23,6 +24,8 @@ export default function DevicesPage() {
   const params = useParams();
   const agentId = params.id as string;
 
+  const { isRunning } = useAgent();
+
   const [devices, setDevices] = useState<Device[]>([]);
   const [loading, setLoading] = useState(true);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -38,6 +41,19 @@ export default function DevicesPage() {
   }
 
   useEffect(() => {
+    // Clear any existing interval
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current);
+      intervalRef.current = null;
+    }
+
+    // Skip if agent is not running
+    if (!isRunning) {
+      setLoading(false);
+      setDevices([]);
+      return;
+    }
+
     loadDevices();
 
     // Poll every 30s, but only when page is visible
@@ -65,7 +81,7 @@ export default function DevicesPage() {
         clearInterval(intervalRef.current);
       }
     };
-  }, [agentId]);
+  }, [agentId, isRunning]);
 
   const pendingDevices = devices.filter((d) => d.status === "pending");
   const pairedDevices = devices.filter((d) => d.status === "paired");

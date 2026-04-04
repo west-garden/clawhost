@@ -36,31 +36,31 @@ export function AgentDetailHeader({
   return (
     <div className="agent-detail-header">
       {/* Agent info row */}
-      <div className="px-5 pt-4 pb-0 flex items-center gap-3">
-        <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center text-sm font-bold text-white flex-shrink-0">
+      <div className="px-5 pt-4 pb-2 flex items-center gap-3">
+        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-red-700 flex items-center justify-center text-base font-bold text-white flex-shrink-0">
           {initial}
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 flex-wrap">
             <h1 className="text-base font-semibold text-foreground truncate">
               {agentName}
             </h1>
             <AgentStatusBadge status={currentStatus} />
           </div>
-          <p className="text-[11px] text-muted-foreground font-mono truncate">
+          <p className="text-sm text-muted-foreground font-mono truncate mt-0.5">
             {agentSlug} · ID: {agentId.slice(0, 12)}
           </p>
         </div>
 
         {/* Action buttons */}
-        <div className="flex gap-1.5 flex-shrink-0">
+        <div className="flex gap-2 flex-shrink-0 flex-wrap sm:flex-nowrap">
           {currentStatus !== "running" && currentStatus !== "starting" && (
             <button
               onClick={() => onAction("start")}
               disabled={actionLoading !== null}
-              className="glass-btn py-1.5 px-3 text-xs"
+              className="glass-btn h-11 py-2.5 px-4 text-sm min-w-[80px]"
             >
-              <Play className="w-3.5 h-3.5" />
+              <Play className="w-4 h-4" />
               <span>
                 {actionLoading === "start"
                   ? t("agent.actions.starting")
@@ -73,9 +73,9 @@ export function AgentDetailHeader({
               <button
                 onClick={() => onAction("stop")}
                 disabled={actionLoading !== null}
-                className="glass-btn-secondary py-1.5 px-3 text-xs"
+                className="glass-btn-secondary h-11 py-2.5 px-4 text-sm min-w-[80px]"
               >
-                <Square className="w-3 h-3" />
+                <Square className="w-4 h-4" />
                 <span>
                   {actionLoading === "stop"
                     ? t("agent.actions.stopping")
@@ -85,9 +85,9 @@ export function AgentDetailHeader({
               <button
                 onClick={() => onAction("restart")}
                 disabled={actionLoading !== null}
-                className="glass-btn-secondary py-1.5 px-3 text-xs"
+                className="glass-btn-secondary h-11 py-2.5 px-4 text-sm min-w-[90px]"
               >
-                <RotateCw className="w-3 h-3" />
+                <RotateCw className="w-4 h-4" />
                 <span>
                   {actionLoading === "restart"
                     ? t("agent.actions.restarting")
@@ -101,17 +101,17 @@ export function AgentDetailHeader({
               href={webchatUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="glass-btn-secondary py-1.5 px-3 text-xs"
+              className="glass-btn-secondary h-11 py-2.5 px-4 text-sm"
             >
-              <ExternalLink className="w-3 h-3" />
-              <span>WebUI</span>
+              <ExternalLink className="w-4 h-4" />
+              <span className="hidden sm:inline">WebUI</span>
             </a>
           )}
         </div>
       </div>
 
-      {/* View tabs */}
-      <div className="flex gap-0 px-5 mt-3">
+      {/* View tabs with proper touch targets */}
+      <div className="flex gap-0 px-5 mt-2 overflow-x-auto scrollbar-none">
         <Link
           href={`/agents/${agentId}`}
           className={cn(

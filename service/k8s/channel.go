@@ -54,8 +54,9 @@ func AddChannelToAgent(ctx context.Context, botID, accessToken, channel, account
 	}
 
 	// Set channel-level defaults if not provided by upstream
+	// Default to "pairing" mode for security (WestClaw disables "open" for security reasons)
 	if _, ok := channelLevelConfig["dmPolicy"]; !ok {
-		channelLevelConfig["dmPolicy"] = "open"
+		channelLevelConfig["dmPolicy"] = "pairing"
 	}
 	if _, ok := channelLevelConfig["enabled"]; !ok {
 		channelLevelConfig["enabled"] = true
