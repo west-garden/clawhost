@@ -1,0 +1,401 @@
+"use client";
+
+import { useState, useEffect, useRef, useCallback } from "react";
+import type { GatewayClient } from "@/lib/gateway-client";
+import type { ChatSession, ChatMessage, GatewaySessionsListResult, GatewayChatHistoryResult, GatewayMessage, SessionMeta } from "@/types";
+import {
+  getAllSessionMeta,
+  updateSessionMeta,
+  getArchivedKeys,
+  getCustomOrder,
+  setCustomOrder,
+} from "@/lib/session-meta-storage";
+
+const FETCH_BATCH = 100;
+const MAX_CACHED_SESSIONS = 20;
+
+// Generate a unique session key for new panel-created chats
+function generateSessionKey(): string {
+  const id = crypto.randomUUID().slice(0, 8);
+  return `agent:main:panel-${id}`;
+}
+
+// Extract text from Gateway message content
+function extractTextContent(content: GatewayMessage["content"]): string {
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content
+      .filter((block) => block.type === "text")
+      .map((block) => block.text)
+      .join("");
+  }
+  return "";
+}
+
+// Parse Gateway messages to ChatMessage format
+function parseMessages(messages: GatewayMessage[] | undefined): ChatMessage[] {
+  if (!messages) return [];
+  return messages.map((msg) => ({
+    id: crypto.randomUUID(),
+    role: msg.role,
+    content: extractTextContent(msg.content),
+    timestamp: msg.timestamp ?? Date.now(),
+  }));
+}
+
+interface SessionCache {
+  messages: ChatMessage[];
+  lastAccessed: number;
+}
+
+interface UseWsChatSessionsOptions {
+  agentId: string;
+  client: GatewayClient | null;
+  connected: boolean;
+}
+
+interface UseWsChatSessionsReturn {
+  sessions: ChatSession[];
+  activeSessionKey: string;
+  activeSession: ChatSession | null;
+  isLoading: boolean;
+  switchSession: (key: string) => Promise<void>;
+  createNewSession: () => void;
+  archiveSession: (key: string) => void;
+  togglePin: (key: string) => void;
+  renameSession: (key: string, title: string | null) => void;
+  reorderSessions: (fromIndex: number, toIndex: number) => void;
+  refreshSessions: () => void;
+  getActiveMessages: () => ChatMessage[];
+  updateActiveMessages: (messages: ChatMessage[]) => void;
+}
+
+export function useWsChatSessions({
+  agentId,
+  client,
+  connected,
+}: UseWsChatSessionsOptions): UseWsChatSessionsReturn {
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [activeKey, setActiveKey] = useState<string>("");
+  const [isLoading, setIsLoading] = useState(true);
+
+  const cacheRef = useRef<Map<string, SessionCache>>(new Map());
+  const activeKeyRef = useRef(activeKey);
+  activeKeyRef.current = activeKey;
+
+  // Archived keys from localStorage
+  const archivedKeysRef = useRef<Set<string>>(new Set());
+  // Session metadata (pinned, customTitle) from localStorage
+  const metaMapRef = useRef<Map<string, SessionMeta>>(new Map());
+  // Custom order from localStorage
+  const customOrderRef = useRef<string[] | null>(null);
+
+  // Load metadata from localStorage on mount
+  useEffect(() => {
+    const meta = getAllSessionMeta(agentId);
+    metaMapRef.current = new Map(Object.entries(meta));
+    archivedKeysRef.current = getArchivedKeys(agentId);
+    customOrderRef.current = getCustomOrder(agentId);
+  }, [agentId]);
+
+  // Fetch sessions list from Gateway
+  const fetchSessionsList = useCallback(async () => {
+    if (!client) return;
+
+    try {
+      const result = await client.request<GatewaySessionsListResult>("sessions.list", {
+        includeDerivedTitles: true,
+      });
+
+      if (!result?.sessions) return;
+
+      const archived = archivedKeysRef.current;
+      const meta = metaMapRef.current;
+
+      // Filter out spawnedBy sessions and archived sessions
+      const filtered = result.sessions.filter(
+        (s) => !s.spawnedBy && !archived.has(s.key)
+      );
+
+      const chatSessions: ChatSession[] = filtered.map((s) => {
+        const m = meta.get(s.key);
+        return {
+          key: s.key,
+          id: s.key,
+          title: m?.customTitle || s.derivedTitle || s.displayName || "新对话",
+          messages: [],
+          createdAt: s.updatedAt ?? Date.now(),
+          updatedAt: s.updatedAt ?? Date.now(),
+          pinned: m?.pinned,
+        };
+      });
+
+      // Apply custom order or default sort
+      const customOrder = customOrderRef.current;
+      if (customOrder && customOrder.length > 0) {
+        const orderMap = new Map(customOrder.map((key, i) => [key, i]));
+        chatSessions.sort((a, b) => {
+          const pa = a.pinned ? 1 : 0;
+          const pb = b.pinned ? 1 : 0;
+          if (pa !== pb) return pb - pa;
+          const oa = orderMap.get(a.key);
+          const ob = orderMap.get(b.key);
+          if (oa !== undefined && ob !== undefined) return oa - ob;
+          if (oa !== undefined) return -1;
+          if (ob !== undefined) return 1;
+          return b.updatedAt - a.updatedAt;
+        });
+      } else {
+        chatSessions.sort((a, b) => {
+          const pa = a.pinned ? 1 : 0;
+          const pb = b.pinned ? 1 : 0;
+          if (pa !== pb) return pb - pa;
+          return b.updatedAt - a.updatedAt;
+        });
+      }
+
+      setSessions(chatSessions);
+
+      // Set active session to first one if not set
+      if (!activeKeyRef.current && chatSessions.length > 0) {
+        setActiveKey(chatSessions[0].key);
+      }
+    } catch (err) {
+      console.error("[useWsChatSessions] Failed to fetch sessions:", err);
+    }
+  }, [client]);
+
+  // Load history for a session
+  const loadHistory = useCallback(async (sessionKey: string): Promise<ChatMessage[]> => {
+    if (!client) return [];
+
+    try {
+      const result = await client.request<GatewayChatHistoryResult>("chat.history", {
+        sessionKey,
+        limit: FETCH_BATCH,
+      });
+
+      return parseMessages(result?.messages);
+    } catch (err) {
+      console.error("[useWsChatSessions] Failed to load history:", err);
+      return [];
+    }
+  }, [client]);
+
+  // Fetch sessions on connect
+  useEffect(() => {
+    if (!connected || !client) {
+      setIsLoading(true);
+      return;
+    }
+
+    setIsLoading(true);
+    fetchSessionsList().then(() => {
+      setIsLoading(false);
+    });
+  }, [connected, client, fetchSessionsList]);
+
+  // Switch to a different session
+  const switchSession = useCallback(async (key: string) => {
+    if (key === activeKeyRef.current) return;
+
+    setActiveKey(key);
+
+    // Check cache first
+    const cached = cacheRef.current.get(key);
+    if (cached) {
+      cached.lastAccessed = Date.now();
+      return;
+    }
+
+    // Load history from Gateway
+    const messages = await loadHistory(key);
+
+    // LRU eviction
+    if (cacheRef.current.size >= MAX_CACHED_SESSIONS) {
+      let oldestKey: string | null = null;
+      let oldestTime = Infinity;
+      for (const [k, v] of cacheRef.current) {
+        if (k === key) continue;
+        if (v.lastAccessed < oldestTime) {
+          oldestTime = v.lastAccessed;
+          oldestKey = k;
+        }
+      }
+      if (oldestKey) cacheRef.current.delete(oldestKey);
+    }
+
+    cacheRef.current.set(key, {
+      messages,
+      lastAccessed: Date.now(),
+    });
+  }, [loadHistory]);
+
+  // Create a new session (optimistic)
+  const createNewSession = useCallback(() => {
+    const newKey = generateSessionKey();
+    const newSession: ChatSession = {
+      key: newKey,
+      id: newKey,
+      title: "新对话",
+      messages: [],
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    setSessions((prev) => [newSession, ...prev]);
+    setActiveKey(newKey);
+
+    // Initialize empty cache
+    cacheRef.current.set(newKey, {
+      messages: [],
+      lastAccessed: Date.now(),
+    });
+
+    // Update custom order
+    if (customOrderRef.current) {
+      customOrderRef.current = [newKey, ...customOrderRef.current];
+      setCustomOrder(agentId, customOrderRef.current);
+    }
+  }, [agentId]);
+
+  // Archive a session
+  const archiveSession = useCallback((key: string) => {
+    // Optimistic: add to archived set
+    archivedKeysRef.current = new Set([...archivedKeysRef.current, key]);
+
+    // Persist to localStorage
+    updateSessionMeta(agentId, key, { archivedAt: Date.now() });
+
+    // Remove from sessions list
+    setSessions((prev) => {
+      const filtered = prev.filter((s) => s.key !== key);
+      if (filtered.length === 0) return prev;
+      return filtered;
+    });
+
+    // Remove from custom order
+    if (customOrderRef.current) {
+      customOrderRef.current = customOrderRef.current.filter((k) => k !== key);
+      setCustomOrder(agentId, customOrderRef.current);
+    }
+
+    // Remove from cache
+    cacheRef.current.delete(key);
+
+    // Switch to first session if archiving active
+    if (key === activeKeyRef.current) {
+      setSessions((prev) => {
+        if (prev.length > 0) {
+          setActiveKey(prev[0].key);
+        }
+        return prev;
+      });
+    }
+  }, [agentId]);
+
+  // Toggle pin
+  const togglePin = useCallback((key: string) => {
+    const meta = metaMapRef.current.get(key);
+    const newPinned = !meta?.pinned;
+
+    // Optimistic update
+    const updated = { ...meta, key, pinned: newPinned } as SessionMeta;
+    metaMapRef.current.set(key, updated);
+
+    // Persist to localStorage
+    updateSessionMeta(agentId, key, { pinned: newPinned });
+
+    // Update sessions and re-sort
+    setSessions((prev) => {
+      const next = prev.map((s) =>
+        s.key === key ? { ...s, pinned: newPinned } : s
+      );
+      // Re-sort only if no custom order
+      if (!customOrderRef.current) {
+        next.sort((a, b) => {
+          const pa = a.pinned ? 1 : 0;
+          const pb = b.pinned ? 1 : 0;
+          if (pa !== pb) return pb - pa;
+          return b.updatedAt - a.updatedAt;
+        });
+      }
+      return next;
+    });
+  }, [agentId]);
+
+  // Rename session
+  const renameSession = useCallback((key: string, title: string | null) => {
+    // Optimistic update
+    const meta = metaMapRef.current.get(key);
+    const updated = { ...meta, key, customTitle: title } as SessionMeta;
+    metaMapRef.current.set(key, updated);
+
+    // Persist to localStorage
+    updateSessionMeta(agentId, key, { customTitle: title });
+
+    // Update sessions
+    setSessions((prev) =>
+      prev.map((s) =>
+        s.key === key ? { ...s, title: title || s.title } : s
+      )
+    );
+  }, [agentId]);
+
+  // Reorder sessions
+  const reorderSessions = useCallback((fromIndex: number, toIndex: number) => {
+    if (fromIndex === toIndex) return;
+
+    setSessions((prev) => {
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+
+      // Save new order
+      customOrderRef.current = next.map((s) => s.key);
+      setCustomOrder(agentId, customOrderRef.current);
+
+      return next;
+    });
+  }, [agentId]);
+
+  // Refresh sessions list
+  const refreshSessions = useCallback(() => {
+    if (connected && client) {
+      fetchSessionsList();
+    }
+  }, [connected, client, fetchSessionsList]);
+
+  // Get active session messages from cache
+  const getActiveMessages = useCallback((): ChatMessage[] => {
+    const cached = cacheRef.current.get(activeKeyRef.current);
+    return cached?.messages ?? [];
+  }, []);
+
+  // Update active session messages in cache
+  const updateActiveMessages = useCallback((messages: ChatMessage[]) => {
+    cacheRef.current.set(activeKeyRef.current, {
+      messages,
+      lastAccessed: Date.now(),
+    });
+  }, []);
+
+  // Get active session
+  const activeSession = sessions.find((s) => s.key === activeKey) ?? null;
+
+  return {
+    sessions,
+    activeSessionKey: activeKey,
+    activeSession,
+    isLoading,
+    switchSession,
+    createNewSession,
+    archiveSession,
+    togglePin,
+    renameSession,
+    reorderSessions,
+    refreshSessions,
+    getActiveMessages,
+    updateActiveMessages,
+  };
+}
