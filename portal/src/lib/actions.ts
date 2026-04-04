@@ -73,6 +73,18 @@ export async function restartAgent(id: string) {
   return { success: true };
 }
 
+export async function resetAgent(id: string) {
+  const res = await fetchWithAuth(`/api/v1/agents/${id}/reset`, {
+    method: "POST",
+  });
+  const data = (await res.json()) as ApiResponse;
+  if (!res.ok || data.code !== 0) {
+    return { error: data.message || "Failed to reset agent" };
+  }
+  revalidatePath(`/agents/${id}`);
+  return { success: true };
+}
+
 export async function deleteAgent(id: string) {
   const res = await fetchWithAuth(`/api/v1/agents/${id}`, {
     method: "DELETE",

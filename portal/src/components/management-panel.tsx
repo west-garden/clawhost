@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { ConfirmDialog } from "./confirm-dialog";
 import { ChannelList } from "./channel-list";
 import { useAgentStatus } from "@/hooks/use-agent-status";
-import { deleteAgent, resetAgentToken, restartAgent } from "@/lib/actions";
+import { deleteAgent, resetAgentToken, resetAgent } from "@/lib/actions";
 import type { AgentDetail, AgentConnectResponse } from "@/types";
 import {
   Copy,
@@ -31,7 +31,7 @@ export function ManagementPanel({
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [resetTokenOpen, setResetTokenOpen] = useState(false);
-  const [restartOpen, setRestartOpen] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
 
   const { status: liveStatus } = useAgentStatus(agent.id, true);
   const currentStatus = liveStatus?.status ?? agent.status;
@@ -61,16 +61,16 @@ export function ManagementPanel({
     setActionLoading(null);
   }
 
-  async function handleRestart() {
-    setActionLoading("restart");
-    const result = await restartAgent(agent.id);
+  async function handleReset() {
+    setActionLoading("reset");
+    const result = await resetAgent(agent.id);
     if (result.error) {
       toast.error(result.error);
     } else {
-      toast.success(t("agent.restartSuccess"));
+      toast.success(t("agent.resetSuccess"));
       router.refresh();
     }
-    setRestartOpen(false);
+    setResetOpen(false);
     setActionLoading(null);
   }
 
@@ -93,7 +93,7 @@ export function ManagementPanel({
         </div>
         <div className="glass-panel-content">
           <button
-            onClick={() => setRestartOpen(true)}
+            onClick={() => setResetOpen(true)}
             className="w-full flex items-center gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors text-left"
           >
             <div className="w-9 h-9 rounded-lg bg-muted flex items-center justify-center">
@@ -102,7 +102,7 @@ export function ManagementPanel({
             <div>
               <p className="text-sm font-medium text-foreground">重置 Agent</p>
               <p className="text-xs text-muted-foreground">
-                强制重启 Agent，清除所有运行状态
+                恢复初始状态，清除运行时配置（保留模型配置）
               </p>
             </div>
           </button>
@@ -152,29 +152,6 @@ export function ManagementPanel({
                 </div>
 
                 <div className="h-px bg-border" />
-
-                {connectInfo.endpoint && (
-                  <>
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">
-                          {t("agent.connect.apiEndpoint")}
-                        </p>
-                        <p className="text-xs text-muted-foreground truncate font-mono">
-                          {connectInfo.endpoint}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => copyToClipboard(connectInfo.endpoint!)}
-                        className="glass-btn-secondary py-1.5 px-3 text-xs shrink-0"
-                      >
-                        <Copy className="w-3.5 h-3.5" />
-                        <span>{t("common.copy")}</span>
-                      </button>
-                    </div>
-                    <div className="h-px bg-border" />
-                  </>
-                )}
 
                 <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
@@ -241,12 +218,12 @@ export function ManagementPanel({
 
       {/* Dialogs */}
       <ConfirmDialog
-        open={restartOpen}
-        onOpenChange={setRestartOpen}
+        open={resetOpen}
+        onOpenChange={setResetOpen}
         title="重置 Agent"
-        description="确定要重置此 Agent 吗？这将强制重启并清除所有运行状态。"
-        loading={actionLoading === "restart"}
-        onConfirm={handleRestart}
+        description="确定要重置此 Agent 吗？这将清除运行时配置（微信绑定、定时任务等），恢复初始状态。模型配置将保留。"
+        loading={actionLoading === "reset"}
+        onConfirm={handleReset}
       />
       <ConfirmDialog
         open={resetTokenOpen}
