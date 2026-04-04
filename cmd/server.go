@@ -146,6 +146,12 @@ func startServer() {
 		api.POST("/providers/validate-custom", v1.ValidateCustomProviderApiKey)
 	}
 
+	// Public marketplace routes (no auth required)
+	marketplace := e.Group("/api/v1/marketplace")
+	{
+		marketplace.GET("/skills", v1.ListMarketplaceSkills)
+	}
+
 	// Agent instance routes: require ownership validation
 	agentAPI := api.Group("/agents/:id")
 	agentAPI.Use(authmw.AgentOwnerAuth()) // Verify authenticated user owns the agent
@@ -169,6 +175,7 @@ func startServer() {
 		agentAPI.PUT("/skills/:name", v1.UpdateSkill)
 		agentAPI.DELETE("/skills/:name", v1.DeleteSkill)
 		agentAPI.POST("/skills/install", v1.InstallSkill)
+		agentAPI.POST("/skills/install-marketplace", v1.InstallMarketplaceSkill)
 		agentAPI.POST("/skills/create", v1.CreateSkill)
 
 		// Cron job management
