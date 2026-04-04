@@ -153,12 +153,16 @@ export interface ChatMessage {
 }
 
 export interface ChatSession {
+  key?: string; // Gateway session key
   id: string;
   title: string;
   model: string;
   messages: ChatMessage[];
   createdAt: number;
   updatedAt: number;
+  pinned?: boolean; // 置顶状态
+  unread?: boolean; // 未读标记
+  _isStreaming?: boolean; // 内部使用：流式消息标记
 }
 
 export interface SessionsStorage {
@@ -189,4 +193,58 @@ export interface MarketplaceSkill {
   category: string;
   tags: string[];
   path: string;
+}
+
+// --- Gateway Types ---
+
+export interface GatewaySession {
+  key: string;
+  displayName?: string;
+  derivedTitle?: string;
+  kind?: string;
+  channel?: string;
+  lastChannel?: string;
+  updatedAt?: number;
+  totalTokens?: number;
+  totalTokensFresh?: boolean;
+  spawnedBy?: boolean;
+}
+
+export interface GatewaySessionsListResult {
+  sessions: GatewaySession[];
+}
+
+export interface GatewayMessage {
+  role: "user" | "assistant";
+  content: string | Array<{ type: "text"; text: string }>;
+  timestamp?: number;
+  idempotencyKey?: string;
+}
+
+export interface GatewayChatHistoryResult {
+  messages?: GatewayMessage[];
+}
+
+export interface ChatEventPayload {
+  state?: "delta" | "final" | "error" | "aborted";
+  runId?: string;
+  sessionKey?: string;
+  message?: GatewayMessage;
+  errorMessage?: string;
+}
+
+export interface AgentEventPayload {
+  runId?: string;
+  stream?: "lifecycle" | "tool" | "assistant";
+  sessionKey?: string;
+  data?: Record<string, unknown>;
+}
+
+// --- Session Metadata (localStorage) ---
+
+export interface SessionMeta {
+  key: string;
+  pinned?: boolean;
+  customTitle?: string | null;
+  archivedAt?: number | null;
 }
