@@ -19,6 +19,12 @@ interface ChatPanelProps {
   onUpdateLastAssistantMessage: (content: string, sessionId?: string) => void;
   onSetModel: (model: string) => void;
   providers: Record<string, ProviderWithModels>;
+  // WebSocket mode props
+  isConnected?: boolean;
+  isConnecting?: boolean;
+  isStreaming?: boolean;
+  sendMessage?: (text: string) => void;
+  abortGeneration?: () => void;
 }
 
 export function ChatPanel({
@@ -30,11 +36,19 @@ export function ChatPanel({
   onUpdateLastAssistantMessage,
   onSetModel,
   providers,
+  // WebSocket mode
+  isConnected: wsConnected,
+  isConnecting: wsConnecting,
+  isStreaming: wsStreaming,
+  sendMessage: wsSendMessage,
+  abortGeneration: wsAbortGeneration,
 }: ChatPanelProps) {
   const t = useTranslations("chat");
   const ta = useTranslations("agent");
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
+  // Use WebSocket streaming state if available
+  const effectiveStreaming = wsStreaming ?? isStreaming;
   const [warningDismissed, setWarningDismissed] = useState(false);
   const [startLoading, setStartLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -78,8 +92,16 @@ export function ChatPanel({
 
   async function handleSend() {
     const text = input.trim();
-    if (!text || isStreaming || !isRunning || !activeSession) return;
+    if (!text || effectiveStreaming || !isRunning || !activeSession) return;
 
+    // WebSocket mode
+    if (wsSendMessage && wsConnected) {
+      setInput("");
+      wsSendMessage(text);
+      return;
+    }
+
+    // HTTP fallback (for backward compatibility)
     // Check gateway connection
     if (!isConnected) {
       toast.error(t("gatewayDisconnected"));
@@ -276,31 +298,31 @@ export function ChatPanel({
           <div className="flex items-center gap-2 mb-2 text-xs">
             <span
               className={`inline-flex items-center gap-1.5 ${
-                isConnected
+                wsConnected
                   ? "text-emerald-600 dark:text-emerald-400"
-                  : isConnecting
+                  : wsConnecting
                     ? "text-yellow-600 dark:text-yellow-400"
                     : "text-red-600 dark:text-red-400"
               }`}
             >
               <span
                 className={`w-2 h-2 rounded-full ${
-                  isConnected
+                  wsConnected
                     ? "bg-emerald-500"
-                    : isConnecting
+                    : wsConnecting
                       ? "bg-yellow-500 animate-pulse"
                       : "bg-red-500"
                 }`}
               />
-              {isConnected ? (
+              {wsConnected ? (
                 <Wifi className="w-3.5 h-3.5" />
               ) : (
                 <WifiOff className="w-3.5 h-3.5" />
               )}
               <span>
-                {isConnected
+                {wsConnected
                   ? t("connected")
-                  : isConnecting
+                  : wsConnecting
                     ? t("connecting")
                     : t("disconnected")}
               </span>
@@ -315,7 +337,7 @@ export function ChatPanel({
               providers={providers}
               value={activeSession.model}
               onChange={onSetModel}
-              disabled={isStreaming}
+              disabled={effectiveStreaming}
             />
           </div>
         )}
@@ -338,7 +360,7 @@ export function ChatPanel({
           />
           <button
             onClick={handleSend}
-            disabled={!input.trim() || isStreaming || !activeSession}
+            disabled={!input.trim() || effectiveStreaming || !activeSession || (wsSendMessage && !wsConnected)}
             className="chat-send-btn"
           >
             <Send className="w-4 h-4" />
