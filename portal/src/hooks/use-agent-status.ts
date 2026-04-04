@@ -5,27 +5,25 @@ import type { AgentStatusResponse, ApiResponse } from "@/types";
 const fetcher = (url: string) =>
   fetch(url).then((r) => r.json()) as Promise<ApiResponse<AgentStatusResponse>>;
 
-export function useAgentStatus(agentId: string, enabled = true) {
-  const stableTimerRef = useRef<NodeJS.Timeout | null>(null);
+interface UseAgentStatusOptions {
+  enabled?: boolean;
+  pauseWhen?: boolean; // Pause polling when this condition is true (e.g., WebSocket connected)
+}
+
+export function useAgentStatus(agentId: string, options?: UseAgentStatusOptions | boolean) {
+  // Support legacy boolean argument for backwards compatibility
+  const enabled = typeof options === "boolean" ? options : options?.enabled ?? true;
+  const pauseWhen = typeof options === "boolean" ? false : options?.pauseWhen ?? false;
 
   const { data, error, isLoading, mutate } = useSWR(
     enabled ? `/api/agents/${agentId}/status` : null,
     fetcher,
     {
-      // Poll every 5s (simple, reliable)
-      refreshInterval: enabled ? 5000 : 0,
+      // Poll every 5s, but pause when pauseWhen is true (e.g., WebSocket connected)
+      refreshInterval: enabled && !pauseWhen ? 5000 : 0,
       revalidateOnReconnect: true,
     }
   );
-
-  // Cleanup timer on unmount
-  useEffect(() => {
-    return () => {
-      if (stableTimerRef.current) {
-        clearTimeout(stableTimerRef.current);
-      }
-    };
-  }, []);
 
   return {
     status: data?.data,

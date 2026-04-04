@@ -139,9 +139,6 @@ export function ManagementPanel({
                     <p className="text-base text-foreground truncate font-mono break-all">
                       {connectInfo.webchat_url}
                     </p>
-                    <p className="text-sm text-yellow-600 dark:text-yellow-500 mt-1.5">
-                      {t("agent.connect.webuiHint")}
-                    </p>
                   </div>
                   <button
                     onClick={() =>

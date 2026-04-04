@@ -62,6 +62,24 @@ func AddChannelToAgent(ctx context.Context, botID, accessToken, channel, account
 		channelLevelConfig["enabled"] = true
 	}
 
+	// Validate dmPolicy="open" requires allowFrom to include "*"
+	// OpenClaw validation: channels.telegram.dmPolicy="open" requires allowFrom to include "*"
+	if dmPolicy, ok := channelLevelConfig["dmPolicy"].(string); ok && dmPolicy == "open" {
+		allowFrom, _ := channelLevelConfig["allowFrom"].([]interface{})
+		hasWildcard := false
+		for _, v := range allowFrom {
+			if s, ok := v.(string); ok && s == "*" {
+				hasWildcard = true
+				break
+			}
+		}
+		if !hasWildcard {
+			// Auto-add "*" to allowFrom when dmPolicy="open"
+			allowFrom = append(allowFrom, "*")
+			channelLevelConfig["allowFrom"] = allowFrom
+		}
+	}
+
 	// Add/update channel account in config using multi-account structure
 	// Structure: channels.{channel}.{enabled, dmPolicy, ...}.accounts.{account}
 	if existingConfig["channels"] == nil {

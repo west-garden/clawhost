@@ -292,6 +292,23 @@ export function ChatPanel({
             </div>
           </div>
         ))}
+
+        {/* Typing indicator when streaming but no assistant message yet */}
+        {effectiveStreaming && !messages.some((m) => m.role === "assistant" && m._isStreaming) && (
+          <div className="flex gap-2.5 items-start">
+            <div className="w-7 h-7 rounded-md flex items-center justify-center text-[10px] font-semibold flex-shrink-0 mt-0.5 bg-primary text-primary-foreground">
+              {initial}
+            </div>
+            <div className="chat-bubble chat-bubble-bot">
+              <div className="flex items-center gap-1">
+                <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "0ms" }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "150ms" }} />
+                <span className="w-1.5 h-1.5 rounded-full bg-muted-foreground animate-bounce" style={{ animationDelay: "300ms" }} />
+              </div>
+            </div>
+          </div>
+        )}
+
         <div ref={messagesEndRef} />
       </div>
 

@@ -33,16 +33,8 @@ export function ChatPageClient({
     return "default";
   })();
 
-  // Agent status - poll for updates
+  // Agent status - poll for updates, pause when WebSocket connected
   const [currentStatus, setCurrentStatus] = useState(initialStatus);
-  const { status: agentStatusData } = useAgentStatus(agentId);
-
-  // Update currentStatus when agent status changes
-  useEffect(() => {
-    if (agentStatusData?.status) {
-      setCurrentStatus(agentStatusData.status);
-    }
-  }, [agentStatusData?.status]);
 
   // Gateway connection with event handling
   const handleGatewayEvent = useCallback((evt: GatewayEvent) => {
@@ -57,6 +49,18 @@ export function ChatPageClient({
 
   const isConnected = connectionState === "connected";
   const isConnecting = connectionState === "connecting";
+
+  // Pause polling when WebSocket is connected (no redundant requests)
+  const { status: agentStatusData } = useAgentStatus(agentId, {
+    pauseWhen: isConnected,
+  });
+
+  // Update currentStatus when agent status changes
+  useEffect(() => {
+    if (agentStatusData?.status) {
+      setCurrentStatus(agentStatusData.status);
+    }
+  }, [agentStatusData?.status]);
 
   // Session management
   const {

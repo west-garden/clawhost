@@ -78,12 +78,16 @@ func ReadAgentRawConfig(ctx context.Context, botID string) (map[string]interface
 }
 
 // WriteAgentRawConfig writes a full openclaw.json config to a running agent's pod
+// Validates channel dmPolicy="open" requires allowFrom to include "*"
 func WriteAgentRawConfig(ctx context.Context, botID string, config map[string]interface{}) error {
 	namespace := GetNamespace()
 	podName, err := WaitForPodReady(ctx, botID, 10)
 	if err != nil {
 		return fmt.Errorf("pod not ready: %w", err)
 	}
+
+	// Validate and fix channel dmPolicy="open" configs
+	validateChannelDMPolicies(config)
 
 	configJSON, err := json.MarshalIndent(config, "", "  ")
 	if err != nil {
@@ -96,6 +100,44 @@ func WriteAgentRawConfig(ctx context.Context, botID string, config map[string]in
 		return fmt.Errorf("failed to write config: %w", err)
 	}
 	return nil
+}
+
+// validateChannelDMPolicies ensures all channels with dmPolicy="open" have allowFrom=["*"]
+// OpenClaw validation: channels.{channel}.dmPolicy="open" requires allowFrom to include "*"
+func validateChannelDMPolicies(config map[string]interface{}) {
+	channels, ok := config["channels"].(map[string]interface{})
+	if !ok {
+		return
+	}
+
+	for _, channelData := range channels {
+		channelConfig, ok := channelData.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		// Check if dmPolicy="open"
+		dmPolicy, ok := channelConfig["dmPolicy"].(string)
+		if !ok || dmPolicy != "open" {
+			continue
+		}
+
+		// Check if allowFrom already contains "*"
+		allowFrom, _ := channelConfig["allowFrom"].([]interface{})
+		hasWildcard := false
+		for _, v := range allowFrom {
+			if s, ok := v.(string); ok && s == "*" {
+				hasWildcard = true
+				break
+			}
+		}
+
+		// Auto-add "*" to allowFrom when dmPolicy="open"
+		if !hasWildcard {
+			allowFrom = append(allowFrom, "*")
+			channelConfig["allowFrom"] = allowFrom
+		}
+	}
 }
 
 // readExistingConfig reads the existing openclaw.json config from the pod
