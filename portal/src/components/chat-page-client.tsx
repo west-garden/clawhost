@@ -6,6 +6,7 @@ import { ChatSessionSidebar } from "@/components/chat-session-sidebar";
 import { useGatewayConnection } from "@/hooks/use-gateway-connection";
 import { useWsChatSessions } from "@/hooks/use-ws-chat-sessions";
 import { useWsChat } from "@/hooks/use-ws-chat";
+import { useAgentStatus } from "@/hooks/use-agent-status";
 import type { GatewayEvent } from "@/lib/gateway-client";
 import type { AgentStatus, ProviderWithModels } from "@/types";
 
@@ -32,8 +33,16 @@ export function ChatPageClient({
     return "default";
   })();
 
-  // Agent status
+  // Agent status - poll for updates
   const [currentStatus, setCurrentStatus] = useState(initialStatus);
+  const { status: agentStatusData } = useAgentStatus(agentId);
+
+  // Update currentStatus when agent status changes
+  useEffect(() => {
+    if (agentStatusData?.status) {
+      setCurrentStatus(agentStatusData.status);
+    }
+  }, [agentStatusData?.status]);
 
   // Gateway connection with event handling
   const handleGatewayEvent = useCallback((evt: GatewayEvent) => {
