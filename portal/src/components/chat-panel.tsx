@@ -282,14 +282,14 @@ export function ChatPanel({
             onKeyDown={handleKeyDown}
             placeholder={t("inputPlaceholder")}
             rows={1}
-            className="flex-1 bg-transparent text-sm text-foreground placeholder-muted-foreground resize-none outline-none max-h-32 leading-relaxed"
+            className="chat-textarea placeholder:text-muted-foreground"
           />
           <button
             onClick={handleSend}
             disabled={!input.trim() || isStreaming || !activeSession}
-            className="glass-btn py-2 px-3 text-sm gap-1.5 disabled:opacity-30 disabled:cursor-not-allowed"
+            className="chat-send-btn"
           >
-            <Send className="w-3.5 h-3.5" />
+            <Send className="w-4 h-4" />
             <span>{t("send")}</span>
           </button>
         </div>
