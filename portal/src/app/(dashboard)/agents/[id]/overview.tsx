@@ -90,7 +90,20 @@ export function AgentOverview({
   }
 
   function copyToClipboard(text: string) {
-    navigator.clipboard.writeText(text);
+    // Try modern API first (requires HTTPS or localhost)
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(text);
+    } else {
+      // Fallback for non-secure contexts (IP address access)
+      const textarea = document.createElement("textarea");
+      textarea.value = text;
+      textarea.style.position = "fixed";
+      textarea.style.left = "-9999px";
+      document.body.appendChild(textarea);
+      textarea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textarea);
+    }
     toast.success(t("common.copied"));
   }
 
