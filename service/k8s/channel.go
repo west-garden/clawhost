@@ -318,6 +318,83 @@ func readOpenClawConfig(ctx context.Context, namespace, podName string) (map[str
 	return config, nil
 }
 
+// FixAgentConfigDMPolicies reads the agent config and fixes any dmPolicy="open" channels missing allowFrom=["*"]
+// This is used to fix existing configs that were created before the validation was added
+func FixAgentConfigDMPolicies(ctx context.Context, botID string) error {
+	namespace := GetNamespace()
+
+	podName, err := WaitForPodReady(ctx, botID, 30)
+	if err != nil {
+		return fmt.Errorf("failed to get pod: %w", err)
+	}
+
+	// Read existing config
+	config, err := readOpenClawConfig(ctx, namespace, podName)
+	if err != nil {
+		return fmt.Errorf("failed to read config: %w", err)
+	}
+
+	// Fix dmPolicy="open" channels
+	fixed := fixChannelDMPolicies(config)
+	if !fixed {
+		return nil // No fixes needed
+	}
+
+	// Write updated config
+	if err := writeOpenClawConfig(ctx, namespace, podName, config); err != nil {
+		return fmt.Errorf("failed to write config: %w", err)
+	}
+
+	// Sync config to database
+	if err := SyncConfigToDatabase(ctx, botID); err != nil {
+		fmt.Printf("Warning: failed to sync config to database: %v\n", err)
+	}
+
+	return nil
+}
+
+// fixChannelDMPolicies validates and fixes all channels with dmPolicy="open"
+// Returns true if any fixes were made
+func fixChannelDMPolicies(config map[string]interface{}) bool {
+	channels, ok := config["channels"].(map[string]interface{})
+	if !ok {
+		return false
+	}
+
+	fixed := false
+	for _, channelData := range channels {
+		channelConfig, ok := channelData.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		// Check if dmPolicy="open"
+		dmPolicy, ok := channelConfig["dmPolicy"].(string)
+		if !ok || dmPolicy != "open" {
+			continue
+		}
+
+		// Check if allowFrom already contains "*"
+		allowFrom, _ := channelConfig["allowFrom"].([]interface{})
+		hasWildcard := false
+		for _, v := range allowFrom {
+			if s, ok := v.(string); ok && s == "*" {
+				hasWildcard = true
+				break
+			}
+		}
+
+		// Auto-add "*" to allowFrom when dmPolicy="open"
+		if !hasWildcard {
+			allowFrom = append(allowFrom, "*")
+			channelConfig["allowFrom"] = allowFrom
+			fixed = true
+		}
+	}
+
+	return fixed
+}
+
 // writeOpenClawConfig writes the openclaw.json config file to the pod
 func writeOpenClawConfig(ctx context.Context, namespace, podName string, config map[string]interface{}) error {
 	configJSON, err := json.MarshalIndent(config, "", "  ")

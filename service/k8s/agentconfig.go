@@ -56,6 +56,15 @@ func WriteConfigToAgent(ctx context.Context, botID string, config *AgentConfig, 
 		return fmt.Errorf("failed to marshal config: %w", err)
 	}
 
+	// Validate and fix channel dmPolicy="open" configs
+	validateChannelDMPolicies(mergedConfig)
+
+	// Re-marshal after validation fixes
+	configJSON, err = json.MarshalIndent(mergedConfig, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal config: %w", err)
+	}
+
 	// Write config file to OpenClaw's config directory
 	command := []string{"sh", "-c", fmt.Sprintf("cat > /home/node/.openclaw/openclaw.json << 'EOFCONFIG'\n%s\nEOFCONFIG", string(configJSON))}
 

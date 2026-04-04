@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useRef, useCallback } from "react";
 import type { GatewayClient, GatewayEvent } from "@/lib/gateway-client";
 import type { ChatMessage, ChatEventPayload } from "@/types";
 
@@ -10,10 +10,11 @@ interface UseWsChatOptions {
   sessionKey: string;
   getMessages: () => ChatMessage[];
   updateMessages: (messages: ChatMessage[]) => void;
+  getIsStreaming: (sessionKey: string) => boolean;
+  setIsStreaming: (sessionKey: string, value: boolean) => void;
 }
 
 interface UseWsChatReturn {
-  isStreaming: boolean;
   sendMessage: (text: string) => void;
   abortGeneration: () => void;
   handleEvent: (evt: GatewayEvent) => void;
@@ -25,8 +26,9 @@ export function useWsChat({
   sessionKey,
   getMessages,
   updateMessages,
+  getIsStreaming,
+  setIsStreaming,
 }: UseWsChatOptions): UseWsChatReturn {
-  const [isStreaming, setIsStreaming] = useState(false);
   const streamingTextRef = useRef("");
   const runIdRef = useRef<string | null>(null);
 
@@ -124,7 +126,7 @@ export function useWsChat({
 
           streamingTextRef.current = "";
           runIdRef.current = null;
-          setIsStreaming(false);
+          setIsStreaming(sessionKeyRef.current, false);
           break;
         }
 
@@ -146,7 +148,7 @@ export function useWsChat({
 
           streamingTextRef.current = "";
           runIdRef.current = null;
-          setIsStreaming(false);
+          setIsStreaming(sessionKeyRef.current, false);
           break;
         }
 
@@ -166,7 +168,7 @@ export function useWsChat({
 
           streamingTextRef.current = "";
           runIdRef.current = null;
-          setIsStreaming(false);
+          setIsStreaming(sessionKeyRef.current, false);
           break;
         }
       }
@@ -194,7 +196,7 @@ export function useWsChat({
     ];
     updateMessages(updatedMessages);
 
-    setIsStreaming(true);
+    setIsStreaming(sessionKeyRef.current, true);
 
     // Send to Gateway
     client.request("chat.send", {
@@ -203,7 +205,7 @@ export function useWsChat({
       idempotencyKey,
     }).catch((err) => {
       console.error("[useWsChat] Send failed:", err);
-      setIsStreaming(false);
+      setIsStreaming(sessionKeyRef.current, false);
 
       // Add error message
       const currentMessages = getMessages();
@@ -230,7 +232,6 @@ export function useWsChat({
   }, [client, connected, sessionKey]);
 
   return {
-    isStreaming,
     sendMessage,
     abortGeneration,
     handleEvent,

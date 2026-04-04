@@ -73,6 +73,9 @@ func WriteOpenClawConfigToPod(ctx context.Context, botID string, config *model.O
 		return fmt.Errorf("failed to get pod: %w", err)
 	}
 
+	// Validate and fix channel dmPolicy="open" configs
+	ValidateOpenClawChannels(config)
+
 	configJSON, err := json.MarshalIndent(config, "", "  ")
 	if err != nil {
 		return fmt.Errorf("failed to marshal config: %w", err)
@@ -88,11 +91,49 @@ func WriteOpenClawConfigToPod(ctx context.Context, botID string, config *model.O
 	return nil
 }
 
+// ValidateOpenClawChannels ensures all channels with dmPolicy="open" have allowFrom=["*"]
+// OpenClaw validation: channels.{channel}.dmPolicy="open" requires allowFrom to include "*"
+func ValidateOpenClawChannels(config *model.OpenClawConfig) {
+	if config.Channels == nil {
+		return
+	}
+
+	for _, channelData := range config.Channels {
+		channelConfig, ok := channelData.(map[string]interface{})
+		if !ok {
+			continue
+		}
+
+		// Check if dmPolicy="open"
+		dmPolicy, ok := channelConfig["dmPolicy"].(string)
+		if !ok || dmPolicy != "open" {
+			continue
+		}
+
+		// Check if allowFrom already contains "*"
+		allowFrom, _ := channelConfig["allowFrom"].([]interface{})
+		hasWildcard := false
+		for _, v := range allowFrom {
+			if s, ok := v.(string); ok && s == "*" {
+				hasWildcard = true
+				break
+			}
+		}
+
+		// Auto-add "*" to allowFrom when dmPolicy="open"
+		if !hasWildcard {
+			allowFrom = append(allowFrom, "*")
+			channelConfig["allowFrom"] = allowFrom
+		}
+	}
+}
+
 // SyncSectionsToPod reads existing config from the pod, merges only the specified
 // sections from the database, and writes back. Uses node inside the pod to do the
 // merge so that JSON key ordering of unchanged sections (especially gateway) is
 // preserved, preventing openclaw's hot-reload from detecting a false gateway change.
 // Always updates gateway.auth.token to ensure it matches bot's AccessToken.
+// Validates channel dmPolicy="open" configs to auto-add allowFrom=["*"].
 func SyncSectionsToPod(ctx context.Context, botID string, sections ...string) error {
 	namespace := GetNamespace()
 
@@ -110,6 +151,9 @@ func SyncSectionsToPod(ctx context.Context, botID string, sections ...string) er
 	if err != nil {
 		return fmt.Errorf("failed to get config: %w", err)
 	}
+
+	// Validate and fix channel dmPolicy="open" configs before merging
+	ValidateOpenClawChannels(dbConfig)
 
 	// Marshal DB config to a generic map to extract sections
 	dbJSON, err := json.Marshal(dbConfig)

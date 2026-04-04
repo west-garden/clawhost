@@ -77,6 +77,8 @@ export function ChatPageClient({
     refreshSessions,
     getActiveMessages,
     updateActiveMessages,
+    getIsStreaming,
+    setIsStreaming,
   } = useWsChatSessions({
     agentId,
     client,
@@ -93,11 +95,13 @@ export function ChatPageClient({
     sessionKey: activeSessionKey,
     getMessages: getActiveMessages,
     updateMessages: updateActiveMessages,
+    getIsStreaming,
+    setIsStreaming,
   });
   wsChatRef.current = wsChat;
 
   const messages = getActiveMessages();
-  const isStreaming = wsChat.isStreaming;
+  const isStreaming = activeSessionKey ? getIsStreaming(activeSessionKey) : false;
 
   // Update session messages in sidebar when they change
   const sessionsWithMessages = sessions.map((s) => ({

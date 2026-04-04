@@ -26,6 +26,14 @@ func RestartAgent(c echo.Context) error {
 	openclawConfig, _ := agent.GetOpenClawConfig()
 	k8sConfig := convertToK8sConfig(agent, openclawConfig)
 
+	// Fix dmPolicy="open" channels in the stored config before restarting
+	// This ensures the pod starts with a valid config
+	if openclawConfig != nil {
+		k8s.ValidateOpenClawChannels(openclawConfig)
+		agent.SetOpenClawConfig(openclawConfig)
+		model.UpdateAgent(agent)
+	}
+
 	// Replace deployment spec with rolling update -- picks up all changes
 	// (ChatClaw sidecar, image updates, resource changes) without downtime
 	if err := k8s.ReplaceDeployment(ctx, agent.ID, agent.UserID, agent.AccessToken, k8sConfig); err != nil {

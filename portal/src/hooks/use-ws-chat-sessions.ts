@@ -49,6 +49,7 @@ function parseMessages(messages: GatewayMessage[] | undefined): ChatMessage[] {
 interface SessionCache {
   messages: ChatMessage[];
   lastAccessed: number;
+  isStreaming: boolean;
 }
 
 interface UseWsChatSessionsOptions {
@@ -71,6 +72,8 @@ interface UseWsChatSessionsReturn {
   refreshSessions: () => void;
   getActiveMessages: () => ChatMessage[];
   updateActiveMessages: (messages: ChatMessage[]) => void;
+  getIsStreaming: (sessionKey: string) => boolean;
+  setIsStreaming: (sessionKey: string, value: boolean) => void;
 }
 
 export function useWsChatSessions({
@@ -259,6 +262,7 @@ export function useWsChatSessions({
     cacheRef.current.set(key, {
       messages,
       lastAccessed: Date.now(),
+      isStreaming: false,
     });
   }, [loadHistory]);
 
@@ -282,6 +286,7 @@ export function useWsChatSessions({
     cacheRef.current.set(newKey, {
       messages: [],
       lastAccessed: Date.now(),
+      isStreaming: false,
     });
 
     // Save to localStorage (persist across refresh until Gateway creates it)
@@ -414,9 +419,27 @@ export function useWsChatSessions({
 
   // Update active session messages in cache
   const updateActiveMessages = useCallback((messages: ChatMessage[]) => {
+    const cached = cacheRef.current.get(activeKeyRef.current);
     cacheRef.current.set(activeKeyRef.current, {
       messages,
       lastAccessed: Date.now(),
+      isStreaming: cached?.isStreaming ?? false,
+    });
+  }, []);
+
+  // Get streaming state for a specific session
+  const getIsStreaming = useCallback((sessionKey: string): boolean => {
+    const cached = cacheRef.current.get(sessionKey);
+    return cached?.isStreaming ?? false;
+  }, []);
+
+  // Set streaming state for a specific session
+  const setIsStreaming = useCallback((sessionKey: string, value: boolean) => {
+    const cached = cacheRef.current.get(sessionKey);
+    cacheRef.current.set(sessionKey, {
+      messages: cached?.messages ?? [],
+      lastAccessed: cached?.lastAccessed ?? Date.now(),
+      isStreaming: value,
     });
   }, []);
 
@@ -437,5 +460,7 @@ export function useWsChatSessions({
     refreshSessions,
     getActiveMessages,
     updateActiveMessages,
+    getIsStreaming,
+    setIsStreaming,
   };
 }
