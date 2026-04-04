@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { TaskList } from "@/components/task-list";
 import { listCronJobs } from "@/lib/actions";
+import { useAgent } from "@/contexts/agent-context";
 
 interface CronJob {
   id: string;
@@ -22,12 +23,20 @@ export default function TasksPage() {
   const params = useParams();
   const agentId = params.id as string;
 
+  const { isRunning } = useAgent();
+
   const [jobs, setJobs] = useState<CronJob[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Skip if agent is not running
+    if (!isRunning) {
+      setLoading(false);
+      setJobs([]);
+      return;
+    }
     loadJobs();
-  }, [agentId]);
+  }, [agentId, isRunning]);
 
   async function loadJobs() {
     setLoading(true);

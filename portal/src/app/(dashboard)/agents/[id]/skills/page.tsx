@@ -9,6 +9,7 @@ import { SkillList } from "@/components/skill-list";
 import { SkillInstallDialog } from "@/components/skill-install-dialog";
 import { SkillCreateDialog } from "@/components/skill-create-dialog";
 import { listSkills } from "@/lib/actions";
+import { useAgent } from "@/contexts/agent-context";
 import { Download, Plus } from "lucide-react";
 
 interface Skill {
@@ -20,14 +21,22 @@ export default function SkillsPage() {
   const params = useParams();
   const agentId = params.id as string;
 
+  const { isRunning } = useAgent();
+
   const [skills, setSkills] = useState<Skill[]>([]);
   const [loading, setLoading] = useState(true);
   const [installOpen, setInstallOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
 
   useEffect(() => {
+    // Skip if agent is not running
+    if (!isRunning) {
+      setLoading(false);
+      setSkills([]);
+      return;
+    }
     loadSkills();
-  }, [agentId]);
+  }, [agentId, isRunning]);
 
   async function loadSkills() {
     setLoading(true);
@@ -52,6 +61,7 @@ export default function SkillsPage() {
               size="sm"
               variant="outline"
               onClick={() => setInstallOpen(true)}
+              disabled={!isRunning}
             >
               <Download className="w-4 h-4 mr-1" />
               {t("agent.skills.install")}
@@ -59,6 +69,7 @@ export default function SkillsPage() {
             <Button
               size="sm"
               onClick={() => setCreateOpen(true)}
+              disabled={!isRunning}
             >
               <Plus className="w-4 h-4 mr-1" />
               {t("agent.skills.create")}
