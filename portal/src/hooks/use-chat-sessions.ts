@@ -45,6 +45,17 @@ export function useChatSessions({
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const storageRef = useRef<SessionsStorage>(storage);
 
+  // Immediate save function (called on critical updates)
+  const saveImmediately = useCallback(() => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+      saveTimeoutRef.current = null;
+    }
+    if (storageRef.current.sessions.length > 0 || storageRef.current.activeSessionId) {
+      saveSessions(agentId, storageRef.current);
+    }
+  }, [agentId]);
+
   // Load sessions from localStorage on mount
   useEffect(() => {
     const loaded = getSessions(agentId);
@@ -122,14 +133,18 @@ export function useChatSessions({
 
   const updateActiveSession = useCallback(
     (updater: (session: ChatSession) => ChatSession) => {
-      if (!activeSession) return;
-      const updated = updater(activeSession);
-      const newSessions = storage.sessions.map((s) =>
-        s.id === updated.id ? updated : s
-      );
-      updateStorage({ ...storage, sessions: newSessions });
+      setStorage((prev) => {
+        const session = prev.sessions.find((s) => s.id === prev.activeSessionId);
+        if (!session) return prev;
+
+        const updated = updater(session);
+        return {
+          ...prev,
+          sessions: prev.sessions.map((s) => (s.id === updated.id ? updated : s)),
+        };
+      });
     },
-    [activeSession, storage, updateStorage]
+    []
   );
 
   const addUserMessage = useCallback(
@@ -150,38 +165,41 @@ export function useChatSessions({
     (content: string) => {
       if (!activeSession) return;
 
-      const messages = [...activeSession.messages];
-      const lastMessage = messages[messages.length - 1];
+      setStorage((prev) => {
+        const session = prev.sessions.find((s) => s.id === prev.activeSessionId);
+        if (!session) return prev;
 
-      if (lastMessage && lastMessage.role === "assistant") {
-        // Update existing assistant message
-        messages[messages.length - 1] = {
-          ...lastMessage,
-          content,
-          timestamp: Date.now(),
+        const messages = [...session.messages];
+        const lastMessage = messages[messages.length - 1];
+
+        if (lastMessage && lastMessage.role === "assistant") {
+          messages[messages.length - 1] = {
+            ...lastMessage,
+            content,
+            timestamp: Date.now(),
+          };
+        } else {
+          messages.push({
+            id: crypto.randomUUID(),
+            role: "assistant",
+            content,
+            timestamp: Date.now(),
+          });
+        }
+
+        const updated = {
+          ...session,
+          messages,
+          updatedAt: Date.now(),
         };
-      } else {
-        // Add new assistant message
-        messages.push({
-          id: crypto.randomUUID(),
-          role: "assistant",
-          content,
-          timestamp: Date.now(),
-        });
-      }
 
-      const updated = {
-        ...activeSession,
-        messages,
-        updatedAt: Date.now(),
-      };
-
-      const newSessions = storage.sessions.map((s) =>
-        s.id === updated.id ? updated : s
-      );
-      updateStorage({ ...storage, sessions: newSessions });
+        return {
+          ...prev,
+          sessions: prev.sessions.map((s) => (s.id === updated.id ? updated : s)),
+        };
+      });
     },
-    [activeSession, storage, updateStorage]
+    [activeSession]
   );
 
   const setModel = useCallback(
