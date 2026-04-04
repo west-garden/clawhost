@@ -54,7 +54,6 @@ export class GatewayClient {
   private pending = new Map<string, Pending>();
   private closed = false;
   private connectSent = false;
-  private connectNonce: string | null = null;
   private backoffMs = INITIAL_BACKOFF_MS;
   private keepaliveTimer: ReturnType<typeof setInterval> | null = null;
   private keepaliveTimeout: ReturnType<typeof setTimeout> | null = null;
@@ -97,7 +96,6 @@ export class GatewayClient {
   private doConnect(): void {
     if (this.closed) return;
     this.connectSent = false;
-    this.connectNonce = null;
     this.authenticated = false;
 
     const ws = new WebSocket(this.opts.url);
@@ -222,7 +220,6 @@ export class GatewayClient {
       if (evt.event === "connect.challenge") {
         const payload = evt.payload as { nonce?: string } | undefined;
         if (payload?.nonce) {
-          this.connectNonce = payload.nonce;
           this.sendConnect();
         }
         return;
