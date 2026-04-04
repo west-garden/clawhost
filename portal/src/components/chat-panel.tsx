@@ -67,6 +67,10 @@ export function ChatPanel({
   const isConnected = connectionState === "connected";
   const isConnecting = connectionState === "connecting";
 
+  // Use WebSocket connection states if available, fall back to HTTP mode
+  const effectiveConnected = wsConnected ?? isConnected;
+  const effectiveConnecting = wsConnecting ?? isConnecting;
+
   const initial = (agentName || "?")[0].toUpperCase();
 
   const messages = activeSession?.messages || [];
@@ -298,31 +302,31 @@ export function ChatPanel({
           <div className="flex items-center gap-2 mb-2 text-xs">
             <span
               className={`inline-flex items-center gap-1.5 ${
-                wsConnected
+                effectiveConnected
                   ? "text-emerald-600 dark:text-emerald-400"
-                  : wsConnecting
+                  : effectiveConnecting
                     ? "text-yellow-600 dark:text-yellow-400"
                     : "text-red-600 dark:text-red-400"
               }`}
             >
               <span
                 className={`w-2 h-2 rounded-full ${
-                  wsConnected
+                  effectiveConnected
                     ? "bg-emerald-500"
-                    : wsConnecting
+                    : effectiveConnecting
                       ? "bg-yellow-500 animate-pulse"
                       : "bg-red-500"
                 }`}
               />
-              {wsConnected ? (
+              {effectiveConnected ? (
                 <Wifi className="w-3.5 h-3.5" />
               ) : (
                 <WifiOff className="w-3.5 h-3.5" />
               )}
               <span>
-                {wsConnected
+                {effectiveConnected
                   ? t("connected")
-                  : wsConnecting
+                  : effectiveConnecting
                     ? t("connecting")
                     : t("disconnected")}
               </span>
