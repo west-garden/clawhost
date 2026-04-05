@@ -41,7 +41,7 @@ export function ChannelList({
   const { data, mutate } = useSWR<ApiResponse<Record<string, unknown>>>(
     isRunning ? `/api/agents/${agentId}/channels` : null,
     fetcher,
-    { refreshInterval: 10000 }
+    { refreshInterval: 30000 }
   );
 
   const channels = data?.data ? Object.keys(data.data) : [];

@@ -6,9 +6,9 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { ConfirmDialog } from "./confirm-dialog";
 import { ChannelList } from "./channel-list";
-import { useAgentStatus } from "@/hooks/use-agent-status";
+import { useAgent } from "@/contexts/agent-context";
 import { deleteAgent, resetAgentToken, resetAgent } from "@/lib/actions";
-import type { AgentDetail, AgentConnectResponse } from "@/types";
+import type { AgentConnectResponse } from "@/types";
 import {
   Copy,
   RefreshCw,
@@ -20,10 +20,8 @@ import {
 } from "lucide-react";
 
 export function ManagementPanel({
-  agent,
   connectInfo,
 }: {
-  agent: AgentDetail;
   connectInfo: AgentConnectResponse | null;
 }) {
   const t = useTranslations();
@@ -33,8 +31,7 @@ export function ManagementPanel({
   const [resetTokenOpen, setResetTokenOpen] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
 
-  const { status: liveStatus } = useAgentStatus(agent.id, true);
-  const currentStatus = liveStatus?.status ?? agent.status;
+  const { agent, currentStatus } = useAgent();
 
   async function handleDelete() {
     setActionLoading("delete");

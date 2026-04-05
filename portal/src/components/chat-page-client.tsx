@@ -4,9 +4,9 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { ChatPanel } from "@/components/chat-panel";
 import { ChatSessionSidebar } from "@/components/chat-session-sidebar";
 import { useGatewayConnection } from "@/hooks/use-gateway-connection";
+import { useAgentStatus } from "@/hooks/use-agent-status";
 import { useWsChatSessions } from "@/hooks/use-ws-chat-sessions";
 import { useWsChat } from "@/hooks/use-ws-chat";
-import { useAgentStatus } from "@/hooks/use-agent-status";
 import type { GatewayEvent } from "@/lib/gateway-client";
 import type { AgentStatus, ProviderWithModels } from "@/types";
 
@@ -33,8 +33,8 @@ export function ChatPageClient({
     return "default";
   })();
 
-  // Agent status - poll for updates, pause when WebSocket connected
-  const [currentStatus, setCurrentStatus] = useState(initialStatus);
+  // Agent status — starts from server-rendered initial status, then driven by WS + polling
+  const [currentStatus, setCurrentStatus] = useState<AgentStatus>(initialStatus);
 
   // Gateway connection with event handling
   const handleGatewayEvent = useCallback((evt: GatewayEvent) => {
@@ -43,24 +43,29 @@ export function ChatPageClient({
 
   const { connectionState, client } = useGatewayConnection({
     agentId,
-    enabled: currentStatus === "running",
+    enabled: currentStatus === "running" || currentStatus === "starting",
     onEvent: handleGatewayEvent,
   });
 
   const isConnected = connectionState === "connected";
   const isConnecting = connectionState === "connecting";
 
-  // Pause polling when WebSocket is connected (no redundant requests)
+  // REST polling only when WS is not connected (to detect agent startup)
   const { status: agentStatusData } = useAgentStatus(agentId, {
     pauseWhen: isConnected,
   });
 
-  // Update currentStatus when agent status changes
+  // WS connection state is the source of truth when connected.
+  // When disconnected, fall back to REST polling to detect agent startup.
   useEffect(() => {
-    if (agentStatusData?.status) {
+    if (isConnected) {
+      setCurrentStatus("running");
+    } else if (agentStatusData?.status) {
       setCurrentStatus(agentStatusData.status);
+    } else if (isConnecting) {
+      setCurrentStatus("starting");
     }
-  }, [agentStatusData?.status]);
+  }, [isConnected, isConnecting, agentStatusData?.status]);
 
   // Session management
   const {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
@@ -12,7 +12,7 @@ import { Separator } from "@/components/ui/separator";
 import { AgentStatusBadge } from "@/components/agent-status-badge";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ChannelList } from "@/components/channel-list";
-import { useAgentStatus } from "@/hooks/use-agent-status";
+import { useAgent } from "@/contexts/agent-context";
 import {
   startAgent,
   stopAgent,
@@ -20,13 +20,11 @@ import {
   deleteAgent,
   resetAgentToken,
 } from "@/lib/actions";
-import type { AgentDetail, AgentConnectResponse } from "@/types";
+import type { AgentConnectResponse } from "@/types";
 
 export function AgentOverview({
-  agent,
   connectInfo,
 }: {
-  agent: AgentDetail;
   connectInfo: AgentConnectResponse | null;
 }) {
   const t = useTranslations();
@@ -34,19 +32,8 @@ export function AgentOverview({
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [resetTokenOpen, setResetTokenOpen] = useState(false);
-  const [pollEnabled, setPollEnabled] = useState(agent.status === "running");
 
-  const { status: liveStatus } = useAgentStatus(agent.id, pollEnabled);
-  const currentStatus = liveStatus?.status ?? agent.status;
-
-  // When status transitions to "running", refresh server data to get connect info
-  const [prevStatus, setPrevStatus] = useState(currentStatus);
-  useEffect(() => {
-    if (prevStatus !== "running" && currentStatus === "running") {
-      router.refresh();
-    }
-    setPrevStatus(currentStatus);
-  }, [currentStatus, prevStatus, router]);
+  const { agent, currentStatus } = useAgent();
 
   async function handleAction(
     action: "start" | "stop" | "restart",
@@ -58,7 +45,6 @@ export function AgentOverview({
       toast.error(result.error);
     } else {
       toast.success(t(`agent.${action}Success`));
-      setPollEnabled(true);
       router.refresh();
     }
     setActionLoading(null);

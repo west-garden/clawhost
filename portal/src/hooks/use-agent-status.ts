@@ -19,8 +19,8 @@ export function useAgentStatus(agentId: string, options?: UseAgentStatusOptions 
     enabled ? `/api/agents/${agentId}/status` : null,
     fetcher,
     {
-      // Poll every 5s, but pause when pauseWhen is true (e.g., WebSocket connected)
-      refreshInterval: enabled && !pauseWhen ? 5000 : 0,
+      // Poll every 30s, but pause when pauseWhen is true (e.g., WebSocket connected)
+      refreshInterval: enabled && !pauseWhen ? 30000 : 0,
       revalidateOnReconnect: !pauseWhen,
       revalidateOnFocus: !pauseWhen,
       revalidateIfStale: !pauseWhen,

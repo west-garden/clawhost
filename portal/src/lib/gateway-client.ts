@@ -101,10 +101,6 @@ export class GatewayClient {
     const ws = new WebSocket(this.opts.url);
     this.ws = ws;
 
-    ws.addEventListener("open", () => {
-      // Wait for challenge from gateway
-    });
-
     ws.addEventListener("message", (ev) => {
       this.handleMessage(String(ev.data ?? ""));
     });
