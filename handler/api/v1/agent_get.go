@@ -29,7 +29,7 @@ func GetAgent(c echo.Context) error {
 	ctx := context.Background()
 	response := &GetAgentResponse{Agent: agent}
 
-	// If agent is running, get deployment status, image info, and sync config
+	// If agent is running, get deployment status and image info
 	if agent.Status == model.AgentStatusRunning {
 		// Get deployment status
 		if statusInfo, err := k8s.GetDeploymentStatusInfo(ctx, agent.ID); err == nil {
@@ -44,18 +44,6 @@ func GetAgent(c echo.Context) error {
 				response.LatestImage = latestImage
 				upToDate := currentImage == latestImage
 				response.ImageUpToDate = &upToDate
-			}
-		}
-
-		// Only sync config if deployment is ready (not during updates)
-		if response.DeploymentStatus != nil && response.DeploymentStatus.Status == "ready" {
-			if err := k8s.SyncConfigToDatabase(ctx, agent.ID); err != nil {
-				c.Logger().Warnf("failed to sync config from pod: %v", err)
-			} else {
-				// Reload agent to get updated config
-				if updatedAgent, err := model.GetAgentByID(agent.ID); err == nil {
-					response.Agent = updatedAgent
-				}
 			}
 		}
 	}

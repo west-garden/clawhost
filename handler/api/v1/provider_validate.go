@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"sort"
 	"strings"
 	"time"
 
@@ -31,8 +33,9 @@ type ValidateCustomProviderRequest struct {
 
 // ValidateProviderResponse represents the validation result
 type ValidateProviderResponse struct {
-	Valid bool   `json:"valid"`
-	Error string `json:"error,omitempty"`
+	Valid   bool   `json:"valid"`
+	Error   string `json:"error,omitempty"`
+	Models  []string `json:"models,omitempty"`  // Auto-discovered model IDs
 }
 
 // httpClient with 10 second timeout
@@ -86,9 +89,16 @@ func ValidateProviderApiKey(c echo.Context) error {
 	// Validate the API key
 	valid, errMsg := validateApiKey(baseURL, req.APIKey, meta.API, validationModel)
 
+	// Return provider's model list
+	var modelIDs []string
+	for _, m := range meta.Models {
+		modelIDs = append(modelIDs, m.ID)
+	}
+
 	return util.Success(c, ValidateProviderResponse{
-		Valid: valid,
-		Error: errMsg,
+		Valid:  valid,
+		Error:  errMsg,
+		Models: modelIDs,
 	})
 }
 
@@ -112,23 +122,62 @@ func ValidateCustomProviderApiKey(c echo.Context) error {
 		return util.BadRequest(c, "api type is required")
 	}
 
-	// Determine validation model: user specified → default based on API type
+	// Auto-fetch models from provider if no validation model specified
 	validationModel := req.ValidationModel
+	var discoveredModels []string
 	if validationModel == "" {
-		// Use a generic model name for custom providers
-		if req.API == "anthropic-messages" {
-			validationModel = "claude-3-haiku-20240307"
-		} else {
-			validationModel = "gpt-4o-mini"
+		models, err := fetchProviderModels(req.BaseURL, req.APIKey, req.API)
+		if err == nil && len(models) > 0 {
+			discoveredModels = models
+			validationModel = models[0]
 		}
+	}
+
+	if validationModel == "" {
+		return util.BadRequest(c, "could not discover models from provider — please specify a validation model in the request, or ensure your provider supports the /v1/models endpoint")
 	}
 
 	// Validate the API key
 	valid, errMsg := validateApiKey(req.BaseURL, req.APIKey, req.API, validationModel)
 
-	return util.Success(c, ValidateProviderResponse{
-		Valid: valid,
-		Error: errMsg,
+	resp := ValidateProviderResponse{
+		Valid:  valid,
+		Error:  errMsg,
+		Models: discoveredModels,
+	}
+
+	return util.Success(c, resp)
+}
+
+// FetchCustomProviderModels fetches available models from a custom provider
+// POST /api/v1/providers/fetch-models
+func FetchCustomProviderModels(c echo.Context) error {
+	var req struct {
+		BaseURL string `json:"baseUrl"`
+		APIKey  string `json:"apiKey"`
+		API     string `json:"api"`
+	}
+	if err := c.Bind(&req); err != nil {
+		return util.BadRequest(c, "invalid request body")
+	}
+
+	if req.BaseURL == "" {
+		return util.BadRequest(c, "baseUrl is required")
+	}
+	if req.APIKey == "" {
+		return util.BadRequest(c, "apiKey is required")
+	}
+	if req.API == "" {
+		return util.BadRequest(c, "api type is required")
+	}
+
+	models, err := fetchProviderModels(req.BaseURL, req.APIKey, req.API)
+	if err != nil {
+		return util.BadRequest(c, err.Error())
+	}
+
+	return util.Success(c, map[string]interface{}{
+		"models": models,
 	})
 }
 
@@ -290,4 +339,72 @@ func validateOpenAiCompatibleApiKey(baseURL, apiKey, model string) (bool, string
 	// Other errors (rate limit, model not found, insufficient quota, etc.)
 	// The key is likely valid but there may be other issues
 	return false, fmt.Sprintf("request failed with status %d: %s", resp.StatusCode, string(respBody))
+}
+
+// fetchProviderModels queries the provider's models listing endpoint.
+// For OpenAI-compatible APIs: GET {baseUrl}/v1/models
+// For Anthropic: no standard models endpoint, returns empty list
+func fetchProviderModels(baseURL, apiKey, apiType string) ([]string, error) {
+	if apiType != "openai-completions" {
+		// Anthropic doesn't have a models listing endpoint
+		return nil, nil
+	}
+
+	// Build models URL
+	modelsURL := strings.TrimSuffix(baseURL, "/") + "/models"
+	if !strings.HasSuffix(baseURL, "/v1") && !strings.HasSuffix(baseURL, "/v1/") {
+		modelsURL = strings.TrimSuffix(baseURL, "/") + "/v1/models"
+	}
+
+	parsed, err := url.Parse(modelsURL)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("GET", parsed.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+apiKey)
+	req.Header.Set("Accept", "application/json")
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("models endpoint returned status %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var data struct {
+		Data []struct {
+			ID string `json:"id"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(body, &data); err != nil {
+		return nil, err
+	}
+
+	var models []string
+	seen := make(map[string]bool)
+	for _, m := range data.Data {
+		if m.ID != "" && !seen[m.ID] {
+			seen[m.ID] = true
+			models = append(models, m.ID)
+		}
+	}
+
+	if len(models) == 0 {
+		return nil, fmt.Errorf("no models found")
+	}
+
+	sort.Strings(models)
+	return models, nil
 }

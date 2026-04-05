@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+
+	"github.com/clawhost/clawhost/model"
 )
 
 // ChannelConfig represents a channel configuration
@@ -20,20 +22,24 @@ type ChannelConfig struct {
 }
 
 // AddChannelToAgent adds an IM channel account to an agent's OpenClaw instance
-// This writes directly to the config file, openclaw will hot-reload
+// This uses the database as the source of truth and syncs the channels section to the pod
 // Supports multi-account: channels.telegram.accounts.{accountName}
 func AddChannelToAgent(ctx context.Context, botID, accessToken, channel, account string, channelConfig map[string]interface{}) error {
-	namespace := GetNamespace()
-
-	podName, err := WaitForPodReady(ctx, botID, 30)
+	// Get agent from database
+	agent, err := model.GetAgentByID(botID)
 	if err != nil {
-		return fmt.Errorf("failed to get pod: %w", err)
+		return fmt.Errorf("failed to get agent: %w", err)
 	}
 
-	// Read existing config
-	existingConfig, err := readOpenClawConfig(ctx, namespace, podName)
+	// Get existing config from database
+	config, err := agent.GetOpenClawConfig()
 	if err != nil {
-		return fmt.Errorf("failed to read config: %w", err)
+		config = &model.OpenClawConfig{}
+	}
+
+	// Ensure channels map exists
+	if config.Channels == nil {
+		config.Channels = make(model.ChannelsConfig)
 	}
 
 	// Separate channel-level fields from account-level fields
@@ -53,8 +59,7 @@ func AddChannelToAgent(ctx context.Context, botID, accessToken, channel, account
 		}
 	}
 
-	// Set channel-level defaults if not provided by upstream
-	// Default to "pairing" mode for security (WestClaw disables "open" for security reasons)
+	// Set channel-level defaults if not provided
 	if _, ok := channelLevelConfig["dmPolicy"]; !ok {
 		channelLevelConfig["dmPolicy"] = "pairing"
 	}
@@ -63,7 +68,6 @@ func AddChannelToAgent(ctx context.Context, botID, accessToken, channel, account
 	}
 
 	// Validate dmPolicy="open" requires allowFrom to include "*"
-	// OpenClaw validation: channels.telegram.dmPolicy="open" requires allowFrom to include "*"
 	if dmPolicy, ok := channelLevelConfig["dmPolicy"].(string); ok && dmPolicy == "open" {
 		allowFrom, _ := channelLevelConfig["allowFrom"].([]interface{})
 		hasWildcard := false
@@ -74,30 +78,25 @@ func AddChannelToAgent(ctx context.Context, botID, accessToken, channel, account
 			}
 		}
 		if !hasWildcard {
-			// Auto-add "*" to allowFrom when dmPolicy="open"
 			allowFrom = append(allowFrom, "*")
 			channelLevelConfig["allowFrom"] = allowFrom
 		}
 	}
 
-	// Add/update channel account in config using multi-account structure
-	// Structure: channels.{channel}.{enabled, dmPolicy, ...}.accounts.{account}
-	if existingConfig["channels"] == nil {
-		existingConfig["channels"] = make(map[string]interface{})
+	// Build or merge channel config
+	// If channel already exists in DB config, merge into it (preserve existing accounts)
+	existingChannel, exists := config.Channels[channel]
+	if !exists {
+		existingChannel = make(map[string]interface{})
+		config.Channels[channel] = existingChannel
 	}
-	channels := existingConfig["channels"].(map[string]interface{})
-
-	// Get or create channel config
-	if channels[channel] == nil {
-		channels[channel] = make(map[string]interface{})
-	}
-	chCfg, ok := channels[channel].(map[string]interface{})
+	chCfg, ok := existingChannel.(map[string]interface{})
 	if !ok {
 		chCfg = make(map[string]interface{})
-		channels[channel] = chCfg
+		config.Channels[channel] = chCfg
 	}
 
-	// Apply channel-level config (upstream values override existing)
+	// Apply channel-level config
 	for k, v := range channelLevelConfig {
 		chCfg[k] = v
 	}
@@ -115,15 +114,22 @@ func AddChannelToAgent(ctx context.Context, botID, accessToken, channel, account
 	// Add/update the account
 	accounts[account] = accountConfig
 
-	// Write updated config
-	if err := writeOpenClawConfig(ctx, namespace, podName, existingConfig); err != nil {
-		return fmt.Errorf("failed to write config: %w", err)
+	// Save to database
+	if err := agent.SetOpenClawConfig(config); err != nil {
+		return fmt.Errorf("failed to set config: %w", err)
+	}
+	if err := model.UpdateAgent(agent); err != nil {
+		return fmt.Errorf("failed to update agent: %w", err)
 	}
 
-	// Sync config to database
-	if err := SyncConfigToDatabase(ctx, botID); err != nil {
-		// Log but don't fail the operation
-		fmt.Printf("Warning: failed to sync config to database: %v\n", err)
+	// Sync channels section to pod and restart to ensure OpenClaw picks up the change
+	if agent.Status == model.AgentStatusRunning {
+		if err := SyncSectionsToPod(ctx, botID, "channels"); err != nil {
+			fmt.Printf("Warning: failed to sync channels to pod: %v\n", err)
+		}
+		if err := RestartDeployment(ctx, botID); err != nil {
+			fmt.Printf("Warning: failed to restart deployment: %v\n", err)
+		}
 	}
 
 	return nil
@@ -235,47 +241,51 @@ func enrichWeixinAccountNames(ctx context.Context, namespace, podName string, ac
 // RemoveChannelFromAgent removes an IM channel account from an agent
 // If account is empty, removes the entire channel; otherwise removes specific account
 func RemoveChannelFromAgent(ctx context.Context, botID, accessToken, channel, account string) error {
-	namespace := GetNamespace()
-
-	podName, err := WaitForPodReady(ctx, botID, 30)
+	// Get agent from database
+	agent, err := model.GetAgentByID(botID)
 	if err != nil {
-		return fmt.Errorf("failed to get pod: %w", err)
+		return fmt.Errorf("failed to get agent: %w", err)
 	}
 
-	// Read existing config
-	existingConfig, err := readOpenClawConfig(ctx, namespace, podName)
+	// Get existing config from database
+	config, err := agent.GetOpenClawConfig()
 	if err != nil {
-		return fmt.Errorf("failed to read config: %w", err)
+		return fmt.Errorf("failed to get config: %w", err)
 	}
 
 	// Remove channel or account from config
-	if channels, ok := existingConfig["channels"].(map[string]interface{}); ok {
-		if account == "" {
-			// Remove entire channel
-			delete(channels, channel)
-		} else {
-			// Remove specific account
-			if channelConfig, ok := channels[channel].(map[string]interface{}); ok {
-				if accounts, ok := channelConfig["accounts"].(map[string]interface{}); ok {
-					delete(accounts, account)
-					// If no accounts left, remove the channel
-					if len(accounts) == 0 {
-						delete(channels, channel)
-					}
+	channels := config.Channels
+	if channels == nil {
+		return fmt.Errorf("no channels configured")
+	}
+
+	if account == "" {
+		// Remove entire channel
+		delete(channels, channel)
+	} else {
+		// Remove specific account
+		if channelConfig, ok := channels[channel].(map[string]interface{}); ok {
+			if accounts, ok := channelConfig["accounts"].(map[string]interface{}); ok {
+				delete(accounts, account)
+				// If no accounts left, remove the channel
+				if len(accounts) == 0 {
+					delete(channels, channel)
 				}
 			}
 		}
 	}
 
-	// Write updated config
-	if err := writeOpenClawConfig(ctx, namespace, podName, existingConfig); err != nil {
-		return fmt.Errorf("failed to write config: %w", err)
+	// Save to database
+	if err := agent.SetOpenClawConfig(config); err != nil {
+		return fmt.Errorf("failed to set config: %w", err)
+	}
+	if err := model.UpdateAgent(agent); err != nil {
+		return fmt.Errorf("failed to update agent: %w", err)
 	}
 
-	// Sync config to database
-	if err := SyncConfigToDatabase(ctx, botID); err != nil {
-		// Log but don't fail the operation
-		fmt.Printf("Warning: failed to sync config to database: %v\n", err)
+	// Sync channels section to pod
+	if agent.Status == model.AgentStatusRunning {
+		return SyncSectionsToPod(ctx, botID, "channels")
 	}
 
 	return nil
@@ -318,36 +328,48 @@ func readOpenClawConfig(ctx context.Context, namespace, podName string) (map[str
 	return config, nil
 }
 
-// FixAgentConfigDMPolicies reads the agent config and fixes any dmPolicy="open" channels missing allowFrom=["*"]
+// FixAgentConfigDMPolicies reads the agent config from database and fixes any dmPolicy="open" channels missing allowFrom=["*"]
 // This is used to fix existing configs that were created before the validation was added
 func FixAgentConfigDMPolicies(ctx context.Context, botID string) error {
-	namespace := GetNamespace()
-
-	podName, err := WaitForPodReady(ctx, botID, 30)
+	// Get agent from database
+	agent, err := model.GetAgentByID(botID)
 	if err != nil {
-		return fmt.Errorf("failed to get pod: %w", err)
+		return fmt.Errorf("failed to get agent: %w", err)
 	}
 
-	// Read existing config
-	config, err := readOpenClawConfig(ctx, namespace, podName)
+	// Get config from database
+	config, err := agent.GetOpenClawConfig()
 	if err != nil {
-		return fmt.Errorf("failed to read config: %w", err)
+		return fmt.Errorf("failed to get config: %w", err)
+	}
+
+	// Convert to generic map for fixChannelDMPolicies
+	configJSON, err := json.Marshal(config)
+	if err != nil {
+		return fmt.Errorf("failed to marshal config: %w", err)
+	}
+	var configMap map[string]interface{}
+	if err := json.Unmarshal(configJSON, &configMap); err != nil {
+		return fmt.Errorf("failed to unmarshal config: %w", err)
 	}
 
 	// Fix dmPolicy="open" channels
-	fixed := fixChannelDMPolicies(config)
+	fixed := fixChannelDMPolicies(configMap)
 	if !fixed {
 		return nil // No fixes needed
 	}
 
-	// Write updated config
-	if err := writeOpenClawConfig(ctx, namespace, podName, config); err != nil {
-		return fmt.Errorf("failed to write config: %w", err)
+	// Save to database
+	if err := agent.SetOpenClawConfig(config); err != nil {
+		return fmt.Errorf("failed to set config: %w", err)
+	}
+	if err := model.UpdateAgent(agent); err != nil {
+		return fmt.Errorf("failed to update agent: %w", err)
 	}
 
-	// Sync config to database
-	if err := SyncConfigToDatabase(ctx, botID); err != nil {
-		fmt.Printf("Warning: failed to sync config to database: %v\n", err)
+	// Sync channels section to pod
+	if agent.Status == model.AgentStatusRunning {
+		return SyncSectionsToPod(ctx, botID, "channels")
 	}
 
 	return nil
@@ -393,23 +415,6 @@ func fixChannelDMPolicies(config map[string]interface{}) bool {
 	}
 
 	return fixed
-}
-
-// writeOpenClawConfig writes the openclaw.json config file to the pod
-func writeOpenClawConfig(ctx context.Context, namespace, podName string, config map[string]interface{}) error {
-	configJSON, err := json.MarshalIndent(config, "", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal config: %w", err)
-	}
-
-	command := []string{"sh", "-c", fmt.Sprintf("cat > /home/node/.openclaw/openclaw.json << 'EOFCONFIG'\n%s\nEOFCONFIG", string(configJSON))}
-
-	_, err = ExecInPod(ctx, namespace, podName, "openclaw", command)
-	if err != nil {
-		return fmt.Errorf("failed to write config: %w", err)
-	}
-
-	return nil
 }
 
 // ApproveChannelPairing approves a channel pairing request using the pairing code
@@ -485,34 +490,37 @@ func ListChannelPairingRequests(ctx context.Context, botID, channel string) (*Ch
 // RevokeChannelPairing revokes a channel pairing for a user
 // This removes the user from the allowFrom list in config
 func RevokeChannelPairing(ctx context.Context, botID, channel, userID string) (string, error) {
+	// First try the CLI command
 	namespace := GetNamespace()
-
 	podName, err := WaitForPodReady(ctx, botID, 30)
 	if err != nil {
 		return "", fmt.Errorf("failed to get pod: %w", err)
 	}
 
-	// First try the CLI command
 	command := []string{"node", "/app/openclaw.mjs", "pairing", "revoke", channel, userID}
 	output, err := ExecInPod(ctx, namespace, podName, "openclaw", command)
 	if err == nil {
 		return strings.TrimSpace(output), nil
 	}
 
-	// If CLI command fails, remove from config allowFrom list
-	existingConfig, err := readOpenClawConfig(ctx, namespace, podName)
+	// If CLI command fails, remove from config allowFrom list (using DB as source of truth)
+	agent, err := model.GetAgentByID(botID)
 	if err != nil {
-		return "", fmt.Errorf("failed to read config: %w", err)
+		return "", fmt.Errorf("failed to get agent: %w", err)
+	}
+
+	config, err := agent.GetOpenClawConfig()
+	if err != nil {
+		return "", fmt.Errorf("failed to get config: %w", err)
 	}
 
 	// Get channels config
-	channels, ok := existingConfig["channels"].(map[string]interface{})
-	if !ok {
+	if config.Channels == nil {
 		return "", fmt.Errorf("no channels configured")
 	}
 
 	// Get specific channel config
-	channelConfig, ok := channels[channel].(map[string]interface{})
+	channelConfig, ok := config.Channels[channel].(map[string]interface{})
 	if !ok {
 		return "", fmt.Errorf("channel %s not configured", channel)
 	}
@@ -530,9 +538,19 @@ func RevokeChannelPairing(ctx context.Context, botID, channel, userID string) (s
 		channelConfig["allowFrom"] = newAllowFrom
 	}
 
-	// Write updated config
-	if err := writeOpenClawConfig(ctx, namespace, podName, existingConfig); err != nil {
-		return "", fmt.Errorf("failed to write config: %w", err)
+	// Save to database
+	if err := agent.SetOpenClawConfig(config); err != nil {
+		return "", fmt.Errorf("failed to set config: %w", err)
+	}
+	if err := model.UpdateAgent(agent); err != nil {
+		return "", fmt.Errorf("failed to update agent: %w", err)
+	}
+
+	// Sync channels section to pod
+	if agent.Status == model.AgentStatusRunning {
+		if err := SyncSectionsToPod(ctx, botID, "channels"); err != nil {
+			return "user removed from allowFrom list (pod sync failed)", nil
+		}
 	}
 
 	return "user removed from allowFrom list", nil
@@ -616,15 +634,20 @@ func GetChannelPairedUsers(ctx context.Context, botID, channel string) ([]Channe
 		}
 	}
 
-	// Try 3: Read from config allowFrom list (pre-authorized users)
-	existingConfig, err := readOpenClawConfig(ctx, namespace, podName)
+	// Try 3: Read from database config allowFrom list (pre-authorized users)
+	agent, err := model.GetAgentByID(botID)
 	if err != nil {
 		return users, nil // Return empty, don't fail
 	}
 
+	config, err := agent.GetOpenClawConfig()
+	if err != nil {
+		return users, nil
+	}
+
 	// Get channels config
-	channels, ok := existingConfig["channels"].(map[string]interface{})
-	if !ok {
+	channels := config.Channels
+	if channels == nil {
 		return users, nil
 	}
 

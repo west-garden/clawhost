@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 import {
   Dialog,
   DialogContent,
@@ -18,9 +19,9 @@ import {
   updateModelProvider,
   deleteModelProvider,
   validateProviderApiKey,
-  validateCustomProviderApiKey,
+  fetchCustomProviderModels,
 } from "@/lib/actions";
-import { CheckCircle2, XCircle, Loader2 } from "lucide-react";
+import { CheckCircle2, XCircle, Loader2, X } from "lucide-react";
 
 // Provider presets with baseUrl and API format
 // Grouped by category for better UX
@@ -153,15 +154,20 @@ export function ConfigModelsPanel({ agentId, providers, loading, onRefresh }: Pr
     apiKey: "",
     apiType: "openai-completions",
   });
+  const [customModels, setCustomModels] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [validating, setValidating] = useState(false);
   const [validationResult, setValidationResult] = useState<{ valid: boolean; error?: string } | null>(null);
+  const [fetchingModels, setFetchingModels] = useState(false);
+  const [fetchModelsError, setFetchModelsError] = useState<string | null>(null);
 
   function openAddDialog() {
     setEditingProvider(null);
     setPresetKey("custom");
     setForm({ name: "", baseUrl: "", apiKey: "", apiType: "openai-completions" });
+    setCustomModels([]);
     setValidationResult(null);
+    setFetchModelsError(null);
     setDialogOpen(true);
   }
 
@@ -182,13 +188,16 @@ export function ConfigModelsPanel({ agentId, providers, loading, onRefresh }: Pr
       apiKey: "",
       apiType: provider.apiType || "openai-completions",
     });
+    setCustomModels(provider.models?.map((m) => m.id) || []);
     setValidationResult(null);
+    setFetchModelsError(null);
     setDialogOpen(true);
   }
 
   function handlePresetChange(key: string) {
     setPresetKey(key);
     setValidationResult(null);
+    setFetchModelsError(null);
     if (key === "custom") {
       setForm({ ...form, name: "", baseUrl: "", apiType: "openai-completions" });
     } else {
@@ -207,18 +216,10 @@ export function ConfigModelsPanel({ agentId, providers, loading, onRefresh }: Pr
     setValidationResult(null);
 
     try {
-      let result;
-      if (presetKey === "custom") {
-        // Custom provider validation
-        result = await validateCustomProviderApiKey(form.baseUrl, form.apiKey, form.apiType);
-      } else {
-        // Built-in provider validation
-        const preset = PROVIDER_PRESETS[presetKey];
-        result = await validateProviderApiKey(presetKey, form.apiKey, form.baseUrl || undefined);
-      }
-
+      // Built-in provider validation
+      const preset = PROVIDER_PRESETS[presetKey];
+      const result = await validateProviderApiKey(presetKey, form.apiKey, form.baseUrl || undefined);
       setValidationResult(result);
-
       if (result.valid) {
         toast.success(t("apiKeyValid"));
       } else {
@@ -232,6 +233,46 @@ export function ConfigModelsPanel({ agentId, providers, loading, onRefresh }: Pr
     }
   }
 
+  async function handleFetchModels() {
+    if (!form.baseUrl || !form.apiKey) {
+      toast.error(t("apiKeyRequired"));
+      return;
+    }
+
+    setFetchingModels(true);
+    setFetchModelsError(null);
+
+    try {
+      const result = await fetchCustomProviderModels(form.baseUrl, form.apiKey, form.apiType);
+      if (result.error) {
+        setFetchModelsError(result.error);
+        toast.error(result.error);
+      } else if (result.models && result.models.length > 0) {
+        setCustomModels(result.models);
+        toast.success(t("apiKeyValid"));
+      } else {
+        setFetchModelsError("No models returned by the provider");
+        toast.error("No models returned by the provider");
+      }
+    } catch (err) {
+      setFetchModelsError(err instanceof Error ? err.message : String(err));
+      toast.error(t("validationFailed"));
+    } finally {
+      setFetchingModels(false);
+    }
+  }
+
+  function addModelTag(model: string) {
+    const trimmed = model.trim();
+    if (trimmed && !customModels.includes(trimmed)) {
+      setCustomModels([...customModels, trimmed]);
+    }
+  }
+
+  function removeModelTag(model: string) {
+    setCustomModels(customModels.filter((m) => m !== model));
+  }
+
   async function handleSubmit() {
     setSubmitting(true);
     try {
@@ -241,6 +282,7 @@ export function ConfigModelsPanel({ agentId, providers, loading, onRefresh }: Pr
         const result = await updateModelProvider(agentId, editingProvider, {
           baseUrl: form.baseUrl || undefined,
           apiKey: form.apiKey || undefined,
+          models: customModels.map((id) => ({ id, name: id })),
         });
         if (result.error) {
           toast.error(result.error);
@@ -253,6 +295,7 @@ export function ConfigModelsPanel({ agentId, providers, loading, onRefresh }: Pr
           baseUrl: form.baseUrl || undefined,
           apiKey: form.apiKey || undefined,
           api: preset?.api || form.apiType || undefined,
+          models: customModels.map((id) => ({ id, name: id })),
         });
         if (result.error) {
           toast.error(result.error);
@@ -365,6 +408,7 @@ export function ConfigModelsPanel({ agentId, providers, loading, onRefresh }: Pr
                 onChange={(e) => {
                   setForm({ ...form, baseUrl: e.target.value });
                   setValidationResult(null);
+                  setFetchModelsError(null);
                 }}
                 placeholder="https://api.example.com"
                 disabled={presetKey !== "custom"}
@@ -399,26 +443,42 @@ export function ConfigModelsPanel({ agentId, providers, loading, onRefresh }: Pr
                   onChange={(e) => {
                     setForm({ ...form, apiKey: e.target.value });
                     setValidationResult(null);
+                    setFetchModelsError(null);
                   }}
                   placeholder={t("apiKeyPlaceholder")}
                   className="flex-1"
                 />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleValidate}
-                  disabled={validating || !form.apiKey}
-                >
-                  {validating ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    t("validate")
-                  )}
-                </Button>
+                {presetKey === "custom" && form.apiType === "openai-completions" ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleFetchModels}
+                    disabled={fetchingModels || !form.apiKey || !form.baseUrl}
+                  >
+                    {fetchingModels ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      t("fetchModels")
+                    )}
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleValidate}
+                    disabled={validating || !form.apiKey}
+                  >
+                    {validating ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      t("validate")
+                    )}
+                  </Button>
+                )}
               </div>
 
-              {/* Validation result */}
-              {validationResult && (
+              {/* Validation result (built-in providers) */}
+              {validationResult && presetKey !== "custom" && (
                 <div className={`flex items-center gap-2 text-sm ${validationResult.valid ? "text-green-600" : "text-red-600"}`}>
                   {validationResult.valid ? (
                     <>
@@ -433,13 +493,60 @@ export function ConfigModelsPanel({ agentId, providers, loading, onRefresh }: Pr
                   )}
                 </div>
               )}
+
+              {/* Fetch models result (custom providers) */}
+              {presetKey === "custom" && fetchModelsError && (
+                <div className="flex items-center gap-2 text-sm text-red-600">
+                  <XCircle className="w-4 h-4" />
+                  <span>{fetchModelsError}</span>
+                </div>
+              )}
+            </div>
+
+            {/* Model list */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label>{t("models")}</Label>
+                {presetKey === "custom" && form.apiType === "openai-completions" && (
+                  <span className="text-xs text-muted-foreground">
+                    {customModels.length > 0
+                      ? `${customModels.length} models`
+                      : "Click \"Fetch Models\" or add manually"}
+                  </span>
+                )}
+              </div>
+
+              {customModels.length > 0 ? (
+                <div className="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
+                  {customModels.map((m) => (
+                    <Badge key={m} variant="secondary" className="text-xs font-mono">
+                      {m}
+                      <button
+                        onClick={() => removeModelTag(m)}
+                        className="ml-1 hover:text-destructive"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  {presetKey === "custom" && form.apiType === "openai-completions"
+                    ? t("fetchModelsHint") || "Fetch models from your provider or add manually"
+                    : "Select a preset to auto-fill models"}
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               {t("cancel")}
             </Button>
-            <Button onClick={handleSubmit} disabled={submitting}>
+            <Button
+              onClick={handleSubmit}
+              disabled={submitting || customModels.length === 0}
+            >
               {submitting ? t("saving") : t("save")}
             </Button>
           </DialogFooter>

@@ -14,7 +14,9 @@
     "retry": "Retry",
     "noPermission": "No permission",
     "notFound": "Page not found",
-    "goHome": "Go home"
+    "goHome": "Go home",
+    "true": "Yes",
+    "false": "No"
   },
   "auth": {
     "login": "Login",
@@ -109,6 +111,8 @@
       "title": "Config",
       "models": "Model Providers",
       "defaults": "Defaults",
+      "primaryModel": "Primary Model",
+      "fallbackModel": "Fallback Model",
       "raw": "Raw Config",
       "edit": "Edit",
       "delete": "Delete",
@@ -138,7 +142,14 @@
       "validationFailed": "Validation failed",
       "apiProtocol": "API Protocol",
       "openaiCompatible": "OpenAI Compatible",
-      "anthropicMessages": "Anthropic Messages"
+      "anthropicMessages": "Anthropic Messages",
+      "validationModel": "Validation Model",
+      "validationModelPlaceholder": "e.g. qwen-turbo (optional, auto-detected if /v1/models supported)",
+      "validationModelHint": "Used to verify your API key. Leave empty to auto-discover models from provider.",
+      "discoveredModels": "Discovered Models",
+      "fetchModels": "Fetch Models",
+      "fetchingModels": "Fetching models...",
+      "fetchModelsHint": "Fetch models from your provider or add manually"
     },
     "skills": {
       "title": "Skills",
@@ -182,22 +193,6 @@
       "disabled": "Disabled",
       "lastRun": "Last run",
       "nextRun": "Next run"
-    },
-    "devices": {
-      "title": "Devices",
-      "pending": "Pending",
-      "paired": "Paired",
-      "approve": "Approve",
-      "revoke": "Revoke",
-      "approved": "Device approved",
-      "revoked": "Device revoked",
-      "noPending": "No pending devices",
-      "noPaired": "No paired devices",
-      "approveConfirm": "Allow this device to connect to your agent?",
-      "revokeConfirm": "This will disconnect the device from your agent.",
-      "unknown": "Unknown",
-      "justNow": "Just now",
-      "connected": "Connected"
     }
   },
   "channels": {
@@ -207,6 +202,17 @@
     "remove": "Remove",
     "removeConfirm": "Are you sure you want to remove this channel?",
     "removed": "Channel removed",
+    "saving": "Saving...",
+    "create": "Add",
+    "update": "Update",
+    "edit": "Edit",
+    "cancel": "Cancel",
+    "displayName": "Display Name",
+    "displayNamePlaceholder": "My Telegram Bot",
+    "displayNameHint": "Optional label for this channel account",
+    "enableAccount": "Enable this channel",
+    "fieldRequired": "Field '{field}' is required",
+
     "wechat": {
       "name": "WeChat",
       "scanQr": "Scan QR Code",
@@ -222,8 +228,128 @@
     "telegram": {
       "name": "Telegram",
       "botToken": "Bot Token",
-      "botTokenPlaceholder": "Enter Telegram Bot Token",
-      "added": "Telegram channel added"
+      "botTokenPlaceholder": "Enter Telegram Bot Token (from @BotFather)",
+      "added": "Telegram channel added",
+      "fieldBotTokenHintCreate": "Create a bot via @BotFather on Telegram to get the token",
+      "fieldWebhookUrlPlaceholder": "https://your-domain.com/webhook (optional)",
+      "fieldWebhookUrlHint": "Custom webhook URL. Leave empty for default polling mode",
+      "allowedGroupsHint": "Group IDs or usernames (format: @username or numeric ID)",
+      "groupAllowFromHint": "User IDs allowed in groups (numeric IDs or @usernames)"
+    },
+
+    "discord": {
+      "name": "Discord"
+    },
+    "slack": {
+      "name": "Slack"
+    },
+    "feishu": {
+      "name": "Feishu"
+    },
+    "signal": {
+      "name": "Signal"
+    },
+    "matrix": {
+      "name": "Matrix"
+    },
+    "line": {
+      "name": "LINE"
+    },
+    "msteams": {
+      "name": "MS Teams"
+    },
+    "mattermost": {
+      "name": "Mattermost"
+    },
+
+    "fieldBotToken": "Bot Token",
+    "fieldBotTokenPlaceholder": "Enter the bot token",
+    "fieldBotTokenHintCreate": "Get this from your bot provider",
+    "fieldToken": "Token",
+    "fieldAppToken": "App Token",
+    "fieldAppId": "App ID",
+    "fieldAppSecret": "App Secret",
+    "fieldAppPassword": "App Password",
+    "fieldTenantId": "Tenant ID",
+    "fieldChannelAccessToken": "Channel Access Token",
+    "fieldChannelSecret": "Channel Secret",
+    "fieldWebhookUrl": "Webhook URL",
+    "fieldWebhookUrlPlaceholder": "https://your-domain.com/webhook",
+    "fieldWebhookUrlHint": "Custom webhook URL. Leave empty for default",
+    "fieldProxyUrl": "Proxy URL",
+    "fieldProxyUrlPlaceholder": "socks5://user:pass@host:port (optional)",
+    "fieldProxyUrlHint": "Proxy URL for Telegram API access. Useful in restricted networks",
+    "fieldAccount": "Account",
+    "fieldHttpUrl": "HTTP URL",
+    "fieldHomeserver": "Homeserver URL",
+    "fieldUserId": "User ID",
+    "fieldPassword": "Password",
+    "fieldEncryption": "Encryption",
+    "fieldVerificationToken": "Verification Token",
+    "fieldEncryptKey": "Encrypt Key",
+    "fieldDomain": "Domain",
+    "domainFeishu": "Feishu (飞书)",
+    "domainLark": "Lark",
+    "connectionMode": "Connection Mode",
+    "modeWebsocket": "WebSocket",
+    "modeWebhook": "Webhook",
+    "modeSocket": "Socket Mode",
+    "modeHttp": "HTTP Mode",
+    "requireMention": "Require @Mention",
+
+    "dmPolicy": "Direct Message Policy",
+    "dmPolicyPairing": "Pairing (users send a message and get approved)",
+    "dmPolicyAllowlist": "Allowlist (only specific users allowed)",
+    "dmPolicyDisabled": "Disabled (DMs disabled)",
+    "dmPolicyOpen": "Open (anyone can DM — security risk)",
+
+    "groupPolicy": "Group Policy",
+    "groupPolicyOpen": "Open (bot responds to everyone in groups)",
+    "groupPolicyAllowlist": "Allowlist (only specific groups/users allowed)",
+    "groupPolicyDisabled": "Disabled (group messages disabled)",
+    "fieldGroupPolicyHint": "Controls how the bot responds in group chats",
+
+    "allowedGroups": "Allowed Groups",
+    "allowedGroupsPlaceholder": "Enter group ID and press Enter",
+    "groupAllowFrom": "Allowed Users in Groups",
+    "groupAllowFromPlaceholder": "Enter user ID and press Enter",
+    "tagsPlaceholder": "Type and press Enter to add",
+    "tagsRemove": "Remove",
+
+    "pairing": {
+      "title": "Pairing Management",
+      "pendingTitle": "Pending Pairing Requests",
+      "pairedTitle": "Paired Users",
+      "approveCode": "Approve Pairing Code",
+      "codePlaceholder": "Enter pairing code (e.g., JDB55KTQ)",
+      "approve": "Approve",
+      "approving": "Approving...",
+      "approved": "Pairing approved",
+      "revoke": "Revoke",
+      "revoking": "Revoking...",
+      "revoked": "Pairing revoked",
+      "noPending": "No pending pairing requests",
+      "noPaired": "No paired users yet",
+      "pairingCode": "Pairing Code",
+      "codeCreatedAt": "Created",
+      "approveConfirm": "Approve pairing code {code}?",
+      "revokeConfirm": "Revoke access for {user}?",
+      "pairedUser": "User",
+      "pairedSource": "Source",
+      "refresh": "Refresh"
+    },
+
+    "channelDetails": {
+      "title": "Channel Details",
+      "accounts": "Accounts",
+      "status": "Status",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "dmPolicy": "DM Policy",
+      "groupPolicy": "Group Policy",
+      "pairedUsers": "Paired Users",
+      "editConfig": "Edit Config",
+      "managePairing": "Manage Pairing"
     }
   },
   "chat": {

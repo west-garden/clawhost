@@ -194,18 +194,20 @@ func AddModelProvider(c echo.Context) error {
 		return util.InternalError(c, "failed to update agent")
 	}
 
-	// Sync to pod if agent is running
+	// Sync to pod if agent is running (synchronous to ensure it completes)
 	if agent.Status == model.AgentStatusRunning {
-		go func() {
-			ctx := context.Background()
-			sections := []string{"models"}
-			if defaultModelSet {
-				sections = append(sections, "agents")
-			}
-			if err := k8s.SyncSectionsToPod(ctx, agent.ID, sections...); err != nil {
-				c.Logger().Errorf("failed to sync config to pod: %v", err)
-			}
-		}()
+		ctx := context.Background()
+		sections := []string{"models"}
+		if defaultModelSet {
+			sections = append(sections, "agents")
+		}
+		if err := k8s.SyncSectionsToPod(ctx, agent.ID, sections...); err != nil {
+			c.Logger().Errorf("failed to sync config to pod: %v", err)
+		}
+		// Restart to ensure OpenClaw picks up the new config
+		if err := k8s.RestartDeployment(ctx, agent.ID); err != nil {
+			c.Logger().Errorf("failed to restart deployment: %v", err)
+		}
 	}
 
 	return util.Success(c, config.Models.Providers[req.Name])
@@ -341,18 +343,20 @@ func UpdateModelProvider(c echo.Context) error {
 		return util.InternalError(c, "failed to update agent")
 	}
 
-	// Sync to pod if agent is running
+	// Sync to pod if agent is running (synchronous to ensure it completes)
 	if agent.Status == model.AgentStatusRunning {
-		go func() {
-			ctx := context.Background()
-			sections := []string{"models"}
-			if defaultModelSet {
-				sections = append(sections, "agents")
-			}
-			if err := k8s.SyncSectionsToPod(ctx, agent.ID, sections...); err != nil {
-				c.Logger().Errorf("failed to sync config to pod: %v", err)
-			}
-		}()
+		ctx := context.Background()
+		sections := []string{"models"}
+		if defaultModelSet {
+			sections = append(sections, "agents")
+		}
+		if err := k8s.SyncSectionsToPod(ctx, agent.ID, sections...); err != nil {
+			c.Logger().Errorf("failed to sync config to pod: %v", err)
+		}
+		// Restart to ensure OpenClaw picks up the new config
+		if err := k8s.RestartDeployment(ctx, agent.ID); err != nil {
+			c.Logger().Errorf("failed to restart deployment: %v", err)
+		}
 	}
 
 	return util.Success(c, config.Models.Providers[providerName])
@@ -395,14 +399,16 @@ func DeleteModelProvider(c echo.Context) error {
 		return util.InternalError(c, "failed to update agent")
 	}
 
-	// Sync only models section to pod if agent is running (don't touch gateway)
+	// Sync only models section to pod if agent is running (synchronous)
 	if agent.Status == model.AgentStatusRunning {
-		go func() {
-			ctx := context.Background()
-			if err := k8s.SyncSectionsToPod(ctx, agent.ID, "models"); err != nil {
-				c.Logger().Errorf("failed to sync config to pod: %v", err)
-			}
-		}()
+		ctx := context.Background()
+		if err := k8s.SyncSectionsToPod(ctx, agent.ID, "models"); err != nil {
+			c.Logger().Errorf("failed to sync config to pod: %v", err)
+		}
+		// Restart to ensure OpenClaw picks up the new config
+		if err := k8s.RestartDeployment(ctx, agent.ID); err != nil {
+			c.Logger().Errorf("failed to restart deployment: %v", err)
+		}
 	}
 
 	return util.Success(c, nil)

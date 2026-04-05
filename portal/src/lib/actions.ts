@@ -112,7 +112,7 @@ export async function resetAgentToken(id: string) {
 export async function addChannel(
   agentId: string,
   channel: string,
-  config: Record<string, string>
+  config: Record<string, unknown>
 ) {
   const res = await fetchWithAuth(`/api/v1/agents/${agentId}/channels`, {
     method: "POST",
@@ -257,9 +257,25 @@ export async function validateCustomProviderApiKey(
   });
   const data = await res.json();
   if (!res.ok || data.code !== 0) {
-    return { valid: false, error: data.message || "Validation failed" };
+    return { valid: false, error: data.message || "Validation failed", models: undefined as undefined };
   }
-  return data.data as { valid: boolean; error?: string };
+  return data.data as { valid: boolean; error?: string; models?: string[] };
+}
+
+export async function fetchCustomProviderModels(
+  baseUrl: string,
+  apiKey: string,
+  api: string
+) {
+  const res = await fetchWithAuth("/api/v1/providers/fetch-models", {
+    method: "POST",
+    body: JSON.stringify({ baseUrl, apiKey, api }),
+  });
+  const data = await res.json();
+  if (!res.ok || data.code !== 0) {
+    return { error: data.message || "Failed to fetch models" };
+  }
+  return { models: data.data?.models as string[] | undefined };
 }
 
 // --- Config Defaults ---
@@ -310,6 +326,50 @@ export async function updateAgentRawConfig(agentId: string, config: Record<strin
   return { success: true };
 }
 
+// --- Channels ---
+
+export async function listChannelPairingRequests(agentId: string, channel: string) {
+  const res = await fetchWithAuth(`/api/v1/agents/${agentId}/channels/${channel}/pairing`);
+  const data = await res.json();
+  if (!res.ok || data.code !== 0) {
+    return { error: data.message || "Failed to list pairing requests" };
+  }
+  return { requests: data.data?.requests || [], channel: data.data?.channel };
+}
+
+export async function approveChannelPairing(agentId: string, channel: string, code: string) {
+  const res = await fetchWithAuth(`/api/v1/agents/${agentId}/channels/${channel}/pairing/approve`, {
+    method: "POST",
+    body: JSON.stringify({ code }),
+  });
+  const data = await res.json();
+  if (!res.ok || data.code !== 0) {
+    return { error: data.message || "Failed to approve pairing" };
+  }
+  return { success: true };
+}
+
+export async function revokeChannelPairing(agentId: string, channel: string, userId: string) {
+  const res = await fetchWithAuth(`/api/v1/agents/${agentId}/channels/${channel}/pairing/revoke`, {
+    method: "POST",
+    body: JSON.stringify({ user_id: userId }),
+  });
+  const data = await res.json();
+  if (!res.ok || data.code !== 0) {
+    return { error: data.message || "Failed to revoke pairing" };
+  }
+  return { success: true };
+}
+
+export async function listChannelPairedUsers(agentId: string, channel: string) {
+  const res = await fetchWithAuth(`/api/v1/agents/${agentId}/channels/${channel}/pairing/users`);
+  const data = await res.json();
+  if (!res.ok || data.code !== 0) {
+    return { error: data.message || "Failed to list paired users" };
+  }
+  return { users: data.data?.users || [] };
+}
+
 // --- Skills ---
 
 export async function listSkills(agentId: string) {
@@ -329,44 +389,6 @@ export async function deleteSkill(agentId: string, skillName: string) {
   const data = await res.json();
   if (!res.ok || data.code !== 0) {
     return { error: data.message || "Failed to delete skill" };
-  }
-  revalidatePath(`/agents/${agentId}`);
-  return { success: true };
-}
-
-// --- Devices ---
-
-export async function listDevices(agentId: string, status?: string) {
-  const query = status ? `?status=${status}` : "";
-  const res = await fetchWithAuth(`/api/v1/agents/${agentId}/devices${query}`);
-  const data = await res.json();
-  if (!res.ok || data.code !== 0) {
-    return { error: data.message || "Failed to list devices" };
-  }
-  return { devices: data.data?.devices || [] };
-}
-
-export async function approveDevice(agentId: string, requestId: string) {
-  const res = await fetchWithAuth(
-    `/api/v1/agents/${agentId}/devices/${requestId}/approve`,
-    { method: "POST" }
-  );
-  const data = await res.json();
-  if (!res.ok || data.code !== 0) {
-    return { error: data.message || "Failed to approve device" };
-  }
-  revalidatePath(`/agents/${agentId}`);
-  return { success: true };
-}
-
-export async function revokeDevice(agentId: string, deviceId: string) {
-  const res = await fetchWithAuth(
-    `/api/v1/agents/${agentId}/devices/${deviceId}`,
-    { method: "DELETE" }
-  );
-  const data = await res.json();
-  if (!res.ok || data.code !== 0) {
-    return { error: data.message || "Failed to revoke device" };
   }
   revalidatePath(`/agents/${agentId}`);
   return { success: true };

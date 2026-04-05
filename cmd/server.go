@@ -145,6 +145,7 @@ func startServer() {
 		api.GET("/providers/:name", v1.GetBuiltInProvider)
 		api.POST("/providers/:name/validate", v1.ValidateProviderApiKey)
 		api.POST("/providers/validate-custom", v1.ValidateCustomProviderApiKey)
+		api.POST("/providers/fetch-models", v1.FetchCustomProviderModels)
 	}
 
 	// Public marketplace routes (no auth required)

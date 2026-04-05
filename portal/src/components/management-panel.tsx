@@ -6,8 +6,9 @@ import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { ConfirmDialog } from "./confirm-dialog";
 import { ChannelList } from "./channel-list";
+import { ConfigDefaultsPanel } from "./config-defaults-panel";
 import { useAgent } from "@/contexts/agent-context";
-import { deleteAgent, resetAgentToken, resetAgent } from "@/lib/actions";
+import { deleteAgent, resetAgentToken, resetAgent, listModelProviders, getAgentDefaults } from "@/lib/actions";
 import type { AgentConnectResponse } from "@/types";
 import {
   Copy,
@@ -198,6 +199,20 @@ export function ManagementPanel({
 
       {/* Channels */}
       <ChannelList agentId={agent.id} agentStatus={currentStatus} />
+
+      {/* Config - Model Defaults */}
+      <section className="glass-panel">
+        <div className="glass-panel-header">
+          <div className="flex items-center gap-2">
+            <span className="font-semibold text-foreground">
+              {t("agent.config.defaults")}
+            </span>
+          </div>
+        </div>
+        <div className="glass-panel-content p-4">
+          <ConfigDefaultsPanel agentId={agent.id} />
+        </div>
+      </section>
 
       {/* Danger Zone */}
       <section className="glass-panel border-2 border-destructive/30">

@@ -98,14 +98,16 @@ func SetAgentDefaults(c echo.Context) error {
 		return util.InternalError(c, "failed to update agent")
 	}
 
-	// Sync only agents section to pod if agent is running (don't touch gateway)
+	// Sync only agents section to pod if agent is running (synchronous)
 	if agent.Status == model.AgentStatusRunning {
-		go func() {
-			ctx := context.Background()
-			if err := k8s.SyncSectionsToPod(ctx, agent.ID, "agents"); err != nil {
-				c.Logger().Errorf("failed to sync config to pod: %v", err)
-			}
-		}()
+		ctx := context.Background()
+		if err := k8s.SyncSectionsToPod(ctx, agent.ID, "agents"); err != nil {
+			c.Logger().Errorf("failed to sync config to pod: %v", err)
+		}
+		// Restart to ensure OpenClaw picks up the new config
+		if err := k8s.RestartDeployment(ctx, agent.ID); err != nil {
+			c.Logger().Errorf("failed to restart deployment: %v", err)
+		}
 	}
 
 	resp := map[string]string{

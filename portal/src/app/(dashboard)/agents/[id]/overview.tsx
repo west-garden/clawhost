@@ -12,6 +12,8 @@ import { Separator } from "@/components/ui/separator";
 import { AgentStatusBadge } from "@/components/agent-status-badge";
 import { ConfirmDialog } from "@/components/confirm-dialog";
 import { ChannelList } from "@/components/channel-list";
+import { ConfigModelsPanel } from "@/components/config-models-panel";
+import { ConfigDefaultsPanel } from "@/components/config-defaults-panel";
 import { useAgent } from "@/contexts/agent-context";
 import {
   startAgent,
@@ -19,6 +21,7 @@ import {
   restartAgent,
   deleteAgent,
   resetAgentToken,
+  listModelProviders,
 } from "@/lib/actions";
 import type { AgentConnectResponse } from "@/types";
 
@@ -34,6 +37,19 @@ export function AgentOverview({
   const [resetTokenOpen, setResetTokenOpen] = useState(false);
 
   const { agent, currentStatus } = useAgent();
+
+  // Config tab state
+  const [configProviders, setConfigProviders] = useState<Record<string, { baseUrl?: string; apiKey?: string; apiType?: string; models?: Array<{ id: string; name?: string }> }>>({});
+  const [configLoading, setConfigLoading] = useState(false);
+
+  async function fetchConfigProviders() {
+    setConfigLoading(true);
+    const result = await listModelProviders(agent.id);
+    if (!result.error && result.providers) {
+      setConfigProviders(result.providers);
+    }
+    setConfigLoading(false);
+  }
 
   async function handleAction(
     action: "start" | "stop" | "restart",
@@ -109,6 +125,7 @@ export function AgentOverview({
       <Tabs defaultValue="overview">
         <TabsList>
           <TabsTrigger value="overview">{t("agent.overview")}</TabsTrigger>
+          <TabsTrigger value="config">{t("agent.config.title")}</TabsTrigger>
           <TabsTrigger value="channels">{t("agent.channels")}</TabsTrigger>
         </TabsList>
 
@@ -278,6 +295,26 @@ export function AgentOverview({
               </Button>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="config" className="space-y-4 mt-4">
+          <Tabs defaultValue="defaults">
+            <TabsList>
+              <TabsTrigger value="defaults">{t("agent.config.defaults")}</TabsTrigger>
+              <TabsTrigger value="models">{t("agent.config.models")}</TabsTrigger>
+            </TabsList>
+            <TabsContent value="defaults" className="mt-4">
+              <ConfigDefaultsPanel agentId={agent.id} />
+            </TabsContent>
+            <TabsContent value="models" className="mt-4">
+              <ConfigModelsPanel
+                agentId={agent.id}
+                providers={configProviders}
+                loading={configLoading}
+                onRefresh={fetchConfigProviders}
+              />
+            </TabsContent>
+          </Tabs>
         </TabsContent>
 
         <TabsContent value="channels" className="mt-4">
