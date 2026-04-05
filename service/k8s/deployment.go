@@ -271,6 +271,17 @@ if command -v node > /dev/null 2>&1 && [ -f /home/node/.openclaw/openclaw.json ]
         c.plugins.allow.push('openclaw-weixin');
         changed = true;
       }
+      // Enable telegram plugin if channel is configured
+      if (c.channels && c.channels.telegram && c.channels.telegram.enabled) {
+        if (!c.plugins.entries['telegram']) {
+          c.plugins.entries['telegram'] = { enabled: true };
+          changed = true;
+        }
+        if (!c.plugins.allow.includes('telegram')) {
+          c.plugins.allow.push('telegram');
+          changed = true;
+        }
+      }
       // Ensure channels section exists (Control UI needs this)
       if (!c.channels) {
         c.channels = {};
