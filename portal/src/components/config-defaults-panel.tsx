@@ -56,9 +56,9 @@ export function ConfigDefaultsPanel({ agentId }: Props) {
             if (firstModel) {
               setPrimaryModel(firstModel);
               await setAgentDefaults(agentId, { primary_model: firstModel });
-              toast.info(`Primary model "${currentPrimary}" not found — auto-set to "${firstModel}"`);
+              toast.info(`主模型 "${currentPrimary}" 不存在，已自动设为 "${firstModel}"`);
             } else {
-              toast.warning(`Primary model "${currentPrimary}" not found in any provider`);
+              toast.warning(`主模型 "${currentPrimary}" 在任何提供商中都未找到`);
             }
           } else {
             setPrimaryModel(currentPrimary);
@@ -83,7 +83,7 @@ export function ConfigDefaultsPanel({ agentId }: Props) {
       if (result.error) {
         toast.error(result.error);
       } else {
-        toast.success("Defaults updated");
+        toast.success("默认设置已更新");
       }
     } finally {
       setSaving(false);
@@ -94,7 +94,7 @@ export function ConfigDefaultsPanel({ agentId }: Props) {
     return (
       <div className="flex items-center gap-2 text-muted-foreground text-sm py-4">
         <Loader2 className="w-4 h-4 animate-spin" />
-        Loading...
+        加载中...
       </div>
     );
   }
@@ -108,7 +108,7 @@ export function ConfigDefaultsPanel({ agentId }: Props) {
           onChange={(e) => setPrimaryModel(e.target.value)}
           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
-          <option value="">— Select a model —</option>
+          <option value="">— 选择模型 —</option>
           {modelOptions.map((m) => (
             <option key={m} value={m}>
               {m}
@@ -117,7 +117,7 @@ export function ConfigDefaultsPanel({ agentId }: Props) {
         </select>
         {modelOptions.length === 0 && (
           <p className="text-xs text-muted-foreground">
-            Add model providers in the Models tab to see options here.
+            在"模型"标签页添加模型提供商后，此处将显示可用选项。
           </p>
         )}
       </div>
@@ -129,7 +129,7 @@ export function ConfigDefaultsPanel({ agentId }: Props) {
           onChange={(e) => setFallbackModel(e.target.value)}
           className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
         >
-          <option value="">— None —</option>
+          <option value="">— 无 —</option>
           {modelOptions.map((m) => (
             <option key={`fb-${m}`} value={m}>
               {m}

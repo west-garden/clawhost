@@ -216,8 +216,29 @@ export function ConfigModelsPanel({ agentId, providers, loading, onRefresh }: Pr
     setValidationResult(null);
 
     try {
+      // Custom provider: validate by fetching models
+      if (presetKey === "custom") {
+        if (!form.baseUrl) {
+          toast.error(t("apiKeyRequired"));
+          return;
+        }
+        const result = await fetchCustomProviderModels(form.baseUrl, form.apiKey, form.apiType);
+        if (result.error) {
+          setFetchModelsError(result.error);
+          toast.error(result.error);
+        } else if (result.models && result.models.length > 0) {
+          setCustomModels(result.models);
+          setValidationResult({ valid: true });
+          toast.success(`发现 ${result.models.length} 个模型`);
+        } else {
+          setFetchModelsError("提供商未返回任何模型");
+          setValidationResult({ valid: false, error: "无可用模型" });
+          toast.error("提供商未返回任何模型");
+        }
+        return;
+      }
+
       // Built-in provider validation
-      const preset = PROVIDER_PRESETS[presetKey];
       const result = await validateProviderApiKey(presetKey, form.apiKey, form.baseUrl || undefined);
       setValidationResult(result);
       if (result.valid) {
@@ -251,8 +272,8 @@ export function ConfigModelsPanel({ agentId, providers, loading, onRefresh }: Pr
         setCustomModels(result.models);
         toast.success(t("apiKeyValid"));
       } else {
-        setFetchModelsError("No models returned by the provider");
-        toast.error("No models returned by the provider");
+        setFetchModelsError("提供商未返回任何模型");
+        toast.error("提供商未返回任何模型");
       }
     } catch (err) {
       setFetchModelsError(err instanceof Error ? err.message : String(err));
@@ -322,7 +343,7 @@ export function ConfigModelsPanel({ agentId, providers, loading, onRefresh }: Pr
   }
 
   if (loading) {
-    return <div className="text-muted-foreground text-sm">Loading...</div>;
+    return <div className="text-muted-foreground text-sm">加载中...</div>;
   }
 
   return (
@@ -510,8 +531,8 @@ export function ConfigModelsPanel({ agentId, providers, loading, onRefresh }: Pr
                 {presetKey === "custom" && form.apiType === "openai-completions" && (
                   <span className="text-xs text-muted-foreground">
                     {customModels.length > 0
-                      ? `${customModels.length} models`
-                      : "Click \"Fetch Models\" or add manually"}
+                      ? `${customModels.length} 个模型`
+                      : "点击\"获取模型\"或手动添加"}
                   </span>
                 )}
               </div>
@@ -534,7 +555,7 @@ export function ConfigModelsPanel({ agentId, providers, loading, onRefresh }: Pr
                 <p className="text-xs text-muted-foreground">
                   {presetKey === "custom" && form.apiType === "openai-completions"
                     ? t("fetchModelsHint") || "Fetch models from your provider or add manually"
-                    : "Select a preset to auto-fill models"}
+                    : "选择预设提供商将自动填充模型列表"}
                 </p>
               )}
             </div>

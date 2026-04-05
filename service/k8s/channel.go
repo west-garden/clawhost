@@ -283,9 +283,14 @@ func RemoveChannelFromAgent(ctx context.Context, botID, accessToken, channel, ac
 		return fmt.Errorf("failed to update agent: %w", err)
 	}
 
-	// Sync channels section to pod
+	// Sync channels section to pod and restart
 	if agent.Status == model.AgentStatusRunning {
-		return SyncSectionsToPod(ctx, botID, "channels")
+		if err := SyncSectionsToPod(ctx, botID, "channels"); err != nil {
+			fmt.Printf("Warning: failed to sync channels to pod: %v\n", err)
+		}
+		if err := RestartDeployment(ctx, botID); err != nil {
+			fmt.Printf("Warning: failed to restart deployment: %v\n", err)
+		}
 	}
 
 	return nil
@@ -357,6 +362,15 @@ func FixAgentConfigDMPolicies(ctx context.Context, botID string) error {
 	fixed := fixChannelDMPolicies(configMap)
 	if !fixed {
 		return nil // No fixes needed
+	}
+
+	// Convert fixed configMap back to OpenClawConfig struct
+	fixedJSON, err := json.Marshal(configMap)
+	if err != nil {
+		return fmt.Errorf("failed to marshal fixed config: %w", err)
+	}
+	if err := json.Unmarshal(fixedJSON, config); err != nil {
+		return fmt.Errorf("failed to unmarshal fixed config: %w", err)
 	}
 
 	// Save to database
