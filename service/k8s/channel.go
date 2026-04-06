@@ -433,23 +433,91 @@ func fixChannelDMPolicies(config map[string]interface{}) bool {
 
 // ApproveChannelPairing approves a channel pairing request using the pairing code
 // Example: openclaw pairing approve telegram JDB55KTQ
-func ApproveChannelPairing(ctx context.Context, botID, channel, code string) (string, error) {
+// ApproveChannelPairingResult holds the result of approving a pairing request
+type ApproveChannelPairingResult struct {
+	Output string
+	UserID string
+}
+
+// ApproveChannelPairing approves a pending channel pairing request
+// Returns the CLI output and the user ID that was approved (for sending confirmation messages)
+func ApproveChannelPairing(ctx context.Context, botID, channel, code string) (*ApproveChannelPairingResult, error) {
 	namespace := GetNamespace()
 
 	podName, err := WaitForPodReady(ctx, botID, 30)
 	if err != nil {
-		return "", fmt.Errorf("failed to get pod: %w", err)
+		return nil, fmt.Errorf("failed to get pod: %w", err)
 	}
 
-	// Execute pairing approve command
-	command := []string{"node", "/app/openclaw.mjs", "pairing", "approve", channel, code}
+	// First, get pending requests to find the user ID for this code
+	pendingResp, err := ListChannelPairingRequests(ctx, botID, channel)
+	if err != nil {
+		return nil, fmt.Errorf("failed to list pending requests: %w", err)
+	}
 
+	var targetUserID string
+	for _, req := range pendingResp.Requests {
+		if strings.EqualFold(req.Code, code) {
+			targetUserID = req.ID
+			break
+		}
+	}
+
+	// Execute pairing approve command in pod
+	command := []string{"node", "/app/openclaw.mjs", "pairing", "approve", channel, code}
 	output, err := ExecInPod(ctx, namespace, podName, "openclaw", command)
 	if err != nil {
-		return "", fmt.Errorf("failed to approve pairing: %w", err)
+		return nil, fmt.Errorf("failed to approve pairing: %w", err)
 	}
 
-	return strings.TrimSpace(output), nil
+	// Also persist to DB so it survives pod restarts
+	if targetUserID != "" {
+		if err := addUserToAllowFromDB(botID, channel, targetUserID); err != nil {
+			// Non-fatal — CLI already added to pod's allowFrom
+			fmt.Printf("[ApprovePairing] DB sync warning for agent %s: %v\n", botID, err)
+		}
+	}
+
+	return &ApproveChannelPairingResult{
+		Output: strings.TrimSpace(output),
+		UserID: targetUserID,
+	}, nil
+}
+
+// addUserToAllowFromDB adds a user to the allowFrom list in the database config
+func addUserToAllowFromDB(botID, channel, userID string) error {
+	agent, err := model.GetAgentByID(botID)
+	if err != nil {
+		return fmt.Errorf("failed to get agent: %w", err)
+	}
+
+	config, err := agent.GetOpenClawConfig()
+	if err != nil {
+		return fmt.Errorf("failed to get config: %w", err)
+	}
+
+	if config.Channels == nil {
+		config.Channels = make(map[string]interface{})
+	}
+
+	channelConfig, ok := config.Channels[channel].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("channel %s not configured", channel)
+	}
+
+	allowFrom, _ := channelConfig["allowFrom"].([]interface{})
+	for _, v := range allowFrom {
+		if s, ok := v.(string); ok && s == userID {
+			return nil // already in list
+		}
+	}
+	allowFrom = append(allowFrom, userID)
+	channelConfig["allowFrom"] = allowFrom
+
+	if err := agent.SetOpenClawConfig(config); err != nil {
+		return fmt.Errorf("failed to set config: %w", err)
+	}
+	return model.UpdateAgent(agent)
 }
 
 // ChannelPairingResponse represents the response from openclaw pairing list
@@ -560,10 +628,13 @@ func RevokeChannelPairing(ctx context.Context, botID, channel, userID string) (s
 		return "", fmt.Errorf("failed to update agent: %w", err)
 	}
 
-	// Sync channels section to pod
+	// Sync channels section to pod and restart to pick up the change
 	if agent.Status == model.AgentStatusRunning {
 		if err := SyncSectionsToPod(ctx, botID, "channels"); err != nil {
 			return "user removed from allowFrom list (pod sync failed)", nil
+		}
+		if err := RestartDeployment(ctx, botID); err != nil {
+			return "user removed from allowFrom list (restart failed)", nil
 		}
 	}
 

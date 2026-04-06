@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -33,6 +33,7 @@ export function ChannelPairingPanel({ agentId, channel, channelLabel, isRunning 
   const [pairedUsers, setPairedUsers] = useState<any[]>([]);
   const [pendingLoading, setPendingLoading] = useState(false);
   const [pairedLoading, setPairedLoading] = useState(false);
+  const sseRef = useRef<EventSource | null>(null);
 
   const fetchPending = useCallback(async () => {
     setPendingLoading(true);
@@ -67,6 +68,31 @@ export function ChannelPairingPanel({ agentId, channel, channelLabel, isRunning 
       clearInterval(pairedInterval);
     };
   }, [isRunning, fetchPending, fetchPaired]);
+
+  // SSE listener for real-time pairing updates
+  useEffect(() => {
+    if (!isRunning) return;
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
+    const url = `${apiUrl}/api/v1/agents/${agentId}/events`;
+    const es = new EventSource(url, { withCredentials: true });
+    sseRef.current = es;
+
+    es.addEventListener("pairing-update", () => {
+      fetchPending();
+      fetchPaired();
+    });
+
+    es.addEventListener("error", () => {
+      if (es.readyState === EventSource.CLOSED) {
+        console.warn("[ChannelPairingPanel] SSE connection closed permanently");
+      }
+    });
+
+    return () => {
+      es.close();
+      sseRef.current = null;
+    };
+  }, [isRunning, agentId, fetchPending, fetchPaired]);
 
   async function handleApprove() {
     if (!approveCode.trim()) return;

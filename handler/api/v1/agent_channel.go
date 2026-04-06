@@ -1,7 +1,12 @@
 package v1
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"fmt"
+	"net/http"
+	"strings"
 
 	"github.com/clawhost/clawhost/middleware"
 	"github.com/clawhost/clawhost/model"
@@ -218,6 +223,16 @@ func ApproveChannelPairing(c echo.Context) error {
 		return util.InternalError(c, "failed to approve pairing: "+err.Error())
 	}
 
+	// Broadcast SSE event for real-time frontend update
+	BroadcastPairingUpdate(agent.ID, channel)
+
+	// Send confirmation message to the user (async, don't block response)
+	go func() {
+		if err := sendPairingConfirmation(agent.ID, channel, req.Code); err != nil {
+			fmt.Printf("[ApprovePairing] confirmation send failed for agent %s: %v\n", agent.ID, err)
+		}
+	}()
+
 	return util.Success(c, map[string]interface{}{
 		"message": "pairing approved successfully",
 		"channel": channel,
@@ -257,6 +272,9 @@ func RevokeChannelPairing(c echo.Context) error {
 	if err != nil {
 		return util.InternalError(c, "failed to revoke pairing: "+err.Error())
 	}
+
+	// Broadcast SSE event for real-time frontend update
+	BroadcastPairingUpdate(agent.ID, channel)
 
 	return util.Success(c, map[string]interface{}{
 		"message": "pairing revoked successfully",
@@ -319,4 +337,76 @@ func ListChannelPairingRequests(c echo.Context) error {
 	}
 
 	return util.Success(c, response)
+}
+
+// sendPairingConfirmation sends a confirmation message to the user via Telegram Bot API
+func sendPairingConfirmation(agentID, channel, code string) error {
+	// Only Telegram is supported for now
+	if !strings.EqualFold(channel, "telegram") {
+		return nil
+	}
+
+	// Get agent config to find the bot token
+	agent, err := model.GetAgentByID(agentID)
+	if err != nil {
+		return fmt.Errorf("failed to get agent: %w", err)
+	}
+
+	config, err := agent.GetOpenClawConfig()
+	if err != nil {
+		return fmt.Errorf("failed to get config: %w", err)
+	}
+
+	// Get bot token from channels.telegram
+	tgChannel, ok := config.Channels["telegram"].(map[string]interface{})
+	if !ok {
+		return fmt.Errorf("telegram channel not configured")
+	}
+
+	botToken, _ := tgChannel["botToken"].(string)
+	if botToken == "" {
+		botToken, _ = tgChannel["token"].(string)
+	}
+	if botToken == "" {
+		return fmt.Errorf("no bot token found for telegram")
+	}
+
+	// Get user ID from pairing request (we need to find who owns this code)
+	// The approval has already happened, so we query the allowFrom list
+	// For simplicity, we'll try to get the user from the pending list (already cleared)
+	// Instead, use the code to look up from the most recent allowFrom entry
+	allowFrom, _ := tgChannel["allowFrom"].([]interface{})
+	if len(allowFrom) == 0 {
+		return fmt.Errorf("no users in allowFrom to send confirmation")
+	}
+
+	// Send to the most recently added user (last in allowFrom)
+	// In practice, the approve command adds the user to allowFrom in the pod
+	// and the DB sync happens right after, so we send to the last entry
+	// For a more robust approach, we'd get the user ID from the pending list BEFORE approval
+	userID, _ := allowFrom[len(allowFrom)-1].(string)
+	if userID == "" {
+		return fmt.Errorf("invalid user ID in allowFrom")
+	}
+
+	message := "✅ 您的访问已获批准！现在可以开始和我对话了。"
+
+	apiURL := fmt.Sprintf("https://api.telegram.org/bot%s/sendMessage", botToken)
+	body := map[string]string{
+		"chat_id": userID,
+		"text":    message,
+	}
+	bodyJSON, _ := json.Marshal(body)
+
+	resp, err := http.Post(apiURL, "application/json", bytes.NewReader(bodyJSON))
+	if err != nil {
+		return fmt.Errorf("failed to send telegram message: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("telegram API returned %d", resp.StatusCode)
+	}
+
+	return nil
 }

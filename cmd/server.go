@@ -186,6 +186,9 @@ func startServer() {
 		agentAPI.POST("/cron/:jobId/toggle", v1.ToggleCronJob)
 		agentAPI.DELETE("/cron/:jobId", v1.DeleteCronJob)
 
+		// SSE event stream for real-time events
+		agentAPI.GET("/events", v1.AgentSSEStreams)
+
 		// Channels management (IM integrations)
 		agentAPI.POST("/channels", v1.AddChannel)
 		agentAPI.GET("/channels", v1.ListChannels)
