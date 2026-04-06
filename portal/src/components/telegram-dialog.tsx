@@ -99,7 +99,8 @@ export function TelegramDialog({
   agentId,
   onSuccess,
 }: TelegramDialogProps) {
-  const t = useTranslations();
+  const t = useTranslations("channels");
+  const tCommon = useTranslations("common");
   const schema = getChannelSchema("telegram")!;
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -178,7 +179,7 @@ export function TelegramDialog({
       setError(result.error);
       toast.error(result.error);
     } else {
-      toast.success(t("channels.telegram.added"));
+      toast.success(t("telegram.added"));
       onSuccess();
       onOpenChange(false);
     }
@@ -192,7 +193,7 @@ export function TelegramDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{t("channels.telegram.name")}</DialogTitle>
+          <DialogTitle>{t("telegram.name")}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
@@ -203,98 +204,98 @@ export function TelegramDialog({
 
           {/* botToken */}
           <div className="space-y-2">
-            <Label htmlFor="botToken">{t("channels.fieldBotToken")}</Label>
+            <Label htmlFor="botToken">{t("fieldBotToken")}</Label>
             <Input
               id="botToken"
               type="password"
               value={botToken}
               onChange={(e) => setBotToken(e.target.value)}
-              placeholder={t("channels.fieldBotTokenPlaceholder")}
+              placeholder={t("fieldBotTokenPlaceholder")}
               required
             />
             <p className="text-xs text-muted-foreground">
-              {t("channels.fieldBotTokenHintCreate")}
+              {t("fieldBotTokenHintCreate")}
             </p>
           </div>
 
           {/* proxyUrl */}
           <div className="space-y-2">
-            <Label htmlFor="proxyUrl">{t("channels.fieldProxyUrl")}</Label>
+            <Label htmlFor="proxyUrl">{t("fieldProxyUrl")}</Label>
             <Input
               id="proxyUrl"
               type="text"
               value={proxyUrl}
               onChange={(e) => setProxyUrl(e.target.value)}
-              placeholder={t("channels.fieldProxyUrlPlaceholder")}
+              placeholder={t("fieldProxyUrlPlaceholder")}
             />
             <p className="text-xs text-muted-foreground">
-              {t("channels.fieldProxyUrlHint")}
+              {t("fieldProxyUrlHint")}
             </p>
           </div>
 
           {/* webhookUrl */}
           <div className="space-y-2">
-            <Label htmlFor="webhookUrl">{t("channels.fieldWebhookUrl")}</Label>
+            <Label htmlFor="webhookUrl">{t("fieldWebhookUrl")}</Label>
             <Input
               id="webhookUrl"
               type="text"
               value={webhookUrl}
               onChange={(e) => setWebhookUrl(e.target.value)}
-              placeholder={t("channels.fieldWebhookUrlPlaceholder")}
+              placeholder={t("fieldWebhookUrlPlaceholder")}
             />
             <p className="text-xs text-muted-foreground">
-              {t("channels.fieldWebhookUrlHint")}
+              {t("fieldWebhookUrlHint")}
             </p>
           </div>
 
           {/* dmPolicy */}
           <div className="space-y-2">
-            <Label htmlFor="dmPolicy">{t("channels.dmPolicy")}</Label>
+            <Label htmlFor="dmPolicy">{t("dmPolicy")}</Label>
             <select
               id="dmPolicy"
               value={dmPolicy}
               onChange={(e) => setDmPolicy(e.target.value)}
               className={selectClass}
             >
-              <option value="pairing">{t("channels.dmPolicyPairing")}</option>
+              <option value="pairing">{t("dmPolicyPairing")}</option>
               <option value="allowlist">
-                {t("channels.dmPolicyAllowlist")}
+                {t("dmPolicyAllowlist")}
               </option>
-              <option value="disabled">{t("channels.dmPolicyDisabled")}</option>
+              <option value="disabled">{t("dmPolicyDisabled")}</option>
             </select>
           </div>
 
           {/* groupPolicy */}
           <div className="space-y-2">
-            <Label htmlFor="groupPolicy">{t("channels.groupPolicy")}</Label>
+            <Label htmlFor="groupPolicy">{t("groupPolicy")}</Label>
             <select
               id="groupPolicy"
               value={groupPolicy}
               onChange={(e) => setGroupPolicy(e.target.value)}
               className={selectClass}
             >
-              <option value="open">{t("channels.groupPolicyOpen")}</option>
+              <option value="open">{t("groupPolicyOpen")}</option>
               <option value="allowlist">
-                {t("channels.groupPolicyAllowlist")}
+                {t("groupPolicyAllowlist")}
               </option>
-              <option value="disabled">{t("channels.groupPolicyDisabled")}</option>
+              <option value="disabled">{t("groupPolicyDisabled")}</option>
             </select>
             <p className="text-xs text-muted-foreground">
-              {t("channels.fieldGroupPolicyHint")}
+              {t("fieldGroupPolicyHint")}
             </p>
           </div>
 
           {/* groups — conditional */}
           {groupPolicy === "allowlist" && (
             <div className="space-y-2">
-              <Label>{t("channels.allowedGroups")}</Label>
+              <Label>{t("allowedGroups")}</Label>
               <TagInput
                 tags={groups}
                 onChange={setGroups}
-                placeholder={t("channels.telegramAllowedGroupsHint")}
+                placeholder={t("telegramAllowedGroupsHint")}
               />
               <p className="text-xs text-muted-foreground">
-                {t("channels.telegramAllowedGroupsHint")}
+                {t("telegramAllowedGroupsHint")}
               </p>
             </div>
           )}
@@ -302,14 +303,14 @@ export function TelegramDialog({
           {/* groupAllowFrom — conditional */}
           {groupPolicy === "allowlist" && (
             <div className="space-y-2">
-              <Label>{t("channels.groupAllowFrom")}</Label>
+              <Label>{t("groupAllowFrom")}</Label>
               <TagInput
                 tags={groupAllowFrom}
                 onChange={setGroupAllowFrom}
-                placeholder={t("channels.telegramGroupAllowFromHint")}
+                placeholder={t("telegramGroupAllowFromHint")}
               />
               <p className="text-xs text-muted-foreground">
-                {t("channels.telegramGroupAllowFromHint")}
+                {t("telegramGroupAllowFromHint")}
               </p>
             </div>
           )}
@@ -317,7 +318,7 @@ export function TelegramDialog({
           {/* enabled */}
           <div className="flex items-center justify-between rounded-lg border p-3">
             <div className="space-y-0.5">
-              <Label>{t("channels.enableAccount")}</Label>
+              <Label>{t("enableAccount")}</Label>
             </div>
             <Switch checked={enabled} onCheckedChange={setEnabled} />
           </div>
@@ -329,10 +330,10 @@ export function TelegramDialog({
               variant="outline"
               onClick={() => onOpenChange(false)}
             >
-              {t("common.cancel")}
+              {tCommon("cancel")}
             </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? t("common.loading") : t("common.confirm")}
+              {loading ? tCommon("loading") : tCommon("confirm")}
             </Button>
           </div>
         </form>

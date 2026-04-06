@@ -27,7 +27,8 @@ interface Props {
 }
 
 export function ChannelPairingPanel({ agentId, channel, channelLabel, isRunning }: Props) {
-  const t = useTranslations();
+  const t = useTranslations("channels.pairing");
+  const tAgent = useTranslations("agent");
   const [approveCode, setApproveCode] = useState("");
   const [approving, setApproving] = useState(false);
   const [revokingUserId, setRevokingUserId] = useState<string | null>(null);
@@ -55,7 +56,7 @@ export function ChannelPairingPanel({ agentId, channel, channelLabel, isRunning 
     if (result.error) {
       toast.error(result.error);
     } else {
-      toast.success(t("channels.pairing.approved"));
+      toast.success(t("approved"));
       setApproveCode("");
       mutatePending();
     }
@@ -68,7 +69,7 @@ export function ChannelPairingPanel({ agentId, channel, channelLabel, isRunning 
     if (result.error) {
       toast.error(result.error);
     } else {
-      toast.success(t("channels.pairing.revoked"));
+      toast.success(t("revoked"));
       mutatePaired();
     }
     setRevokingUserId(null);
@@ -77,7 +78,7 @@ export function ChannelPairingPanel({ agentId, channel, channelLabel, isRunning 
   if (!isRunning) {
     return (
       <div className="text-center text-muted-foreground text-sm py-8">
-        {t("agent.notRunning")}
+        {tAgent("notRunning")}
       </div>
     );
   }
@@ -86,12 +87,12 @@ export function ChannelPairingPanel({ agentId, channel, channelLabel, isRunning 
     <div className="space-y-4">
       {/* Approve code input */}
       <div className="space-y-2">
-        <Label>{t("channels.pairing.approveCode")}</Label>
+        <Label>{t("approveCode")}</Label>
         <div className="flex gap-2">
           <Input
             value={approveCode}
             onChange={(e) => setApproveCode(e.target.value.toUpperCase())}
-            placeholder={t("channels.pairing.codePlaceholder")}
+            placeholder={t("codePlaceholder")}
             className="uppercase tracking-widest font-mono"
             onKeyDown={(e) => e.key === "Enter" && handleApprove()}
           />
@@ -102,7 +103,7 @@ export function ChannelPairingPanel({ agentId, channel, channelLabel, isRunning 
             {approving ? (
               <Loader2 className="w-4 h-4 animate-spin" />
             ) : (
-              t("channels.pairing.approve")
+              t("approve")
             )}
           </Button>
         </div>
@@ -111,7 +112,7 @@ export function ChannelPairingPanel({ agentId, channel, channelLabel, isRunning 
       <Tabs defaultValue="pending">
         <TabsList>
           <TabsTrigger value="pending">
-            {t("channels.pairing.pendingTitle")}
+            {t("pendingTitle")}
             {pendingRequests.length > 0 && (
               <Badge variant="secondary" className="ml-1.5 text-xs">
                 {pendingRequests.length}
@@ -119,7 +120,7 @@ export function ChannelPairingPanel({ agentId, channel, channelLabel, isRunning 
             )}
           </TabsTrigger>
           <TabsTrigger value="paired">
-            {t("channels.pairing.pairedTitle")}
+            {t("pairedTitle")}
             <Badge variant="secondary" className="ml-1.5 text-xs">
               {pairedUsers.length}
             </Badge>
@@ -140,7 +141,7 @@ export function ChannelPairingPanel({ agentId, channel, channelLabel, isRunning 
 
           {pendingRequests.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-6">
-              {t("channels.pairing.noPending")}
+              {t("noPending")}
             </p>
           ) : (
             <div className="space-y-2">
@@ -166,14 +167,14 @@ export function ChannelPairingPanel({ agentId, channel, channelLabel, isRunning 
                       if (result.error) {
                         toast.error(result.error);
                       } else {
-                        toast.success(t("channels.pairing.approved"));
+                        toast.success(t("approved"));
                         mutatePending();
                         mutatePaired();
                       }
                     }}
                   >
                     <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
-                    {t("channels.pairing.approve")}
+                    {t("approve")}
                   </Button>
                 </div>
               ))}
@@ -195,14 +196,14 @@ export function ChannelPairingPanel({ agentId, channel, channelLabel, isRunning 
 
           {pairedUsers.length === 0 ? (
             <p className="text-sm text-muted-foreground text-center py-6">
-              {t("channels.pairing.noPaired")}
+              {t("noPaired")}
             </p>
           ) : (
             <div className="space-y-2">
               {pairedUsers.map((user: { id: string; username?: string; meta?: Record<string, unknown> }) => {
                 const displayName = user.username
                   ? `@${user.username}`
-                  : user.id || t("channels.pairing.pairedUser");
+                  : user.id || t("pairedUser");
                 const source = (user.meta as any)?.source || "pairing";
                 return (
                   <div
@@ -214,7 +215,7 @@ export function ChannelPairingPanel({ agentId, channel, channelLabel, isRunning 
                       <div>
                         <p className="text-sm font-medium">{displayName}</p>
                         <p className="text-xs text-muted-foreground">
-                          {t("channels.pairing.pairedSource")}: {source}
+                          {t("pairedSource")}: {source}
                         </p>
                       </div>
                     </div>
@@ -228,7 +229,7 @@ export function ChannelPairingPanel({ agentId, channel, channelLabel, isRunning 
                       {revokingUserId === user.id ? (
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
                       ) : (
-                        t("channels.pairing.revoke")
+                        t("revoke")
                       )}
                     </Button>
                   </div>

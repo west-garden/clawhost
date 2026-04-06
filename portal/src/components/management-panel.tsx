@@ -26,6 +26,7 @@ export function ManagementPanel({
   connectInfo: AgentConnectResponse | null;
 }) {
   const t = useTranslations();
+  const tConfig = useTranslations("agent.config");
   const router = useRouter();
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -205,7 +206,7 @@ export function ManagementPanel({
         <div className="glass-panel-header">
           <div className="flex items-center gap-2">
             <span className="font-semibold text-foreground">
-              {t("agent.config.defaults")}
+              {tConfig("defaults")}
             </span>
           </div>
         </div>

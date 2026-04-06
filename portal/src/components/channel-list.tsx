@@ -42,7 +42,8 @@ export function ChannelList({
   agentId: string;
   agentStatus: AgentStatus;
 }) {
-  const t = useTranslations();
+  const t = useTranslations("channels");
+  const tAgent = useTranslations("agent");
   const [wechatOpen, setWechatOpen] = useState(false);
   const [telegramOpen, setTelegramOpen] = useState(false);
   const [removeTarget, setRemoveTarget] = useState<string | null>(null);
@@ -71,7 +72,7 @@ export function ChannelList({
     if (result.error) {
       toast.error(result.error);
     } else {
-      toast.success(t("channels.removed"));
+      toast.success(t("removed"));
       mutate();
     }
     setRemoveTarget(null);
@@ -87,7 +88,7 @@ export function ChannelList({
     return (
       <Card>
         <CardContent className="p-6 text-center text-muted-foreground">
-          {t("agent.notRunning")}
+          {tAgent("notRunning")}
         </CardContent>
       </Card>
     );
@@ -98,12 +99,12 @@ export function ChannelList({
       {/* Connected channels */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{t("channels.title")}</CardTitle>
+          <CardTitle className="text-base">{t("title")}</CardTitle>
         </CardHeader>
         <CardContent>
           {channels.length === 0 ? (
             <p className="text-sm text-muted-foreground">
-              {t("channels.empty")}
+              {t("empty")}
             </p>
           ) : (
             <div className="space-y-3">
@@ -130,12 +131,12 @@ export function ChannelList({
                             variant={enabled ? "secondary" : "destructive"}
                             className="text-xs"
                           >
-                            {enabled ? t("channels.channelDetails.enabled") : t("channels.channelDetails.disabled")}
+                            {enabled ? t("channelDetails.enabled") : t("channelDetails.disabled")}
                           </Badge>
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
                           {accounts.length > 0
-                            ? `${accounts.length} ${t("channels.channelDetails.accounts")}: ${accounts.join(", ")}`
+                            ? `${accounts.length} ${t("channelDetails.accounts")}: ${accounts.join(", ")}`
                             : ch}
                         </p>
                       </div>
@@ -147,7 +148,7 @@ export function ChannelList({
                           variant="ghost"
                           onClick={() => openDetail(ch, label)}
                         >
-                          {t("channels.channelDetails.managePairing")}
+                          {t("channelDetails.managePairing")}
                         </Button>
                       )}
                       <Button
@@ -156,7 +157,7 @@ export function ChannelList({
                         className="text-red-500 hover:text-red-700"
                         onClick={() => setRemoveTarget(ch)}
                       >
-                        {t("channels.remove")}
+                        {t("remove")}
                       </Button>
                     </div>
                   </div>
@@ -170,7 +171,7 @@ export function ChannelList({
       {/* Add channel */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">{t("channels.add")}</CardTitle>
+          <CardTitle className="text-base">{t("add")}</CardTitle>
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -180,10 +181,10 @@ export function ChannelList({
             >
               <CardContent className="p-4 text-center">
                 <p className="font-medium text-sm">
-                  {t("channels.wechat.name")}
+                  {t("wechat.name")}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {t("channels.wechat.scanQr")}
+                  {t("wechat.scanQr")}
                 </p>
               </CardContent>
             </Card>
@@ -193,10 +194,10 @@ export function ChannelList({
             >
               <CardContent className="p-4 text-center">
                 <p className="font-medium text-sm">
-                  {t("channels.telegram.name")}
+                  {t("telegram.name")}
                 </p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {t("channels.telegram.botToken")}
+                  {t("telegram.botToken")}
                 </p>
               </CardContent>
             </Card>
@@ -217,11 +218,11 @@ export function ChannelList({
             <Tabs defaultValue="details">
               <TabsList className="w-full">
                 <TabsTrigger value="details" className="flex-1">
-                  {t("channels.channelDetails.title")}
+                  {t("channelDetails.title")}
                 </TabsTrigger>
                 {PAIRING_CHANNELS.has(detailChannel) && (
                   <TabsTrigger value="pairing" className="flex-1">
-                    {t("channels.pairing.title")}
+                    {t("pairing.title")}
                   </TabsTrigger>
                 )}
               </TabsList>
@@ -237,26 +238,26 @@ export function ChannelList({
                   return (
                     <div className="space-y-3 text-sm">
                       <div className="flex justify-between py-2 border-b">
-                        <span className="text-muted-foreground">{t("channels.channelDetails.status")}</span>
+                        <span className="text-muted-foreground">{t("channelDetails.status")}</span>
                         <Badge variant={enabled ? "secondary" : "destructive"}>
-                          {enabled ? t("channels.channelDetails.enabled") : t("channels.channelDetails.disabled")}
+                          {enabled ? t("channelDetails.enabled") : t("channelDetails.disabled")}
                         </Badge>
                       </div>
                       {accounts.length > 0 && (
                         <div className="flex justify-between py-2 border-b">
-                          <span className="text-muted-foreground">{t("channels.channelDetails.accounts")}</span>
+                          <span className="text-muted-foreground">{t("channelDetails.accounts")}</span>
                           <span className="font-mono">{accounts.join(", ")}</span>
                         </div>
                       )}
                       {dmPolicy && (
                         <div className="flex justify-between py-2 border-b">
-                          <span className="text-muted-foreground">{t("channels.channelDetails.dmPolicy")}</span>
+                          <span className="text-muted-foreground">{t("channelDetails.dmPolicy")}</span>
                           <span className="font-mono">{dmPolicy}</span>
                         </div>
                       )}
                       {groupPolicy && (
                         <div className="flex justify-between py-2 border-b">
-                          <span className="text-muted-foreground">{t("channels.channelDetails.groupPolicy")}</span>
+                          <span className="text-muted-foreground">{t("channelDetails.groupPolicy")}</span>
                           <span className="font-mono">{groupPolicy}</span>
                         </div>
                       )}
@@ -270,7 +271,7 @@ export function ChannelList({
                             setRemoveTarget(detailChannel);
                           }}
                         >
-                          {t("channels.remove")}
+                          {t("remove")}
                         </Button>
                       </div>
                     </div>
@@ -309,8 +310,8 @@ export function ChannelList({
       <ConfirmDialog
         open={removeTarget !== null}
         onOpenChange={(v) => !v && setRemoveTarget(null)}
-        title={t("channels.remove")}
-        description={t("channels.removeConfirm")}
+        title={t("remove")}
+        description={t("removeConfirm")}
         variant="destructive"
         loading={removeLoading}
         onConfirm={handleRemove}
