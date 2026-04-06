@@ -72,9 +72,8 @@ export function ChannelPairingPanel({ agentId, channel, channelLabel, isRunning 
   // SSE listener for real-time pairing updates
   useEffect(() => {
     if (!isRunning) return;
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "";
-    const url = `${apiUrl}/api/v1/agents/${agentId}/events`;
-    const es = new EventSource(url, { withCredentials: true });
+    const url = `/api/v1/agents/${agentId}/events`;
+    const es = new EventSource(url);
     sseRef.current = es;
 
     es.addEventListener("pairing-update", () => {
