@@ -1,9 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { toast } from "sonner";
-import useSWR from "swr";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,8 +15,6 @@ import {
   listChannelPairingRequests,
   listChannelPairedUsers,
 } from "@/lib/actions";
-
-const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
 interface Props {
   agentId: string;
@@ -32,22 +29,44 @@ export function ChannelPairingPanel({ agentId, channel, channelLabel, isRunning 
   const [approveCode, setApproveCode] = useState("");
   const [approving, setApproving] = useState(false);
   const [revokingUserId, setRevokingUserId] = useState<string | null>(null);
+  const [pendingRequests, setPendingRequests] = useState<any[]>([]);
+  const [pairedUsers, setPairedUsers] = useState<any[]>([]);
+  const [pendingLoading, setPendingLoading] = useState(false);
+  const [pairedLoading, setPairedLoading] = useState(false);
 
-  // Pending pairing requests
-  const { data: pendingData, mutate: mutatePending, isLoading: pendingLoading } = useSWR(
-    isRunning ? `/api/agents/${agentId}/channels/${channel}/pairing` : null,
-    fetcher,
-    { refreshInterval: 15000 }
-  );
-  const pendingRequests = pendingData?.data?.requests || [];
+  const fetchPending = useCallback(async () => {
+    setPendingLoading(true);
+    const result = await listChannelPairingRequests(agentId, channel);
+    if (result.error) {
+      console.error(result.error);
+    } else {
+      setPendingRequests(result.requests || []);
+    }
+    setPendingLoading(false);
+  }, [agentId, channel]);
 
-  // Paired users
-  const { data: pairedData, mutate: mutatePaired, isLoading: pairedLoading } = useSWR(
-    isRunning ? `/api/agents/${agentId}/channels/${channel}/pairing/users` : null,
-    fetcher,
-    { refreshInterval: 30000 }
-  );
-  const pairedUsers = pairedData?.data?.users || [];
+  const fetchPaired = useCallback(async () => {
+    setPairedLoading(true);
+    const result = await listChannelPairedUsers(agentId, channel);
+    if (result.error) {
+      console.error(result.error);
+    } else {
+      setPairedUsers(result.users || []);
+    }
+    setPairedLoading(false);
+  }, [agentId, channel]);
+
+  useEffect(() => {
+    if (!isRunning) return;
+    fetchPending();
+    fetchPaired();
+    const pendingInterval = setInterval(fetchPending, 15000);
+    const pairedInterval = setInterval(fetchPaired, 30000);
+    return () => {
+      clearInterval(pendingInterval);
+      clearInterval(pairedInterval);
+    };
+  }, [isRunning, fetchPending, fetchPaired]);
 
   async function handleApprove() {
     if (!approveCode.trim()) return;
@@ -58,7 +77,8 @@ export function ChannelPairingPanel({ agentId, channel, channelLabel, isRunning 
     } else {
       toast.success(t("approved"));
       setApproveCode("");
-      mutatePending();
+      fetchPending();
+      fetchPaired();
     }
     setApproving(false);
   }
@@ -70,7 +90,7 @@ export function ChannelPairingPanel({ agentId, channel, channelLabel, isRunning 
       toast.error(result.error);
     } else {
       toast.success(t("revoked"));
-      mutatePaired();
+      fetchPaired();
     }
     setRevokingUserId(null);
   }
@@ -132,7 +152,7 @@ export function ChannelPairingPanel({ agentId, channel, channelLabel, isRunning 
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => mutatePending()}
+              onClick={fetchPending}
               disabled={pendingLoading}
             >
               <RefreshCw className={`w-3.5 h-3.5 ${pendingLoading ? "animate-spin" : ""}`} />
@@ -168,8 +188,8 @@ export function ChannelPairingPanel({ agentId, channel, channelLabel, isRunning 
                         toast.error(result.error);
                       } else {
                         toast.success(t("approved"));
-                        mutatePending();
-                        mutatePaired();
+                        fetchPending();
+                        fetchPaired();
                       }
                     }}
                   >
@@ -187,7 +207,7 @@ export function ChannelPairingPanel({ agentId, channel, channelLabel, isRunning 
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => mutatePaired()}
+              onClick={fetchPaired}
               disabled={pairedLoading}
             >
               <RefreshCw className={`w-3.5 h-3.5 ${pairedLoading ? "animate-spin" : ""}`} />
