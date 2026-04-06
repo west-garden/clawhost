@@ -24,7 +24,18 @@ func getShortID(botID string) string {
 
 // imagePullPolicy returns PullAlways for "latest" tag, PullIfNotPresent otherwise.
 // In local dev mode, always use PullIfNotPresent to allow local images.
+// Can be overridden by openclaw.image_pull_policy config.
 func imagePullPolicy(image string) corev1.PullPolicy {
+	if policy := viper.GetString("openclaw.image_pull_policy"); policy != "" {
+		switch policy {
+		case "Always":
+			return corev1.PullAlways
+		case "IfNotPresent":
+			return corev1.PullIfNotPresent
+		case "Never":
+			return corev1.PullNever
+		}
+	}
 	if viper.GetBool("kubernetes.local_dev") {
 		return corev1.PullIfNotPresent
 	}
@@ -241,10 +252,9 @@ if command -v node > /dev/null 2>&1 && [ -f /home/node/.openclaw/openclaw.json ]
         c.gateway.auth.token = '%s';
         changed = true;
       }
-      // Ensure scopes are set for operator.pairing access (required for device approval)
-      const wantScopes = ['operator.admin', 'operator.read', 'operator.write', 'operator.approvals', 'operator.pairing'];
-      if (!c.gateway.auth.scopes || JSON.stringify(c.gateway.auth.scopes.sort()) !== JSON.stringify(wantScopes.sort())) {
-        c.gateway.auth.scopes = wantScopes;
+      // Remove unsupported scopes key if present (OpenClaw doesn't recognize gateway.auth.scopes)
+      if (c.gateway.auth.scopes) {
+        delete c.gateway.auth.scopes;
         changed = true;
       }
       const wantUi = { allowedOrigins: ['*'], dangerouslyDisableDeviceAuth: true };
@@ -362,9 +372,9 @@ exec openclaw gateway --port %d --bind lan --allow-unconfigured --dev`, configJS
 											Port: intstr.FromInt32(gatewayPort),
 										},
 									},
-									InitialDelaySeconds: 180,
-									PeriodSeconds:       30,
-									FailureThreshold:    5,
+									InitialDelaySeconds: 30,
+									PeriodSeconds:       15,
+									FailureThreshold:    3,
 								},
 								ReadinessProbe: &corev1.Probe{
 									ProbeHandler: corev1.ProbeHandler{
@@ -372,9 +382,9 @@ exec openclaw gateway --port %d --bind lan --allow-unconfigured --dev`, configJS
 											Port: intstr.FromInt32(gatewayPort),
 										},
 									},
-									InitialDelaySeconds: 60,
-									PeriodSeconds:       10,
-									FailureThreshold:    15,
+									InitialDelaySeconds: 10,
+									PeriodSeconds:       5,
+									FailureThreshold:    6,
 								},
 							},
 						}

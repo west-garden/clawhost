@@ -21,6 +21,98 @@ type ChannelConfig struct {
 	Extra         map[string]interface{} `json:"extra,omitempty"`         // Additional config
 }
 
+// --- Pairing file structures (matches WestClaw/apps/desktop/src/api-routes/channel-routes.ts) ---
+
+type pairingStore struct {
+	Version  int                      `json:"version"`
+	Requests []ChannelPairingListItem `json:"requests"`
+}
+
+type allowFromStore struct {
+	Version   int      `json:"version"`
+	AllowFrom []string `json:"allowFrom"`
+}
+
+// credentialsPath returns the credentials directory path inside the pod
+func credentialsPath() string {
+	return "/home/node/.openclaw/credentials"
+}
+
+// pairingFilePath returns the pairing requests file for a channel
+func pairingFilePath(channel string) string {
+	return fmt.Sprintf("%s/%s-pairing.json", credentialsPath(), channel)
+}
+
+// allowFromFilePath returns the allowFrom list file for a channel
+func allowFromFilePath(channel string) string {
+	return fmt.Sprintf("%s/%s-allowFrom.json", credentialsPath(), channel)
+}
+
+// readPairingFile reads the pairing requests file directly (fast — no Node.js spawn)
+func readPairingFile(ctx context.Context, namespace, podName, channel string) ([]ChannelPairingListItem, error) {
+	output, err := ExecInPod(ctx, namespace, podName, "openclaw",
+		[]string{"cat", pairingFilePath(channel)})
+	if err != nil {
+		// File doesn't exist = no pending requests
+		if strings.Contains(err.Error(), "No such file") {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to read pairing file: %w", err)
+	}
+
+	var store pairingStore
+	if err := json.Unmarshal([]byte(output), &store); err != nil {
+		return nil, fmt.Errorf("failed to parse pairing file: %w", err)
+	}
+
+	return store.Requests, nil
+}
+
+// writePairingFile writes the pairing requests file
+func writePairingFile(ctx context.Context, namespace, podName, channel string, requests []ChannelPairingListItem) error {
+	store := pairingStore{Version: 1, Requests: requests}
+	data, err := json.MarshalIndent(store, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal pairing data: %w", err)
+	}
+
+	script := fmt.Sprintf(`cat > %s << 'EOF'\n%s\nEOF`, pairingFilePath(channel), string(data))
+	_, err = ExecInPod(ctx, namespace, podName, "openclaw", []string{"sh", "-c", script})
+	return err
+}
+
+// readAllowFromFile reads the allowFrom list file directly
+func readAllowFromFile(ctx context.Context, namespace, podName, channel string) ([]string, error) {
+	output, err := ExecInPod(ctx, namespace, podName, "openclaw",
+		[]string{"cat", allowFromFilePath(channel)})
+	if err != nil {
+		if strings.Contains(err.Error(), "No such file") {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to read allowFrom file: %w", err)
+	}
+
+	var store allowFromStore
+	if err := json.Unmarshal([]byte(output), &store); err != nil {
+		return nil, fmt.Errorf("failed to parse allowFrom file: %w", err)
+	}
+
+	return store.AllowFrom, nil
+}
+
+// writeAllowFromFile writes the allowFrom list file
+func writeAllowFromFile(ctx context.Context, namespace, podName, channel string, allowFrom []string) error {
+	store := allowFromStore{Version: 1, AllowFrom: allowFrom}
+	data, err := json.MarshalIndent(store, "", "  ")
+	if err != nil {
+		return fmt.Errorf("failed to marshal allowFrom data: %w", err)
+	}
+
+	script := fmt.Sprintf(`cat > %s << 'EOF'\n%s\nEOF`, allowFromFilePath(channel), string(data))
+	_, err = ExecInPod(ctx, namespace, podName, "openclaw", []string{"sh", "-c", script})
+	return err
+}
+
 // AddChannelToAgent adds an IM channel account to an agent's OpenClaw instance
 // This uses the database as the source of truth and syncs the channels section to the pod
 // Supports multi-account: channels.telegram.accounts.{accountName}
@@ -440,7 +532,7 @@ type ApproveChannelPairingResult struct {
 }
 
 // ApproveChannelPairing approves a pending channel pairing request
-// Returns the CLI output and the user ID that was approved (for sending confirmation messages)
+// Reads pairing file directly (fast cat, no Node.js CLI spawn).
 func ApproveChannelPairing(ctx context.Context, botID, channel, code string) (*ApproveChannelPairingResult, error) {
 	namespace := GetNamespace()
 
@@ -449,37 +541,61 @@ func ApproveChannelPairing(ctx context.Context, botID, channel, code string) (*A
 		return nil, fmt.Errorf("failed to get pod: %w", err)
 	}
 
-	// First, get pending requests to find the user ID for this code
-	pendingResp, err := ListChannelPairingRequests(ctx, botID, channel)
+	// Read pairing file directly (fast — just cat a JSON file)
+	requests, err := readPairingFile(ctx, namespace, podName, channel)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list pending requests: %w", err)
+		return nil, fmt.Errorf("failed to read pairing requests: %w", err)
 	}
 
+	// Find the request by code
+	codeUpper := strings.ToUpper(strings.TrimSpace(code))
 	var targetUserID string
-	for _, req := range pendingResp.Requests {
-		if strings.EqualFold(req.Code, code) {
+	var foundIdx int = -1
+	for i, req := range requests {
+		if strings.ToUpper(strings.TrimSpace(req.Code)) == codeUpper {
 			targetUserID = req.ID
+			foundIdx = i
 			break
 		}
 	}
 
-	// Execute pairing approve command in pod
-	command := []string{"node", "/app/openclaw.mjs", "pairing", "approve", channel, code}
-	output, err := ExecInPod(ctx, namespace, podName, "openclaw", command)
-	if err != nil {
-		return nil, fmt.Errorf("failed to approve pairing: %w", err)
+	if foundIdx < 0 {
+		return nil, fmt.Errorf("pairing code %s not found", code)
+	}
+
+	// Remove the approved request from the list
+	requests = append(requests[:foundIdx], requests[foundIdx+1:]...)
+	if err := writePairingFile(ctx, namespace, podName, channel, requests); err != nil {
+		fmt.Printf("[ApprovePairing] Warning: failed to write pairing file: %v\n", err)
+	}
+
+	// Add user to allowFrom file
+	allowFrom, _ := readAllowFromFile(ctx, namespace, podName, channel)
+	found := false
+	for _, id := range allowFrom {
+		if id == targetUserID {
+			found = true
+			break
+		}
+	}
+	if !found && targetUserID != "" {
+		allowFrom = append(allowFrom, targetUserID)
+		if err := writeAllowFromFile(ctx, namespace, podName, channel, allowFrom); err != nil {
+			fmt.Printf("[ApprovePairing] Warning: failed to write allowFrom file: %v\n", err)
+		}
 	}
 
 	// Also persist to DB so it survives pod restarts
 	if targetUserID != "" {
 		if err := addUserToAllowFromDB(botID, channel, targetUserID); err != nil {
-			// Non-fatal — CLI already added to pod's allowFrom
 			fmt.Printf("[ApprovePairing] DB sync warning for agent %s: %v\n", botID, err)
 		}
 	}
 
+	fmt.Printf("[ApprovePairing] Approved channel=%s code=%s user=%s (direct file write)\n", channel, code, targetUserID)
+
 	return &ApproveChannelPairingResult{
-		Output: strings.TrimSpace(output),
+		Output: "pairing approved successfully",
 		UserID: targetUserID,
 	}, nil
 }
@@ -543,7 +659,7 @@ type ChannelPairedUser struct {
 }
 
 // ListChannelPairingRequests lists pending pairing requests for a channel
-// Example: openclaw pairing list telegram --json
+// Reads pairing file directly (fast cat, no Node.js CLI spawn).
 func ListChannelPairingRequests(ctx context.Context, botID, channel string) (*ChannelPairingResponse, error) {
 	namespace := GetNamespace()
 
@@ -552,62 +668,72 @@ func ListChannelPairingRequests(ctx context.Context, botID, channel string) (*Ch
 		return nil, fmt.Errorf("failed to get pod: %w", err)
 	}
 
-	// Execute pairing list command
-	command := []string{"node", "/app/openclaw.mjs", "pairing", "list", channel, "--json"}
-
-	output, err := ExecInPod(ctx, namespace, podName, "openclaw", command)
+	// Read pairing file directly (fast — just cat a JSON file)
+	requests, err := readPairingFile(ctx, namespace, podName, channel)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list pairing requests: %w", err)
+		return nil, fmt.Errorf("failed to read pairing requests: %w", err)
 	}
 
-	// Parse JSON output
-	var response ChannelPairingResponse
-	if err := json.Unmarshal([]byte(output), &response); err != nil {
-		return nil, fmt.Errorf("failed to parse response: %w", err)
-	}
-
-	return &response, nil
+	return &ChannelPairingResponse{
+		Channel:  channel,
+		Requests: requests,
+	}, nil
 }
 
 // RevokeChannelPairing revokes a channel pairing for a user
-// This removes the user from the allowFrom list in config
+// This removes the user from the allowFrom list
 func RevokeChannelPairing(ctx context.Context, botID, channel, userID string) (string, error) {
-	// First try the CLI command
 	namespace := GetNamespace()
+
 	podName, err := WaitForPodReady(ctx, botID, 30)
 	if err != nil {
 		return "", fmt.Errorf("failed to get pod: %w", err)
 	}
 
-	command := []string{"node", "/app/openclaw.mjs", "pairing", "revoke", channel, userID}
-	output, err := ExecInPod(ctx, namespace, podName, "openclaw", command)
-	if err == nil {
-		return strings.TrimSpace(output), nil
+	// Remove from allowFrom file
+	allowFrom, _ := readAllowFromFile(ctx, namespace, podName, channel)
+	var newAllowFrom []string
+	for _, id := range allowFrom {
+		if id != userID {
+			newAllowFrom = append(newAllowFrom, id)
+		}
 	}
 
-	// If CLI command fails, remove from config allowFrom list (using DB as source of truth)
+	if len(newAllowFrom) != len(allowFrom) {
+		if err := writeAllowFromFile(ctx, namespace, podName, channel, newAllowFrom); err != nil {
+			fmt.Printf("[RevokePairing] Warning: failed to write allowFrom file: %v\n", err)
+		}
+	}
+
+	// Also remove from DB config
+	if err := removeUserFromAllowFromDB(botID, channel, userID); err != nil {
+		fmt.Printf("[RevokePairing] DB sync warning for agent %s: %v\n", botID, err)
+	}
+
+	fmt.Printf("[RevokePairing] Revoked channel=%s user=%s\n", channel, userID)
+	return "user removed from allowFrom list", nil
+}
+
+func removeUserFromAllowFromDB(botID, channel, userID string) error {
 	agent, err := model.GetAgentByID(botID)
 	if err != nil {
-		return "", fmt.Errorf("failed to get agent: %w", err)
+		return fmt.Errorf("failed to get agent: %w", err)
 	}
 
 	config, err := agent.GetOpenClawConfig()
 	if err != nil {
-		return "", fmt.Errorf("failed to get config: %w", err)
+		return fmt.Errorf("failed to get config: %w", err)
 	}
 
-	// Get channels config
 	if config.Channels == nil {
-		return "", fmt.Errorf("no channels configured")
+		return nil
 	}
 
-	// Get specific channel config
 	channelConfig, ok := config.Channels[channel].(map[string]interface{})
 	if !ok {
-		return "", fmt.Errorf("channel %s not configured", channel)
+		return nil
 	}
 
-	// Remove from allowFrom list
 	if allowFrom, ok := channelConfig["allowFrom"].([]interface{}); ok {
 		var newAllowFrom []interface{}
 		for _, v := range allowFrom {
@@ -620,29 +746,14 @@ func RevokeChannelPairing(ctx context.Context, botID, channel, userID string) (s
 		channelConfig["allowFrom"] = newAllowFrom
 	}
 
-	// Save to database
 	if err := agent.SetOpenClawConfig(config); err != nil {
-		return "", fmt.Errorf("failed to set config: %w", err)
+		return fmt.Errorf("failed to set config: %w", err)
 	}
-	if err := model.UpdateAgent(agent); err != nil {
-		return "", fmt.Errorf("failed to update agent: %w", err)
-	}
-
-	// Sync channels section to pod and restart to pick up the change
-	if agent.Status == model.AgentStatusRunning {
-		if err := SyncSectionsToPod(ctx, botID, "channels"); err != nil {
-			return "user removed from allowFrom list (pod sync failed)", nil
-		}
-		if err := RestartDeployment(ctx, botID); err != nil {
-			return "user removed from allowFrom list (restart failed)", nil
-		}
-	}
-
-	return "user removed from allowFrom list", nil
+	return model.UpdateAgent(agent)
 }
 
 // GetChannelPairedUsers gets the list of paired users for a channel
-// Tries multiple methods: sessions command, channels status, and config allowFrom
+// Reads allowFrom file directly (fast cat), falls back to DB config.
 func GetChannelPairedUsers(ctx context.Context, botID, channel string) ([]ChannelPairedUser, error) {
 	namespace := GetNamespace()
 
@@ -651,78 +762,32 @@ func GetChannelPairedUsers(ctx context.Context, botID, channel string) ([]Channe
 		return nil, fmt.Errorf("failed to get pod: %w", err)
 	}
 
+	// Read allowFrom file directly (fast)
+	allowFrom, err := readAllowFromFile(ctx, namespace, podName, channel)
+	if err != nil {
+		fmt.Printf("[GetPairedUsers] Warning: failed to read allowFrom file, falling back to DB: %v\n", err)
+		return getPairedUsersFromDB(botID, channel)
+	}
+
+	users := make([]ChannelPairedUser, 0, len(allowFrom))
+	for _, id := range allowFrom {
+		user := ChannelPairedUser{ID: id}
+		if strings.HasPrefix(id, "@") {
+			user.Username = id[1:]
+		}
+		user.Meta = map[string]interface{}{"source": "allowFrom"}
+		users = append(users, user)
+	}
+
+	return users, nil
+}
+
+func getPairedUsersFromDB(botID, channel string) ([]ChannelPairedUser, error) {
 	var users []ChannelPairedUser
 
-	// Try 1: Use sessions command to get active sessions
-	command := []string{"node", "/app/openclaw.mjs", "sessions", "list", "--json"}
-	output, err := ExecInPod(ctx, namespace, podName, "openclaw", command)
-	if err == nil {
-		// Parse sessions and filter by channel
-		var sessions []map[string]interface{}
-		if json.Unmarshal([]byte(output), &sessions) == nil {
-			for _, s := range sessions {
-				if ch, ok := s["channel"].(string); ok && ch == channel {
-					user := ChannelPairedUser{
-						Meta: make(map[string]interface{}),
-					}
-					if id, ok := s["userId"].(string); ok {
-						user.ID = id
-					} else if id, ok := s["userId"].(float64); ok {
-						user.ID = fmt.Sprintf("%.0f", id)
-					}
-					if username, ok := s["username"].(string); ok {
-						user.Username = username
-					}
-					// Copy other metadata
-					for k, v := range s {
-						if k != "userId" && k != "username" && k != "channel" {
-							user.Meta[k] = v
-						}
-					}
-					if user.ID != "" || user.Username != "" {
-						users = append(users, user)
-					}
-				}
-			}
-			if len(users) > 0 {
-				return users, nil
-			}
-		}
-	}
-
-	// Try 2: Use channels status command
-	command = []string{"node", "/app/openclaw.mjs", "channels", "status", channel, "--json"}
-	output, err = ExecInPod(ctx, namespace, podName, "openclaw", command)
-	if err == nil {
-		var status map[string]interface{}
-		if json.Unmarshal([]byte(output), &status) == nil {
-			// Look for paired users in status
-			if paired, ok := status["pairedUsers"].([]interface{}); ok {
-				for _, p := range paired {
-					if userMap, ok := p.(map[string]interface{}); ok {
-						user := ChannelPairedUser{Meta: userMap}
-						if id, ok := userMap["id"].(string); ok {
-							user.ID = id
-						} else if id, ok := userMap["id"].(float64); ok {
-							user.ID = fmt.Sprintf("%.0f", id)
-						}
-						if username, ok := userMap["username"].(string); ok {
-							user.Username = username
-						}
-						users = append(users, user)
-					}
-				}
-			}
-			if len(users) > 0 {
-				return users, nil
-			}
-		}
-	}
-
-	// Try 3: Read from database config allowFrom list (pre-authorized users)
 	agent, err := model.GetAgentByID(botID)
 	if err != nil {
-		return users, nil // Return empty, don't fail
+		return users, nil
 	}
 
 	config, err := agent.GetOpenClawConfig()
@@ -730,19 +795,16 @@ func GetChannelPairedUsers(ctx context.Context, botID, channel string) ([]Channe
 		return users, nil
 	}
 
-	// Get channels config
 	channels := config.Channels
 	if channels == nil {
 		return users, nil
 	}
 
-	// Get specific channel config
 	channelConfig, ok := channels[channel].(map[string]interface{})
 	if !ok {
 		return users, nil
 	}
 
-	// Get allowFrom list
 	if allowFrom, ok := channelConfig["allowFrom"].([]interface{}); ok {
 		for _, v := range allowFrom {
 			var user ChannelPairedUser
